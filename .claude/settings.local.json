@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m compileall src)",
+      "Bash(PYTHONPATH=src .venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8060)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(curl -s http://127.0.0.1:8060/api/health)",
+      "Bash(.venv/bin/flet run *)",
+      "Bash(echo \"Flet PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8550/)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(python3)",
+      "Bash(awk '{print $9, $5, $6, $7, $8}')",
+      "Bash(python -m py_compile src/components/layout.py src/pages/search_page.py src/main.py)",
+      "Bash(python3 -m py_compile src/components/layout.py src/pages/search_page.py src/main.py)",
+      "Bash(python3 -m py_compile src/components/bottom_nav.py src/components/layout.py src/pages/problems_page.py src/pages/scenario_templates_page.py src/main.py)",
+      "Bash(python3 -m py_compile src/components/layout.py)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('src/main.py'\\).read\\(\\)\\); print\\('main.py OK'\\)\")",
+      "Bash(sed -i '' 's/ft\\\\.padding\\\\.symmetric\\(horizontal=\\\\\\([0-9]*\\\\\\), vertical=\\\\\\([0-9]*\\\\\\)\\)/padding_symmetric\\(horizontal=\\\\1, vertical=\\\\2\\)/g' admin_workspace_page.py)",
+      "Bash(sed -i '' 's/ft\\\\.padding\\\\.only\\(left=\\\\\\([0-9]*\\\\\\), top=\\\\\\([0-9]*\\\\\\), bottom=\\\\\\([0-9]*\\\\\\)\\)/padding_only\\(left=\\\\1, top=\\\\2, bottom=\\\\3\\)/g' admin_workspace_page.py)",
+      "Bash(sed -i '' 's/ft\\\\.padding\\\\.all\\(2\\)/ft.Padding\\(left=2, top=2, right=2, bottom=2\\)/g' admin_workspace_page.py)",
+      "Bash(sed -i '' 's/ft\\\\.padding\\\\.all\\(40\\)/ft.Padding\\(left=40, top=40, right=40, bottom=40\\)/g' admin_workspace_page.py)",
+      "Bash(find /Users/admin -name \"flet\" -type d 2>/dev/null | head -5; find /usr/local /opt -name \"flet\" -type d 2>/dev/null | head -5; which flet)",
+      "Bash(pip3 show *)",
+      "Bash(python3 -m flet --version)",
+      "Bash(/Applications/XAMPP/xamppfiles/htdocs/belpomoshnik/.venv/bin/python -c ' *)"
+    ]
+  }
+}

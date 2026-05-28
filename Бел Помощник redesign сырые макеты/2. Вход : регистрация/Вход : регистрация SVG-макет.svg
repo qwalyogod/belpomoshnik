@@ -1,0 +1,370 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="3500" viewBox="0 0 2600 3500">
+<defs>
+  <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#57C8FF"/>
+    <stop offset="100%" stop-color="#229ED9"/>
+  </linearGradient>
+  <linearGradient id="avatarGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#9EE7FF"/>
+    <stop offset="100%" stop-color="#229ED9"/>
+  </linearGradient>
+  <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#092235" flood-opacity="0.18"/>
+  </filter>
+  <filter id="shadowTiny" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#092235" flood-opacity="0.12"/>
+  </filter>
+</defs>
+<rect x="0" y="0" width="2600" height="3500" rx="0" fill="#F1F6FA" stroke="none" stroke-width="1" opacity="1"/>
+<rect x="0" y="0" width="2600" height="1700" rx="0" fill="#F1F6FA" stroke="none" stroke-width="1" opacity="1"/>
+<text x="100" y="74" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="850" fill="#102131" text-anchor="start" opacity="1">02 — Вход / Регистрация</text>
+<text x="100" y="115" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="23" font-weight="700" fill="#61778A" text-anchor="start" opacity="1">Белая тема</text>
+<text x="100" y="165" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="800" fill="#61778A" text-anchor="start" opacity="1" letter-spacing="2">WEB / DESKTOP</text>
+<text x="1790" y="165" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="800" fill="#61778A" text-anchor="start" opacity="1" letter-spacing="2">MOBILE</text>
+<rect x="90" y="195" width="1600" height="1110" rx="32" fill="#FFFFFF" stroke="#D8E5EF" stroke-width="1" opacity="1" filter="url(#shadowSoft)"/>
+<rect x="90" y="195" width="1600" height="76" rx="32" fill="#F8FBFD" stroke="#D8E5EF" stroke-width="0" opacity="1"/>
+<rect x="90" y="255" width="1600" height="16" rx="0" fill="#FFFFFF" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="126" cy="233" r="9" fill="#FF6B68" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="154" cy="233" r="9" fill="#FFD166" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="182" cy="233" r="9" fill="#4EDB89" stroke="none" stroke-width="1" opacity="1"/>
+<rect x="240" y="216" width="1300" height="34" rx="17" fill="#ECF2F7" stroke="none" stroke-width="1" opacity="1"/>
+<text x="890.0" y="239" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="600" fill="#587086" text-anchor="middle" opacity="1">belpomoshnik.by/auth</text>
+<rect x="90" y="271" width="1600" height="1034" rx="0" fill="#F5F8FB" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="146.0" cy="320.0" r="24.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 140 322.0 L 153 313 L 144 326 L 150.0 330.0 L 144.0 328 L 136.0 335.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="138" y1="313" x2="150" y2="313" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="144" y1="307" x2="144" y2="319" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="182" y="328" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#152536" text-anchor="start" opacity="1">Белпомощник</text>
+<text x="390" y="328" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="800" fill="#229ED9" text-anchor="start" opacity="1">Вход</text>
+<text x="465" y="328" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#6B7F90" text-anchor="start" opacity="1">Регистрация</text>
+<text x="600" y="328" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#6B7F90" text-anchor="start" opacity="1">Помощь</text>
+<rect x="1480" y="297" width="160" height="44" rx="22" fill="#F0F6FA" stroke="#E0EAF2" stroke-width="1" opacity="1"/>
+<text x="1560" y="326" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#6B7F90" text-anchor="middle" opacity="1">RU</text>
+<circle cx="1625" cy="319" r="20" fill="url(#avatarGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<line x1="90" y1="367" x2="1690" y2="367" stroke="#E2EAF2" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="690" cy="491" r="120" fill="#229ED9" stroke="none" stroke-width="1" opacity="0.12"/>
+<circle cx="210" cy="1215" r="90" fill="#229ED9" stroke="none" stroke-width="1" opacity="0.08"/>
+<circle cx="189.0" cy="475.0" r="39.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 168 477.0 L 211 453 L 202 496 L 193.0 485.0 L 187.0 498 L 179.0 490.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="196" y1="483" x2="208" y2="483" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="202" y1="477" x2="202" y2="489" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="150" y="559" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="850" fill="#102131" text-anchor="start" opacity="1">
+<tspan x="150" dy="0">Входите, чтобы сохранить</tspan>
+<tspan x="150" dy="48.3">личные ситуации и сроки</tspan>
+</text>
+<text x="150" y="671" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="500" fill="#5A7185" text-anchor="start" opacity="1">
+<tspan x="150" dy="0">Личный кабинет хранит планы, задачи, документы</tspan>
+<tspan x="150" dy="29.700000000000003">и показывает только важные напоминания.</tspan>
+</text>
+<rect x="150" y="751" width="170" height="42" rx="21" fill="#E6F4FC" stroke="#B8E1F6" stroke-width="1" opacity="1"/>
+<text x="235.0" y="778" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#168AC1" text-anchor="middle" opacity="1">Проблема → план</text>
+<rect x="335" y="751" width="150" height="42" rx="21" fill="#F4F7FA" stroke="#E3EAF0" stroke-width="1" opacity="1"/>
+<text x="410.0" y="778" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#526A7B" text-anchor="middle" opacity="1">Напоминания</text>
+<rect x="500" y="751" width="160" height="42" rx="21" fill="#F4F7FA" stroke="#E3EAF0" stroke-width="1" opacity="1"/>
+<text x="580.0" y="778" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#526A7B" text-anchor="middle" opacity="1">Закон-апдейты</text>
+<rect x="150" y="841" width="570" height="250" rx="30" fill="#FFFFFF" stroke="#E1EBF3" stroke-width="1" opacity="1"/>
+<text x="180" y="891" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#102131" text-anchor="start" opacity="1">Сегодня важно</text>
+<text x="660" y="891" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="800" fill="white" text-anchor="middle" opacity="1">3</text>
+<circle cx="660" cy="883" r="17" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="192" cy="933" r="20" fill="#EAF6FD" stroke="#CDECFB" stroke-width="1" opacity="1"/>
+<text x="192" y="940" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#229ED9" text-anchor="middle" opacity="1">1</text>
+<text x="228" y="941" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#102131" text-anchor="start" opacity="1">Истекает медкнижка</text>
+<text x="228" y="971" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#5A7185" text-anchor="start" opacity="1">через 12 дней</text>
+<line x1="178" y1="996" x2="692" y2="996" stroke="#E1EBF3" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="192" cy="1008" r="20" fill="#F5F8FB" stroke="#E4ECF2" stroke-width="1" opacity="1"/>
+<text x="192" y="1015" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#61778A" text-anchor="middle" opacity="1">2</text>
+<text x="228" y="1016" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#102131" text-anchor="start" opacity="1">Новый апдейт по ЖКХ</text>
+<text x="228" y="1046" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#5A7185" text-anchor="start" opacity="1">для вашего профиля</text>
+<line x1="178" y1="1071" x2="692" y2="1071" stroke="#E1EBF3" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="192" cy="1083" r="20" fill="#F5F8FB" stroke="#E4ECF2" stroke-width="1" opacity="1"/>
+<text x="192" y="1090" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#61778A" text-anchor="middle" opacity="1">3</text>
+<text x="228" y="1091" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#102131" text-anchor="start" opacity="1">План “Переезд”</text>
+<text x="228" y="1121" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#5A7185" text-anchor="start" opacity="1">2 задачи сегодня</text>
+<rect x="810" y="421" width="390" height="504" rx="30" fill="#FFFFFF" stroke="#DDE8F0" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="844" y="473" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="34" font-weight="850" fill="#152536" text-anchor="start" opacity="1">Вход</text>
+<text x="844" y="509" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#667C8E" text-anchor="start" opacity="1">
+<tspan x="844" dy="0">Продолжите работу с планами, задачами</tspan>
+<tspan x="844" dy="24.3">и сохранёнными документами.</tspan>
+</text>
+<text x="844" y="573" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Email или телефон</text>
+<rect x="844" y="585" width="322" height="62" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="866" y="624.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="844" y="671" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Пароль</text>
+<rect x="844" y="683" width="322" height="62" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="866" y="722.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="844" y="771" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 851 785 L 856 790 L 864 779" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="882" y="792" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#4F6274" text-anchor="start" opacity="1">Запомнить меня</text>
+<text x="1166" y="792" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#229ED9" text-anchor="end" opacity="1">Забыли пароль?</text>
+<rect x="844" y="826" width="322" height="64" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1005.0" y="865.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Войти</text>
+<line x1="844" y1="909" x2="1166" y2="909" stroke="#E5EDF3" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<text x="1005.0" y="915" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="600" fill="#667C8E" text-anchor="middle" opacity="1">или создать аккаунт</text>
+<rect x="1230" y="421" width="390" height="636" rx="30" fill="#FFFFFF" stroke="#DDE8F0" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1264" y="473" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="34" font-weight="850" fill="#152536" text-anchor="start" opacity="1">Регистрация</text>
+<text x="1264" y="509" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#667C8E" text-anchor="start" opacity="1">
+<tspan x="1264" dy="0">Укажите минимум данных — регион нужен,</tspan>
+<tspan x="1264" dy="24.3">чтобы подсказки были релевантными.</tspan>
+</text>
+<text x="1264" y="573" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Имя</text>
+<rect x="1264" y="585" width="322" height="58" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1286" y="622.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">Алексей</text>
+<text x="1264" y="661" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Email</text>
+<rect x="1264" y="673" width="322" height="58" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1286" y="710.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1264" y="749" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Регион</text>
+<rect x="1264" y="761" width="154.0" height="58" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1286" y="798.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">Минская обл.</text>
+<text x="1432.0" y="749" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Город</text>
+<rect x="1432.0" y="761" width="154.0" height="58" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1454.0" y="798.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">Минск</text>
+<text x="1264" y="837" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1264" y="849" width="322" height="58" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1286" y="886.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1264" y="933" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1271 947 L 1276 952 L 1284 941" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1302" y="954" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#4F6274" text-anchor="start" opacity="1">Согласен с условиями</text>
+<rect x="1264" y="979" width="322" height="64" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1425.0" y="1018.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Создать аккаунт</text>
+<rect x="810" y="1081" width="810" height="76" rx="24" fill="#EAF6FD" stroke="#CDECFB" stroke-width="1" opacity="1"/>
+<circle cx="848" cy="1119" r="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 840 1119 L 846 1125 L 857 1111" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="880" y="1127" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#168AC1" text-anchor="start" opacity="1">Данные сохраняются локально в демо-версии и будут защищены в production.</text>
+<rect x="1790" y="195" width="560" height="1480" rx="48" fill="#FFFFFF" stroke="#D5E2EC" stroke-width="2" opacity="1" filter="url(#shadowSoft)"/>
+<rect x="1808" y="213" width="524" height="1444" rx="38" fill="#F6F9FC" stroke="none" stroke-width="1" opacity="1"/>
+<rect x="2012.0" y="229" width="116" height="13" rx="7" fill="#DDE7EF" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="2148.0" cy="235" r="7" fill="#DDE7EF" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="1864.0" cy="302.0" r="24.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 1858 304.0 L 1871 295 L 1862 308 L 1868.0 312.0 L 1862.0 310 L 1854.0 317.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="1856" y1="295" x2="1868" y2="295" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="1862" y1="289" x2="1862" y2="301" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="1900" y="310" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#152536" text-anchor="start" opacity="1">Белпомощник</text>
+<circle cx="2286" cy="303" r="22" fill="url(#avatarGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<line x1="2278" y1="301" x2="2294" y2="301" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="2286" y1="293" x2="2286" y2="309" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="1808" y1="347" x2="2332" y2="347" stroke="#DFE9F1" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<text x="1834" y="399" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="32" font-weight="850" fill="#152536" text-anchor="start" opacity="1">Вход / Регистрация</text>
+<text x="1834" y="437" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#667C8E" text-anchor="start" opacity="1">
+<tspan x="1834" dy="0">Один экран для входа и создания</tspan>
+<tspan x="1834" dy="24.3">аккаунта без лишних шагов.</tspan>
+</text>
+<rect x="1834" y="502" width="472" height="56" rx="28" fill="#F2F6FA" stroke="#DFE9F1" stroke-width="1" opacity="1"/>
+<rect x="1840" y="508" width="230.0" height="44" rx="22" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1955.0" y="537" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="white" text-anchor="middle" opacity="1">Вход</text>
+<text x="2185.0" y="537" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#667C8E" text-anchor="middle" opacity="1">Регистрация</text>
+<rect x="1834" y="587" width="472" height="388" rx="28" fill="#FFFFFF" stroke="#DFE9F1" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1860" y="633" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="850" fill="#152536" text-anchor="start" opacity="1">Войти в аккаунт</text>
+<text x="1860" y="679" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Email или телефон</text>
+<rect x="1860" y="691" width="420" height="56" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="727.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1860" y="767" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1860" y="779" width="420" height="56" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="815.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1860" y="863" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1867 877 L 1872 882 L 1880 871" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1898" y="884" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#4F6274" text-anchor="start" opacity="1">Запомнить</text>
+<text x="2280" y="884" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#229ED9" text-anchor="end" opacity="1">Забыли?</text>
+<rect x="1860" y="909" width="420" height="54" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="2070.0" y="943.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Войти</text>
+<text x="1834" y="1027" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="28" font-weight="850" fill="#152536" text-anchor="start" opacity="1">Создать аккаунт</text>
+<rect x="1834" y="1059" width="472" height="540" rx="28" fill="#FFFFFF" stroke="#DFE9F1" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1860" y="1107" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Имя</text>
+<rect x="1860" y="1119" width="420" height="52" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="1153.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">Алексей</text>
+<text x="1860" y="1189" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Email</text>
+<rect x="1860" y="1201" width="420" height="52" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="1235.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1860" y="1271" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Регион / город</text>
+<rect x="1860" y="1283" width="420" height="52" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="1317.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">Минская обл., Минск</text>
+<text x="1860" y="1353" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#61778A" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1860" y="1365" width="420" height="52" rx="18" fill="#F7FAFD" stroke="#D9E5EF" stroke-width="1" opacity="1"/>
+<text x="1882" y="1399.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#152536" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1860" y="1447" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1867 1461 L 1872 1466 L 1880 1455" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1898" y="1468" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#4F6274" text-anchor="start" opacity="1">Согласен с условиями</text>
+<rect x="1860" y="1489" width="420" height="56" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="2070.0" y="1524.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Создать аккаунт</text>
+<text x="1860" y="1567" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="500" fill="#667C8E" text-anchor="start" opacity="1">
+<tspan x="1860" dy="0">Регион нужен для подсказок, учреждений</tspan>
+<tspan x="1860" dy="20.8">и релевантных закон-апдейтов.</tspan>
+</text>
+<rect x="1300" y="122" width="390" height="54" rx="22" fill="#FFFFFF" stroke="#DDE8F0" stroke-width="1" opacity="1"/>
+<text x="1326" y="157" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#37546A" text-anchor="start" opacity="1">Карточки вместо “чат-пузырей”</text>
+<rect x="0" y="1700" width="2600" height="3" rx="0" fill="#C9D9E5" stroke="none" stroke-width="1" opacity="0.6"/>
+<rect x="0" y="1705" width="2600" height="1700" rx="0" fill="#07111B" stroke="none" stroke-width="1" opacity="1"/>
+<text x="100" y="1779" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">02 — Вход / Регистрация</text>
+<text x="100" y="1820" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="23" font-weight="700" fill="#9AACBB" text-anchor="start" opacity="1">Тёмная тема</text>
+<text x="100" y="1870" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="800" fill="#9AACBB" text-anchor="start" opacity="1" letter-spacing="2">WEB / DESKTOP</text>
+<text x="1790" y="1870" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="800" fill="#9AACBB" text-anchor="start" opacity="1" letter-spacing="2">MOBILE</text>
+<rect x="90" y="1900" width="1600" height="1110" rx="32" fill="#17212B" stroke="#263847" stroke-width="1" opacity="1" filter="url(#shadowSoft)"/>
+<rect x="90" y="1900" width="1600" height="76" rx="32" fill="#101820" stroke="#263847" stroke-width="0" opacity="1"/>
+<rect x="90" y="1960" width="1600" height="16" rx="0" fill="#17212B" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="126" cy="1938" r="9" fill="#FF6B68" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="154" cy="1938" r="9" fill="#FFD166" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="182" cy="1938" r="9" fill="#4EDB89" stroke="none" stroke-width="1" opacity="1"/>
+<rect x="240" y="1921" width="1300" height="34" rx="17" fill="#111B24" stroke="none" stroke-width="1" opacity="1"/>
+<text x="890.0" y="1944" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="600" fill="#8EA4B7" text-anchor="middle" opacity="1">belpomoshnik.by/auth</text>
+<rect x="90" y="1976" width="1600" height="1034" rx="0" fill="#0E1621" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="146.0" cy="2025.0" r="24.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 140 2027.0 L 153 2018 L 144 2031 L 150.0 2035.0 L 144.0 2033 L 136.0 2040.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="138" y1="2018" x2="150" y2="2018" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="144" y1="2012" x2="144" y2="2024" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="182" y="2033" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#EAF3FB" text-anchor="start" opacity="1">Белпомощник</text>
+<text x="390" y="2033" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="800" fill="#229ED9" text-anchor="start" opacity="1">Вход</text>
+<text x="465" y="2033" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#9AACBB" text-anchor="start" opacity="1">Регистрация</text>
+<text x="600" y="2033" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#9AACBB" text-anchor="start" opacity="1">Помощь</text>
+<rect x="1480" y="2002" width="160" height="44" rx="22" fill="#111B24" stroke="#283B4A" stroke-width="1" opacity="1"/>
+<text x="1560" y="2031" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#9AACBB" text-anchor="middle" opacity="1">RU</text>
+<circle cx="1625" cy="2024" r="20" fill="url(#avatarGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<line x1="90" y1="2072" x2="1690" y2="2072" stroke="#263847" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="690" cy="2196" r="120" fill="#229ED9" stroke="none" stroke-width="1" opacity="0.12"/>
+<circle cx="210" cy="2920" r="90" fill="#229ED9" stroke="none" stroke-width="1" opacity="0.08"/>
+<circle cx="189.0" cy="2180.0" r="39.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 168 2182.0 L 211 2158 L 202 2201 L 193.0 2190.0 L 187.0 2203 L 179.0 2195.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="196" y1="2188" x2="208" y2="2188" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="202" y1="2182" x2="202" y2="2194" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="150" y="2264" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="42" font-weight="850" fill="#EEF7FF" text-anchor="start" opacity="1">
+<tspan x="150" dy="0">Входите, чтобы сохранить</tspan>
+<tspan x="150" dy="48.3">личные ситуации и сроки</tspan>
+</text>
+<text x="150" y="2376" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="500" fill="#A3B5C4" text-anchor="start" opacity="1">
+<tspan x="150" dy="0">Личный кабинет хранит планы, задачи, документы</tspan>
+<tspan x="150" dy="29.700000000000003">и показывает только важные напоминания.</tspan>
+</text>
+<rect x="150" y="2456" width="170" height="42" rx="21" fill="#123244" stroke="#204A60" stroke-width="1" opacity="1"/>
+<text x="235.0" y="2483" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#5CC9FF" text-anchor="middle" opacity="1">Проблема → план</text>
+<rect x="335" y="2456" width="150" height="42" rx="21" fill="#111B24" stroke="#283C4B" stroke-width="1" opacity="1"/>
+<text x="410.0" y="2483" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#AABAC8" text-anchor="middle" opacity="1">Напоминания</text>
+<rect x="500" y="2456" width="160" height="42" rx="21" fill="#111B24" stroke="#283C4B" stroke-width="1" opacity="1"/>
+<text x="580.0" y="2483" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#AABAC8" text-anchor="middle" opacity="1">Закон-апдейты</text>
+<rect x="150" y="2546" width="570" height="250" rx="30" fill="#111B24" stroke="#263B4C" stroke-width="1" opacity="1"/>
+<text x="180" y="2596" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#EEF7FF" text-anchor="start" opacity="1">Сегодня важно</text>
+<text x="660" y="2596" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="800" fill="white" text-anchor="middle" opacity="1">3</text>
+<circle cx="660" cy="2588" r="17" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="192" cy="2638" r="20" fill="#123244" stroke="#27546A" stroke-width="1" opacity="1"/>
+<text x="192" y="2645" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#5CC9FF" text-anchor="middle" opacity="1">1</text>
+<text x="228" y="2646" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#EEF7FF" text-anchor="start" opacity="1">Истекает медкнижка</text>
+<text x="228" y="2676" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#A3B5C4" text-anchor="start" opacity="1">через 12 дней</text>
+<line x1="178" y1="2701" x2="692" y2="2701" stroke="#263B4C" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="192" cy="2713" r="20" fill="#111B24" stroke="#2A3D4B" stroke-width="1" opacity="1"/>
+<text x="192" y="2720" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#A7B5C1" text-anchor="middle" opacity="1">2</text>
+<text x="228" y="2721" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#EEF7FF" text-anchor="start" opacity="1">Новый апдейт по ЖКХ</text>
+<text x="228" y="2751" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#A3B5C4" text-anchor="start" opacity="1">для вашего профиля</text>
+<line x1="178" y1="2776" x2="692" y2="2776" stroke="#263B4C" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<circle cx="192" cy="2788" r="20" fill="#111B24" stroke="#2A3D4B" stroke-width="1" opacity="1"/>
+<text x="192" y="2795" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#A7B5C1" text-anchor="middle" opacity="1">3</text>
+<text x="228" y="2796" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="21" font-weight="750" fill="#EEF7FF" text-anchor="start" opacity="1">План “Переезд”</text>
+<text x="228" y="2826" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="500" fill="#A3B5C4" text-anchor="start" opacity="1">2 задачи сегодня</text>
+<rect x="810" y="2126" width="390" height="504" rx="30" fill="#17212B" stroke="#2B3E4E" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="844" y="2178" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="34" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">Вход</text>
+<text x="844" y="2214" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#9AACBB" text-anchor="start" opacity="1">
+<tspan x="844" dy="0">Продолжите работу с планами, задачами</tspan>
+<tspan x="844" dy="24.3">и сохранёнными документами.</tspan>
+</text>
+<text x="844" y="2278" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Email или телефон</text>
+<rect x="844" y="2290" width="322" height="62" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="866" y="2329.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="844" y="2376" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Пароль</text>
+<rect x="844" y="2388" width="322" height="62" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="866" y="2427.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="844" y="2476" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 851 2490 L 856 2495 L 864 2484" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="882" y="2497" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#A6B7C5" text-anchor="start" opacity="1">Запомнить меня</text>
+<text x="1166" y="2497" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#229ED9" text-anchor="end" opacity="1">Забыли пароль?</text>
+<rect x="844" y="2531" width="322" height="64" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1005.0" y="2570.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Войти</text>
+<line x1="844" y1="2614" x2="1166" y2="2614" stroke="#2A3B48" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<text x="1005.0" y="2620" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="600" fill="#9AACBB" text-anchor="middle" opacity="1">или создать аккаунт</text>
+<rect x="1230" y="2126" width="390" height="636" rx="30" fill="#17212B" stroke="#2B3E4E" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1264" y="2178" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="34" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">Регистрация</text>
+<text x="1264" y="2214" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#9AACBB" text-anchor="start" opacity="1">
+<tspan x="1264" dy="0">Укажите минимум данных — регион нужен,</tspan>
+<tspan x="1264" dy="24.3">чтобы подсказки были релевантными.</tspan>
+</text>
+<text x="1264" y="2278" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Имя</text>
+<rect x="1264" y="2290" width="322" height="58" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1286" y="2327.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">Алексей</text>
+<text x="1264" y="2366" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Email</text>
+<rect x="1264" y="2378" width="322" height="58" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1286" y="2415.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1264" y="2454" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Регион</text>
+<rect x="1264" y="2466" width="154.0" height="58" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1286" y="2503.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">Минская обл.</text>
+<text x="1432.0" y="2454" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Город</text>
+<rect x="1432.0" y="2466" width="154.0" height="58" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1454.0" y="2503.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">Минск</text>
+<text x="1264" y="2542" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1264" y="2554" width="322" height="58" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1286" y="2591.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1264" y="2638" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1271 2652 L 1276 2657 L 1284 2646" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1302" y="2659" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#A6B7C5" text-anchor="start" opacity="1">Согласен с условиями</text>
+<rect x="1264" y="2684" width="322" height="64" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1425.0" y="2723.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Создать аккаунт</text>
+<rect x="810" y="2786" width="810" height="76" rx="24" fill="#123244" stroke="#25536B" stroke-width="1" opacity="1"/>
+<circle cx="848" cy="2824" r="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 840 2824 L 846 2830 L 857 2816" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="880" y="2832" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#5CC9FF" text-anchor="start" opacity="1">Данные сохраняются локально в демо-версии и будут защищены в production.</text>
+<rect x="1790" y="1900" width="560" height="1480" rx="48" fill="#17212B" stroke="#263847" stroke-width="2" opacity="1" filter="url(#shadowSoft)"/>
+<rect x="1808" y="1918" width="524" height="1444" rx="38" fill="#0E1621" stroke="none" stroke-width="1" opacity="1"/>
+<rect x="2012.0" y="1934" width="116" height="13" rx="7" fill="#253644" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="2148.0" cy="1940" r="7" fill="#253644" stroke="none" stroke-width="1" opacity="1"/>
+<circle cx="1864.0" cy="2007.0" r="24.0" fill="url(#blueGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<path d="M 1858 2009.0 L 1871 2000 L 1862 2013 L 1868.0 2017.0 L 1862.0 2015 L 1854.0 2022.0 Z" fill="white" stroke="none" stroke-width="1" opacity="0.95" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="1856" y1="2000" x2="1868" y2="2000" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="1862" y1="1994" x2="1862" y2="2006" stroke="#229ED9" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<text x="1900" y="2015" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="800" fill="#EAF3FB" text-anchor="start" opacity="1">Белпомощник</text>
+<circle cx="2286" cy="2008" r="22" fill="url(#avatarGrad)" stroke="none" stroke-width="1" opacity="1"/>
+<line x1="2278" y1="2006" x2="2294" y2="2006" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="2286" y1="1998" x2="2286" y2="2014" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round"/>
+<line x1="1808" y1="2052" x2="2332" y2="2052" stroke="#263847" stroke-width="1" opacity="1" stroke-linecap="round"/>
+<text x="1834" y="2104" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="32" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">Вход / Регистрация</text>
+<text x="1834" y="2142" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#9AACBB" text-anchor="start" opacity="1">
+<tspan x="1834" dy="0">Один экран для входа и создания</tspan>
+<tspan x="1834" dy="24.3">аккаунта без лишних шагов.</tspan>
+</text>
+<rect x="1834" y="2207" width="472" height="56" rx="28" fill="#111B24" stroke="#263847" stroke-width="1" opacity="1"/>
+<rect x="1840" y="2213" width="230.0" height="44" rx="22" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="1955.0" y="2242" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="white" text-anchor="middle" opacity="1">Вход</text>
+<text x="2185.0" y="2242" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="800" fill="#9AACBB" text-anchor="middle" opacity="1">Регистрация</text>
+<rect x="1834" y="2292" width="472" height="388" rx="28" fill="#17212B" stroke="#263847" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1860" y="2338" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">Войти в аккаунт</text>
+<text x="1860" y="2384" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Email или телефон</text>
+<rect x="1860" y="2396" width="420" height="56" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="2432.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1860" y="2472" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1860" y="2484" width="420" height="56" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="2520.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1860" y="2568" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1867 2582 L 1872 2587 L 1880 2576" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1898" y="2589" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#A6B7C5" text-anchor="start" opacity="1">Запомнить</text>
+<text x="2280" y="2589" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#229ED9" text-anchor="end" opacity="1">Забыли?</text>
+<rect x="1860" y="2614" width="420" height="54" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="2070.0" y="2648.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Войти</text>
+<text x="1834" y="2732" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="28" font-weight="850" fill="#EAF3FB" text-anchor="start" opacity="1">Создать аккаунт</text>
+<rect x="1834" y="2764" width="472" height="540" rx="28" fill="#17212B" stroke="#263847" stroke-width="1" opacity="1" filter="url(#shadowTiny)"/>
+<text x="1860" y="2812" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Имя</text>
+<rect x="1860" y="2824" width="420" height="52" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="2858.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">Алексей</text>
+<text x="1860" y="2894" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Email</text>
+<rect x="1860" y="2906" width="420" height="52" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="2940.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">name@example.com</text>
+<text x="1860" y="2976" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Регион / город</text>
+<rect x="1860" y="2988" width="420" height="52" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="3022.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">Минская обл., Минск</text>
+<text x="1860" y="3058" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="600" fill="#8EA4B7" text-anchor="start" opacity="1">Пароль</text>
+<rect x="1860" y="3070" width="420" height="52" rx="18" fill="#111B24" stroke="#263848" stroke-width="1" opacity="1"/>
+<text x="1882" y="3104.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="500" fill="#EAF3FB" text-anchor="start" opacity="0.96">••••••••</text>
+<rect x="1860" y="3152" width="26" height="26" rx="7" fill="#229ED9" stroke="#229ED9" stroke-width="2" opacity="1"/>
+<path d="M 1867 3166 L 1872 3171 L 1880 3160" fill="none" stroke="white" stroke-width="3" opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1898" y="3173" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="500" fill="#A6B7C5" text-anchor="start" opacity="1">Согласен с условиями</text>
+<rect x="1860" y="3194" width="420" height="56" rx="18" fill="#229ED9" stroke="none" stroke-width="1" opacity="1"/>
+<text x="2070.0" y="3229.0" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" opacity="1">Создать аккаунт</text>
+<text x="1860" y="3272" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="500" fill="#9AACBB" text-anchor="start" opacity="1">
+<tspan x="1860" dy="0">Регион нужен для подсказок, учреждений</tspan>
+<tspan x="1860" dy="20.8">и релевантных закон-апдейтов.</tspan>
+</text>
+<rect x="1300" y="1827" width="390" height="54" rx="22" fill="#111B24" stroke="#263847" stroke-width="1" opacity="1"/>
+<text x="1326" y="1862" font-family="Inter, Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#A6B8C7" text-anchor="start" opacity="1">Карточки вместо “чат-пузырей”</text>
+</svg>

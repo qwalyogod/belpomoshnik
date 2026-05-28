@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="3800" viewBox="0 0 2400 3800">
+<defs>
+  <linearGradient id="canvasBg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#F6FBFF"/>
+    <stop offset="0.5" stop-color="#EEF6FD"/>
+    <stop offset="1" stop-color="#F8FBFF"/>
+  </linearGradient>
+  <filter id="bigShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#6E8AA6" flood-opacity="0.18"/>
+  </filter>
+  <filter id="darkShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#000000" flood-opacity="0.35"/>
+  </filter>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#8AA7BE" flood-opacity="0.13"/>
+  </filter>
+</defs>
+<rect x="0" y="0" width="2400" height="3800" fill="url(#canvasBg)" opacity="1"/>
+<text x="55" y="70" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="42" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Light theme</text>
+<text x="60" y="126" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#128FE3" font-weight="900" text-anchor="start" opacity="1">Web / Desktop</text>
+<text x="1810" y="126" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#128FE3" font-weight="900" text-anchor="start" opacity="1">Mobile</text>
+<g id="desktop_problem_card_light">
+<rect x="60" y="160" width="1650" height="1500" fill="#FFFFFF" rx="30" stroke="#DDE8F2" stroke-width="1" opacity="1" filter="url(#bigShadow)"/>
+<circle cx="92" cy="192" r="8" fill="#FF625C" opacity="1"/>
+<circle cx="118" cy="192" r="8" fill="#FFBD44" opacity="1"/>
+<circle cx="144" cy="192" r="8" fill="#29C56A" opacity="1"/>
+<rect x="60" y="230" width="360" height="1430" fill="#F7FBFF" opacity="1"/>
+<line x1="420" y1="230" x2="420" y2="1660" stroke="#DDE8F2" stroke-width="1" opacity="1"/>
+<circle cx="120" cy="292" r="32" fill="#199BEA" opacity="1"/>
+<text x="120" y="300.16" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#FFFFFF" font-weight="800" text-anchor="middle" opacity="1">Б</text>
+<text x="170" y="284" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Белпомощник</text>
+<text x="170" y="311" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#5D6D7E" font-weight="500" text-anchor="start" opacity="1">личный помощник гражданина</text>
+<text x="120" y="397" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">⌂</text>
+<text x="154" y="399" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Главная</text>
+<text x="120" y="455" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">⌕</text>
+<text x="154" y="457" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Поиск</text>
+<rect x="86" y="491" width="310" height="52" fill="#E5F4FF" rx="16" opacity="1"/>
+<text x="120" y="513" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#168DDB" font-weight="700" text-anchor="middle" opacity="1">□</text>
+<text x="154" y="515" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Проблемы</text>
+<text x="120" y="571" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">◇</text>
+<text x="154" y="573" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Сценарии</text>
+<text x="120" y="629" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">▣</text>
+<text x="154" y="631" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Ситуации</text>
+<text x="120" y="687" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">▤</text>
+<text x="154" y="689" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Документы</text>
+<text x="120" y="745" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">⚖</text>
+<text x="154" y="747" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Закон-апдейты</text>
+<text x="120" y="803" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">▥</text>
+<text x="154" y="805" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Учреждения</text>
+<text x="120" y="861" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#506174" font-weight="700" text-anchor="middle" opacity="1">○</text>
+<text x="154" y="863" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#506174" font-weight="500" text-anchor="start" opacity="1">Профиль</text>
+<rect x="92" y="1440" width="292" height="150" fill="#FFFFFF" rx="22" stroke="#DDE8F2" stroke-width="1" opacity="1"/>
+<text x="128" y="1482" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#111827" font-weight="800" text-anchor="start" opacity="1">Подсказка</text>
+<circle cx="111" cy="1476" r="16" fill="#E9F5FF" opacity="1"/>
+<text x="111" y="1480.42" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">i</text>
+<text x="112" y="1518" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#5D6D7E" font-weight="500" text-anchor="start" opacity="1"><tspan x="112" dy="0">Карточку можно сохранить</tspan><tspan x="112" dy="20.25">и превратить в личный</tspan><tspan x="112" dy="20.25">план с напоминаниями.</tspan></text>
+<text x="462" y="240" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#199BEA" font-weight="800" text-anchor="start" opacity="1">← Каталог проблем</text>
+<rect x="462" y="274" width="116" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="520.0" y="295" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">Документы</text>
+<rect x="584" y="274" width="196" height="30" fill="#FFF3DF" rx="15" opacity="1"/>
+<text x="682.0" y="295" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">Средняя сложность</text>
+<rect x="762" y="274" width="186" height="30" fill="#EAF8EF" rx="15" opacity="1"/>
+<text x="855.0" y="295" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#20A462" font-weight="800" text-anchor="middle" opacity="1">Обновлено 12 мая</text>
+<text x="462" y="352" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="42" fill="#111827" font-weight="950" text-anchor="start" opacity="1">Потерял паспорт</text>
+<text x="462" y="392" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#5D6D7E" font-weight="500" text-anchor="start" opacity="1"><tspan x="462" dy="0">Что делать при утере паспорта гражданина РБ: куда идти, какие документы собрать,</tspan><tspan x="462" dy="25.650000000000002">как оплатить госпошлину и как не сорвать сроки.</tspan></text>
+<circle cx="1565" cy="285" r="28" fill="#E9F5FF" opacity="1"/>
+<text x="1565" y="291.46" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">A</text>
+<circle cx="1628" cy="285" r="28" fill="#E9F5FF" opacity="1"/>
+<text x="1628" y="290.78" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="462" y="445" width="820" height="245" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="502" cy="487" r="24" fill="#FFF3DF" opacity="1"/>
+<text x="502" y="492.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">!</text>
+<text x="540" y="483" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Что делать прямо сейчас</text>
+<circle cx="502" cy="518" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="502" y="521.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">1</text>
+<text x="526" y="523" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1"><tspan x="526" dy="0">Сообщите об утере и подготовьте удостоверяющие</tspan><tspan x="526" dy="21.6">данные</tspan></text>
+<circle cx="502" cy="560" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="502" y="563.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">2</text>
+<text x="526" y="565" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Проверьте, не нужен ли временный документ</text>
+<circle cx="502" cy="602" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="502" y="605.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">3</text>
+<text x="526" y="607" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Соберите документы и оплатите госпошлину</text>
+<circle cx="502" cy="644" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="502" y="647.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">4</text>
+<text x="526" y="649" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Подайте заявление в подразделение по гражданству</text>
+<rect x="1310" y="445" width="360" height="650" fill="#FFFFFF" rx="26" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<text x="1338" y="485" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Кратко по плану</text>
+<text x="1338" y="531" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Сложность</text>
+<rect x="1530" y="509" width="96" height="30" fill="#FFF3DF" rx="15" opacity="1"/>
+<text x="1578.0" y="530" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">Средняя</text>
+<text x="1338" y="579" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Срок</text>
+<rect x="1530" y="557" width="126" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1593.0" y="578" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="1338" y="627" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Стоимость</text>
+<rect x="1530" y="605" width="116" height="30" fill="#EAF8EF" rx="15" opacity="1"/>
+<text x="1588.0" y="626" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#20A462" font-weight="800" text-anchor="middle" opacity="1">1 базовая</text>
+<text x="1338" y="675" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Документов</text>
+<rect x="1530" y="653" width="116" height="30" fill="#F0EAFE" rx="15" opacity="1"/>
+<text x="1588.0" y="674" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#8B5CF6" font-weight="800" text-anchor="middle" opacity="1">4 позиции</text>
+<rect x="1338" y="707" width="304" height="1" fill="#DCE8F3" opacity="1"/>
+<text x="1338" y="751" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Действия</text>
+<rect x="1338" y="777" width="304" height="54" fill="#168DDB" rx="18" opacity="1"/>
+<text x="1490.0" y="811" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#FFFFFF" font-weight="850" text-anchor="middle" opacity="1">Создать персональный план</text>
+<rect x="1338" y="847" width="304" height="52" fill="#E9F5FF" rx="18" opacity="1"/>
+<text x="1490.0" y="880" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#168DDB" font-weight="850" text-anchor="middle" opacity="1">Сохранить себе</text>
+<rect x="1338" y="913" width="304" height="52" fill="#F3F7FB" rx="18" stroke="#DCE8F3" stroke-width="1" opacity="1"/>
+<text x="1490.0" y="946" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="800" text-anchor="middle" opacity="1">Скачать шаблон</text>
+<text x="1338" y="1005" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Куда обращаться</text>
+<rect x="1338" y="1025" width="304" height="70" fill="#F7FBFF" rx="18" stroke="#DCE8F3" stroke-width="1" opacity="1"/>
+<circle cx="1368" cy="1060" r="22" fill="#E9F5FF" opacity="1"/>
+<text x="1368" y="1064.08" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="12" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1400" y="1050" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#111827" font-weight="800" text-anchor="start" opacity="1"><tspan x="1400" dy="0">Отдел по гражданству</tspan><tspan x="1400" dy="20.25">и миграции</tspan></text>
+<text x="1400" y="1078" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Заявление и документы</text>
+<rect x="1338" y="1111" width="304" height="70" fill="#F7FBFF" rx="18" stroke="#DCE8F3" stroke-width="1" opacity="1"/>
+<circle cx="1368" cy="1146" r="22" fill="#E9F5FF" opacity="1"/>
+<text x="1368" y="1150.08" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="12" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1400" y="1136" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#111827" font-weight="800" text-anchor="start" opacity="1">Расчётный центр</text>
+<text x="1400" y="1164" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Оплата госпошлины</text>
+<text x="1338" y="1235" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Официальные источники</text>
+<text x="1346" y="1277" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#168DDB" font-weight="900" text-anchor="start" opacity="1">•</text>
+<text x="1368" y="1277" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Закон о документах</text>
+<text x="1346" y="1309" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#168DDB" font-weight="900" text-anchor="start" opacity="1">•</text>
+<text x="1368" y="1309" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Портал МВД РБ</text>
+<text x="462" y="725" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="28" fill="#111827" font-weight="950" text-anchor="start" opacity="1">Пошаговый план</text>
+<text x="712" y="725" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#5D6D7E" font-weight="700" text-anchor="start" opacity="1">5 шагов</text>
+<rect x="462" y="753" width="820" height="136" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="504" cy="795" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="504" y="800.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">1</text>
+<rect x="1172" y="777" width="96" height="30" fill="#FFF3DF" rx="15" opacity="1"/>
+<text x="1220.0" y="798" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">сегодня</text>
+<text x="540" y="789" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Зафиксировать утерю</text>
+<text x="540" y="823" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Запишите дату и место, проверьте банковские карты и важные</tspan><tspan x="540" dy="20.25">документы.</tspan></text>
+<text x="490" y="855" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="855" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Личные заметки</text>
+<text x="1252" y="829.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="903" width="820" height="136" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="504" cy="945" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="504" y="950.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">2</text>
+<rect x="1172" y="927" width="96" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1220.0" y="948" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">1–2 дня</text>
+<text x="540" y="939" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Подготовить документы</text>
+<text x="540" y="973" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Фото, заявление, подтверждение личности и квитанция об</tspan><tspan x="540" dy="20.25">оплате.</tspan></text>
+<text x="490" y="1005" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="1005" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Паспортные данные</text>
+<text x="1252" y="979.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="1053" width="820" height="136" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="504" cy="1095" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="504" y="1100.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="1172" y="1077" width="116" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1230.0" y="1098" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">до 7 дней</text>
+<text x="540" y="1089" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Подать заявление</text>
+<text x="540" y="1123" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Обратитесь в подразделение по гражданству и миграции по</tspan><tspan x="540" dy="20.25">месту регистрации.</tspan></text>
+<text x="490" y="1155" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="1155" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Заявление</text>
+<text x="1252" y="1129.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="1203" width="820" height="136" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="504" cy="1245" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="504" y="1250.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">4</text>
+<rect x="1172" y="1227" width="136" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1240.0" y="1248" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">опционально</text>
+<text x="540" y="1239" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Получить временную справку</text>
+<text x="540" y="1273" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">При необходимости оформите временный документ до выдачи</tspan><tspan x="540" dy="20.25">паспорта.</tspan></text>
+<text x="490" y="1305" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="1305" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Справка</text>
+<text x="1252" y="1279.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="1353" width="820" height="136" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="504" cy="1395" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="504" y="1400.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">5</text>
+<rect x="1172" y="1377" width="126" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1235.0" y="1398" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="540" y="1389" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Забрать новый паспорт</text>
+<text x="540" y="1423" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Проверьте реквизиты и обновите данные в важных сервисах.</text>
+<text x="490" y="1455" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="1455" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Новый паспорт</text>
+<text x="1252" y="1429.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1310" y="1135" width="360" height="220" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1350" cy="1177" r="24" fill="#E9F5FF" opacity="1"/>
+<text x="1350" y="1182.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">▤</text>
+<text x="1388" y="1173" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Документы</text>
+<circle cx="1350" cy="1208" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1350" y="1211.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1213" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Заявление о выдаче паспорта</text>
+<circle cx="1350" cy="1250" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1350" y="1253.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1255" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">2 фотографии установленного образца</text>
+<circle cx="1350" cy="1292" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1350" y="1295.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1297" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Квитанция об оплате госпошлины</text>
+<circle cx="1350" cy="1334" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1350" y="1337.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1339" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Документ, подтверждающий личность</text>
+<rect x="1310" y="1385" width="360" height="190" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1350" cy="1427" r="24" fill="#FEECEC" opacity="1"/>
+<text x="1350" y="1432.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#EF4444" font-weight="800" text-anchor="middle" opacity="1">×</text>
+<text x="1388" y="1423" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Частые ошибки</text>
+<circle cx="1350" cy="1458" r="14" fill="#FEECEC" opacity="1"/>
+<text x="1350" y="1461.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#EF4444" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1463" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Идти без записи или уточнения графика</text>
+<circle cx="1350" cy="1500" r="14" fill="#FEECEC" opacity="1"/>
+<text x="1350" y="1503.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#EF4444" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1505" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Не брать квитанцию об оплате</text>
+<circle cx="1350" cy="1542" r="14" fill="#FEECEC" opacity="1"/>
+<text x="1350" y="1545.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#EF4444" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="1547" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Не проверять готовность документа</text>
+<rect x="462" y="1528" width="820" height="190" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="502" cy="1570" r="24" fill="#EAF8EF" opacity="1"/>
+<text x="502" y="1575.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#20A462" font-weight="800" text-anchor="middle" opacity="1">₽</text>
+<text x="540" y="1566" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Сроки и стоимость</text>
+<circle cx="502" cy="1601" r="14" fill="#EAF8EF" opacity="1"/>
+<text x="502" y="1604.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#20A462" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="1606" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Срок изготовления: обычно 10–20 дней</text>
+<circle cx="502" cy="1643" r="14" fill="#EAF8EF" opacity="1"/>
+<text x="502" y="1646.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#20A462" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="1648" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Госпошлина зависит от основания и срочности</text>
+<circle cx="502" cy="1685" r="14" fill="#EAF8EF" opacity="1"/>
+<text x="502" y="1688.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#20A462" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="1690" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Сроки могут отличаться по региону</text>
+</g>
+<g id="mobile_problem_card_light">
+<rect x="1795" y="160" width="520" height="1500" fill="#FFFFFF" rx="54" stroke="#DDE8F2" stroke-width="2" opacity="1" filter="url(#bigShadow)"/>
+<rect x="1817" y="184" width="476" height="1452" fill="#FFFFFF" rx="42" opacity="1"/>
+<text x="1853" y="222" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#111827" font-weight="800" text-anchor="start" opacity="1">9:41</text>
+<text x="2215" y="222" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#111827" font-weight="700" text-anchor="start" opacity="1">◖◗  ◉</text>
+<text x="1849" y="275" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="36" fill="#111827" font-weight="500" text-anchor="start" opacity="1">‹</text>
+<text x="1889" y="268" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Карточка проблемы</text>
+<circle cx="2207" cy="259" r="22" fill="#E9F5FF" opacity="1"/>
+<text x="2207" y="264.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#199BEA" font-weight="800" text-anchor="middle" opacity="1">A</text>
+<circle cx="2259" cy="259" r="22" fill="#E9F5FF" opacity="1"/>
+<text x="2259" y="263.42" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#199BEA" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="1845" y="304" width="116" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1903.0" y="325" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">Документы</text>
+<rect x="1959" y="304" width="96" height="30" fill="#FFF3DF" rx="15" opacity="1"/>
+<text x="2007.0" y="325" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">Средняя</text>
+<text x="1845" y="376" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="32" fill="#111827" font-weight="950" text-anchor="start" opacity="1">Потерял паспорт</text>
+<text x="1845" y="418" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#5D6D7E" font-weight="500" text-anchor="start" opacity="1"><tspan x="1845" dy="0">Куда идти, какие документы собрать,</tspan><tspan x="1845" dy="21.6">как оплатить госпошлину и не сорвать сроки.</tspan></text>
+<rect x="1843" y="456" width="424" height="150" fill="#FFFFFF" rx="24" stroke="#DDE8F2" stroke-width="1" opacity="1"/>
+<text x="1869" y="494" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Кратко</text>
+<rect x="1869" y="516" width="126" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="1932.0" y="537" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<rect x="1987" y="516" width="116" height="30" fill="#EAF8EF" rx="15" opacity="1"/>
+<text x="2045.0" y="537" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#20A462" font-weight="800" text-anchor="middle" opacity="1">1 базовая</text>
+<rect x="1869" y="561" width="372" height="42" fill="#199BEA" rx="16" opacity="1"/>
+<text x="2055.0" y="589" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#FFFFFF" font-weight="850" text-anchor="middle" opacity="1">Создать персональный план</text>
+<rect x="1843" y="636" width="424" height="220" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1883" cy="678" r="24" fill="#FFF3DF" opacity="1"/>
+<text x="1883" y="683.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F59E0B" font-weight="800" text-anchor="middle" opacity="1">!</text>
+<text x="1921" y="674" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Что делать сейчас</text>
+<circle cx="1883" cy="709" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="1883" y="712.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">1</text>
+<text x="1907" y="714" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Зафиксируйте утерю</text>
+<circle cx="1883" cy="751" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="1883" y="754.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">2</text>
+<text x="1907" y="756" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Подготовьте фото и заявление</text>
+<circle cx="1883" cy="793" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="1883" y="796.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">3</text>
+<text x="1907" y="798" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Оплатите госпошлину</text>
+<circle cx="1883" cy="835" r="14" fill="#FFF3DF" opacity="1"/>
+<text x="1883" y="838.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#F59E0B" font-weight="900" text-anchor="middle" opacity="1">4</text>
+<text x="1907" y="840" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Подайте документы в отдел</text>
+<text x="1843" y="886" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="950" text-anchor="start" opacity="1">Пошаговый план</text>
+<rect x="1843" y="911" width="424" height="112" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1885" cy="953" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="1885" y="958.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">1</text>
+<rect x="2157" y="935" width="96" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="2205.0" y="956" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">1–2 дня</text>
+<text x="1921" y="947" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Подготовить документы</text>
+<text x="1921" y="981" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Фото, заявление и квитанция.</text>
+<text x="1871" y="989" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="989" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Документы</text>
+<text x="2237" y="975.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="1034" width="424" height="112" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1885" cy="1076" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="1885" y="1081.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">2</text>
+<rect x="2157" y="1058" width="116" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="2215.0" y="1079" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">до 7 дней</text>
+<text x="1921" y="1070" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Подать заявление</text>
+<text x="1921" y="1104" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">В отдел по гражданству и миграции.</text>
+<text x="1871" y="1112" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="1112" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Заявление</text>
+<text x="2237" y="1098.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="1157" width="424" height="112" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1885" cy="1199" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="1885" y="1204.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="2157" y="1181" width="70" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="2192.0" y="1202" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">опц.</text>
+<text x="1921" y="1193" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Получить временную справку</text>
+<text x="1921" y="1227" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Если паспорт нужен срочно.</text>
+<text x="1871" y="1235" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="1235" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Справка</text>
+<text x="2237" y="1221.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="1280" width="424" height="112" fill="#FFFFFF" rx="22" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1885" cy="1322" r="25" fill="#E9F5FF" opacity="1"/>
+<text x="1885" y="1327.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">4</text>
+<rect x="2157" y="1304" width="126" height="30" fill="#E8F4FF" rx="15" opacity="1"/>
+<text x="2220.0" y="1325" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="1921" y="1316" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#111827" font-weight="850" text-anchor="start" opacity="1">Забрать паспорт</text>
+<text x="1921" y="1350" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Проверьте данные и сроки.</text>
+<text x="1871" y="1358" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="1358" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#65758A" font-weight="600" text-anchor="start" opacity="1">Паспорт</text>
+<text x="2237" y="1344.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#65758A" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="1413" width="424" height="170" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1883" cy="1455" r="24" fill="#E9F5FF" opacity="1"/>
+<text x="1883" y="1460.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">▤</text>
+<text x="1921" y="1451" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Документы</text>
+<circle cx="1883" cy="1486" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1883" y="1489.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="1491" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Заявление</text>
+<circle cx="1883" cy="1528" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1883" y="1531.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="1533" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">2 фотографии</text>
+<circle cx="1883" cy="1570" r="14" fill="#E9F5FF" opacity="1"/>
+<text x="1883" y="1573.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#168DDB" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="1575" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Квитанция об оплате</text>
+<rect x="1843" y="1603" width="424" height="142" fill="#FFFFFF" rx="24" stroke="#DCE8F3" stroke-width="1" opacity="1" filter="url(#softShadow)"/>
+<circle cx="1883" cy="1645" r="24" fill="#F0EAFE" opacity="1"/>
+<text x="1883" y="1650.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#8B5CF6" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1921" y="1641" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Куда обращаться</text>
+<circle cx="1883" cy="1676" r="14" fill="#F0EAFE" opacity="1"/>
+<text x="1883" y="1679.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#8B5CF6" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="1681" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#111827" font-weight="700" text-anchor="start" opacity="1">Отдел по гражданству и миграции</text>
+<circle cx="1883" cy="1718" r="14" fill="#F0EAFE" opacity="1"/>
+<text x="1883" y="1721.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#8B5CF6" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="1723" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#65758A" font-weight="500" text-anchor="start" opacity="1">Адрес и график уточнить заранее</text>
+<rect x="1817" y="1558" width="476" height="78" fill="#FFFFFF" stroke="#DDE8F2" stroke-width="1" opacity="1"/>
+<text x="1864.6" y="1588" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#5D6D7E" font-weight="700" text-anchor="middle" opacity="1">⌂</text>
+<text x="1864.6" y="1616" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#5D6D7E" font-weight="600" text-anchor="middle" opacity="1">Главная</text>
+<text x="1959.8" y="1588" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#199BEA" font-weight="700" text-anchor="middle" opacity="1">⌕</text>
+<text x="1959.8" y="1616" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#199BEA" font-weight="800" text-anchor="middle" opacity="1">Поиск</text>
+<text x="2055.0" y="1588" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#5D6D7E" font-weight="700" text-anchor="middle" opacity="1">▣</text>
+<text x="2055.0" y="1616" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#5D6D7E" font-weight="600" text-anchor="middle" opacity="1">Ситуации</text>
+<text x="2150.2" y="1588" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#5D6D7E" font-weight="700" text-anchor="middle" opacity="1">▤</text>
+<text x="2150.2" y="1616" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#5D6D7E" font-weight="600" text-anchor="middle" opacity="1">Документы</text>
+<text x="2245.4" y="1588" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#5D6D7E" font-weight="700" text-anchor="middle" opacity="1">○</text>
+<text x="2245.4" y="1616" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#5D6D7E" font-weight="600" text-anchor="middle" opacity="1">Профиль</text>
+</g>
+<line x1="40" y1="1810" x2="2360" y2="1810" stroke="#D7E5F1" stroke-width="2" opacity="0.6"/>
+<text x="55" y="1890" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="42" fill="#111827" font-weight="900" text-anchor="start" opacity="1">Dark theme</text>
+<text x="60" y="1946" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#128FE3" font-weight="900" text-anchor="start" opacity="1">Web / Desktop</text>
+<text x="1810" y="1946" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#128FE3" font-weight="900" text-anchor="start" opacity="1">Mobile</text>
+<g id="desktop_problem_card_dark">
+<rect x="60" y="1980" width="1650" height="1500" fill="#071521" rx="30" stroke="#21384B" stroke-width="1" opacity="1" filter="url(#darkShadow)"/>
+<circle cx="92" cy="2012" r="8" fill="#FF625C" opacity="1"/>
+<circle cx="118" cy="2012" r="8" fill="#FFBD44" opacity="1"/>
+<circle cx="144" cy="2012" r="8" fill="#29C56A" opacity="1"/>
+<rect x="60" y="2050" width="360" height="1430" fill="#0A1825" opacity="1"/>
+<line x1="420" y1="2050" x2="420" y2="3480" stroke="#21384B" stroke-width="1" opacity="1"/>
+<circle cx="120" cy="2112" r="32" fill="#199BEA" opacity="1"/>
+<text x="120" y="2120.16" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#FFFFFF" font-weight="800" text-anchor="middle" opacity="1">Б</text>
+<text x="170" y="2104" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#F3FAFF" font-weight="850" text-anchor="start" opacity="1">Белпомощник</text>
+<text x="170" y="2131" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">личный помощник гражданина</text>
+<text x="120" y="2217" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">⌂</text>
+<text x="154" y="2219" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Главная</text>
+<text x="120" y="2275" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">⌕</text>
+<text x="154" y="2277" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Поиск</text>
+<rect x="86" y="2311" width="310" height="52" fill="#0D426B" rx="16" opacity="1"/>
+<text x="120" y="2333" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#47B2FF" font-weight="700" text-anchor="middle" opacity="1">□</text>
+<text x="154" y="2335" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#E8F3FC" font-weight="700" text-anchor="start" opacity="1">Проблемы</text>
+<text x="120" y="2391" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">◇</text>
+<text x="154" y="2393" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Сценарии</text>
+<text x="120" y="2449" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">▣</text>
+<text x="154" y="2451" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Ситуации</text>
+<text x="120" y="2507" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">▤</text>
+<text x="154" y="2509" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Документы</text>
+<text x="120" y="2565" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">⚖</text>
+<text x="154" y="2567" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Закон-апдейты</text>
+<text x="120" y="2623" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">▥</text>
+<text x="154" y="2625" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Учреждения</text>
+<text x="120" y="2681" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="23" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">○</text>
+<text x="154" y="2683" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Профиль</text>
+<rect x="92" y="3260" width="292" height="150" fill="#0F1D2B" rx="22" stroke="#21384B" stroke-width="1" opacity="1"/>
+<text x="128" y="3302" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#F3FAFF" font-weight="800" text-anchor="start" opacity="1">Подсказка</text>
+<circle cx="111" cy="3296" r="16" fill="#143B59" opacity="1"/>
+<text x="111" y="3300.42" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">i</text>
+<text x="112" y="3338" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="112" dy="0">Карточку можно сохранить</tspan><tspan x="112" dy="20.25">и превратить в личный</tspan><tspan x="112" dy="20.25">план с напоминаниями.</tspan></text>
+<text x="462" y="2060" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#168DDB" font-weight="800" text-anchor="start" opacity="1">← Каталог проблем</text>
+<rect x="462" y="2094" width="116" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="520.0" y="2115" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">Документы</text>
+<rect x="584" y="2094" width="196" height="30" fill="#463215" rx="15" opacity="1"/>
+<text x="682.0" y="2115" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">Средняя сложность</text>
+<rect x="762" y="2094" width="186" height="30" fill="#123A2A" rx="15" opacity="1"/>
+<text x="855.0" y="2115" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#4BD486" font-weight="800" text-anchor="middle" opacity="1">Обновлено 12 мая</text>
+<text x="462" y="2172" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="42" fill="#F3FAFF" font-weight="950" text-anchor="start" opacity="1">Потерял паспорт</text>
+<text x="462" y="2212" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="462" dy="0">Что делать при утере паспорта гражданина РБ: куда идти, какие документы собрать,</tspan><tspan x="462" dy="25.650000000000002">как оплатить госпошлину и как не сорвать сроки.</tspan></text>
+<circle cx="1565" cy="2105" r="28" fill="#132D42" opacity="1"/>
+<text x="1565" y="2111.46" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="19" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">A</text>
+<circle cx="1628" cy="2105" r="28" fill="#132D42" opacity="1"/>
+<text x="1628" y="2110.78" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#168DDB" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="462" y="2265" width="820" height="245" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="502" cy="2307" r="24" fill="#463215" opacity="1"/>
+<text x="502" y="2312.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">!</text>
+<text x="540" y="2303" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Что делать прямо сейчас</text>
+<circle cx="502" cy="2338" r="14" fill="#463215" opacity="1"/>
+<text x="502" y="2341.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">1</text>
+<text x="526" y="2343" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1"><tspan x="526" dy="0">Сообщите об утере и подготовьте удостоверяющие</tspan><tspan x="526" dy="21.6">данные</tspan></text>
+<circle cx="502" cy="2380" r="14" fill="#463215" opacity="1"/>
+<text x="502" y="2383.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">2</text>
+<text x="526" y="2385" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Проверьте, не нужен ли временный документ</text>
+<circle cx="502" cy="2422" r="14" fill="#463215" opacity="1"/>
+<text x="502" y="2425.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">3</text>
+<text x="526" y="2427" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Соберите документы и оплатите госпошлину</text>
+<circle cx="502" cy="2464" r="14" fill="#463215" opacity="1"/>
+<text x="502" y="2467.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">4</text>
+<text x="526" y="2469" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Подайте заявление в подразделение по гражданству</text>
+<rect x="1310" y="2265" width="360" height="650" fill="#0F1D2B" rx="26" stroke="#244158" stroke-width="1" opacity="1"/>
+<text x="1338" y="2305" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="24" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Кратко по плану</text>
+<text x="1338" y="2351" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Сложность</text>
+<rect x="1530" y="2329" width="96" height="30" fill="#463215" rx="15" opacity="1"/>
+<text x="1578.0" y="2350" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">Средняя</text>
+<text x="1338" y="2399" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Срок</text>
+<rect x="1530" y="2377" width="126" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1593.0" y="2398" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="1338" y="2447" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Стоимость</text>
+<rect x="1530" y="2425" width="116" height="30" fill="#123A2A" rx="15" opacity="1"/>
+<text x="1588.0" y="2446" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#4BD486" font-weight="800" text-anchor="middle" opacity="1">1 базовая</text>
+<text x="1338" y="2495" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Документов</text>
+<rect x="1530" y="2473" width="116" height="30" fill="#2F244D" rx="15" opacity="1"/>
+<text x="1588.0" y="2494" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A78BFA" font-weight="800" text-anchor="middle" opacity="1">4 позиции</text>
+<rect x="1338" y="2527" width="304" height="1" fill="#244158" opacity="1"/>
+<text x="1338" y="2571" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Действия</text>
+<rect x="1338" y="2597" width="304" height="54" fill="#44AFF9" rx="18" opacity="1"/>
+<text x="1490.0" y="2631" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#FFFFFF" font-weight="850" text-anchor="middle" opacity="1">Создать персональный план</text>
+<rect x="1338" y="2667" width="304" height="52" fill="#123B5B" rx="18" opacity="1"/>
+<text x="1490.0" y="2700" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#44AFF9" font-weight="850" text-anchor="middle" opacity="1">Сохранить себе</text>
+<rect x="1338" y="2733" width="304" height="52" fill="#142536" rx="18" stroke="#244158" stroke-width="1" opacity="1"/>
+<text x="1490.0" y="2766" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="800" text-anchor="middle" opacity="1">Скачать шаблон</text>
+<text x="1338" y="2825" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Куда обращаться</text>
+<rect x="1338" y="2845" width="304" height="70" fill="#0B1A28" rx="18" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1368" cy="2880" r="22" fill="#123B5B" opacity="1"/>
+<text x="1368" y="2884.08" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="12" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1400" y="2870" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#F4FAFF" font-weight="800" text-anchor="start" opacity="1"><tspan x="1400" dy="0">Отдел по гражданству</tspan><tspan x="1400" dy="20.25">и миграции</tspan></text>
+<text x="1400" y="2898" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Заявление и документы</text>
+<rect x="1338" y="2931" width="304" height="70" fill="#0B1A28" rx="18" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1368" cy="2966" r="22" fill="#123B5B" opacity="1"/>
+<text x="1368" y="2970.08" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="12" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1400" y="2956" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#F4FAFF" font-weight="800" text-anchor="start" opacity="1">Расчётный центр</text>
+<text x="1400" y="2984" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Оплата госпошлины</text>
+<text x="1338" y="3055" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Официальные источники</text>
+<text x="1346" y="3097" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#44AFF9" font-weight="900" text-anchor="start" opacity="1">•</text>
+<text x="1368" y="3097" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Закон о документах</text>
+<text x="1346" y="3129" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="18" fill="#44AFF9" font-weight="900" text-anchor="start" opacity="1">•</text>
+<text x="1368" y="3129" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Портал МВД РБ</text>
+<text x="462" y="2545" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="28" fill="#F3FAFF" font-weight="950" text-anchor="start" opacity="1">Пошаговый план</text>
+<text x="712" y="2545" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">5 шагов</text>
+<rect x="462" y="2573" width="820" height="136" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="504" cy="2615" r="25" fill="#123B5B" opacity="1"/>
+<text x="504" y="2620.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">1</text>
+<rect x="1172" y="2597" width="96" height="30" fill="#463215" rx="15" opacity="1"/>
+<text x="1220.0" y="2618" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">сегодня</text>
+<text x="540" y="2609" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Зафиксировать утерю</text>
+<text x="540" y="2643" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Запишите дату и место, проверьте банковские карты и важные</tspan><tspan x="540" dy="20.25">документы.</tspan></text>
+<text x="490" y="2675" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="2675" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Личные заметки</text>
+<text x="1252" y="2649.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="2723" width="820" height="136" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="504" cy="2765" r="25" fill="#123B5B" opacity="1"/>
+<text x="504" y="2770.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">2</text>
+<rect x="1172" y="2747" width="96" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1220.0" y="2768" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">1–2 дня</text>
+<text x="540" y="2759" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Подготовить документы</text>
+<text x="540" y="2793" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Фото, заявление, подтверждение личности и квитанция об</tspan><tspan x="540" dy="20.25">оплате.</tspan></text>
+<text x="490" y="2825" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="2825" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Паспортные данные</text>
+<text x="1252" y="2799.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="2873" width="820" height="136" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="504" cy="2915" r="25" fill="#123B5B" opacity="1"/>
+<text x="504" y="2920.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="1172" y="2897" width="116" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1230.0" y="2918" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">до 7 дней</text>
+<text x="540" y="2909" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Подать заявление</text>
+<text x="540" y="2943" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">Обратитесь в подразделение по гражданству и миграции по</tspan><tspan x="540" dy="20.25">месту регистрации.</tspan></text>
+<text x="490" y="2975" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="2975" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Заявление</text>
+<text x="1252" y="2949.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="3023" width="820" height="136" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="504" cy="3065" r="25" fill="#123B5B" opacity="1"/>
+<text x="504" y="3070.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">4</text>
+<rect x="1172" y="3047" width="136" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1240.0" y="3068" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">опционально</text>
+<text x="540" y="3059" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Получить временную справку</text>
+<text x="540" y="3093" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="540" dy="0">При необходимости оформите временный документ до выдачи</tspan><tspan x="540" dy="20.25">паспорта.</tspan></text>
+<text x="490" y="3125" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="3125" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Справка</text>
+<text x="1252" y="3099.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="462" y="3173" width="820" height="136" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="504" cy="3215" r="25" fill="#123B5B" opacity="1"/>
+<text x="504" y="3220.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">5</text>
+<rect x="1172" y="3197" width="126" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1235.0" y="3218" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="540" y="3209" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Забрать новый паспорт</text>
+<text x="540" y="3243" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Проверьте реквизиты и обновите данные в важных сервисах.</text>
+<text x="490" y="3275" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="515" y="3275" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Новый паспорт</text>
+<text x="1252" y="3249.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1310" y="2955" width="360" height="220" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1350" cy="2997" r="24" fill="#123B5B" opacity="1"/>
+<text x="1350" y="3002.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">▤</text>
+<text x="1388" y="2993" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Документы</text>
+<circle cx="1350" cy="3028" r="14" fill="#123B5B" opacity="1"/>
+<text x="1350" y="3031.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3033" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Заявление о выдаче паспорта</text>
+<circle cx="1350" cy="3070" r="14" fill="#123B5B" opacity="1"/>
+<text x="1350" y="3073.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3075" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">2 фотографии установленного образца</text>
+<circle cx="1350" cy="3112" r="14" fill="#123B5B" opacity="1"/>
+<text x="1350" y="3115.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3117" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Квитанция об оплате госпошлины</text>
+<circle cx="1350" cy="3154" r="14" fill="#123B5B" opacity="1"/>
+<text x="1350" y="3157.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3159" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Документ, подтверждающий личность</text>
+<rect x="1310" y="3205" width="360" height="190" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1350" cy="3247" r="24" fill="#43242A" opacity="1"/>
+<text x="1350" y="3252.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#FF7B7B" font-weight="800" text-anchor="middle" opacity="1">×</text>
+<text x="1388" y="3243" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Частые ошибки</text>
+<circle cx="1350" cy="3278" r="14" fill="#43242A" opacity="1"/>
+<text x="1350" y="3281.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FF7B7B" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3283" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Идти без записи или уточнения графика</text>
+<circle cx="1350" cy="3320" r="14" fill="#43242A" opacity="1"/>
+<text x="1350" y="3323.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FF7B7B" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3325" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Не брать квитанцию об оплате</text>
+<circle cx="1350" cy="3362" r="14" fill="#43242A" opacity="1"/>
+<text x="1350" y="3365.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FF7B7B" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1374" y="3367" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Не проверять готовность документа</text>
+<rect x="462" y="3348" width="820" height="190" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="502" cy="3390" r="24" fill="#123A2A" opacity="1"/>
+<text x="502" y="3395.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#4BD486" font-weight="800" text-anchor="middle" opacity="1">₽</text>
+<text x="540" y="3386" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Сроки и стоимость</text>
+<circle cx="502" cy="3421" r="14" fill="#123A2A" opacity="1"/>
+<text x="502" y="3424.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#4BD486" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="3426" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Срок изготовления: обычно 10–20 дней</text>
+<circle cx="502" cy="3463" r="14" fill="#123A2A" opacity="1"/>
+<text x="502" y="3466.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#4BD486" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="3468" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Госпошлина зависит от основания и срочности</text>
+<circle cx="502" cy="3505" r="14" fill="#123A2A" opacity="1"/>
+<text x="502" y="3508.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#4BD486" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="526" y="3510" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Сроки могут отличаться по региону</text>
+</g>
+<g id="mobile_problem_card_dark">
+<rect x="1795" y="1980" width="520" height="1500" fill="#07111B" rx="54" stroke="#284357" stroke-width="2" opacity="1" filter="url(#darkShadow)"/>
+<rect x="1817" y="2004" width="476" height="1452" fill="#081723" rx="42" opacity="1"/>
+<text x="1853" y="2042" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="17" fill="#F3FAFF" font-weight="800" text-anchor="start" opacity="1">9:41</text>
+<text x="2215" y="2042" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#F3FAFF" font-weight="700" text-anchor="start" opacity="1">◖◗  ◉</text>
+<text x="1849" y="2095" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="36" fill="#F3FAFF" font-weight="500" text-anchor="start" opacity="1">‹</text>
+<text x="1889" y="2088" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F3FAFF" font-weight="900" text-anchor="start" opacity="1">Карточка проблемы</text>
+<circle cx="2207" cy="2079" r="22" fill="#132D42" opacity="1"/>
+<text x="2207" y="2084.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">A</text>
+<circle cx="2259" cy="2079" r="22" fill="#132D42" opacity="1"/>
+<text x="2259" y="2083.42" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="13" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="1845" y="2124" width="116" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1903.0" y="2145" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">Документы</text>
+<rect x="1959" y="2124" width="96" height="30" fill="#463215" rx="15" opacity="1"/>
+<text x="2007.0" y="2145" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">Средняя</text>
+<text x="1845" y="2196" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="32" fill="#F3FAFF" font-weight="950" text-anchor="start" opacity="1">Потерял паспорт</text>
+<text x="1845" y="2238" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1"><tspan x="1845" dy="0">Куда идти, какие документы собрать,</tspan><tspan x="1845" dy="21.6">как оплатить госпошлину и не сорвать сроки.</tspan></text>
+<rect x="1843" y="2276" width="424" height="150" fill="#0F1D2B" rx="24" stroke="#284357" stroke-width="1" opacity="1"/>
+<text x="1869" y="2314" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F3FAFF" font-weight="900" text-anchor="start" opacity="1">Кратко</text>
+<rect x="1869" y="2336" width="126" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="1932.0" y="2357" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<rect x="1987" y="2336" width="116" height="30" fill="#123A2A" rx="15" opacity="1"/>
+<text x="2045.0" y="2357" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#4BD486" font-weight="800" text-anchor="middle" opacity="1">1 базовая</text>
+<rect x="1869" y="2381" width="372" height="42" fill="#44AFF9" rx="16" opacity="1"/>
+<text x="2055.0" y="2409" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#FFFFFF" font-weight="850" text-anchor="middle" opacity="1">Создать персональный план</text>
+<rect x="1843" y="2456" width="424" height="220" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1883" cy="2498" r="24" fill="#463215" opacity="1"/>
+<text x="1883" y="2503.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#FBBF24" font-weight="800" text-anchor="middle" opacity="1">!</text>
+<text x="1921" y="2494" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Что делать сейчас</text>
+<circle cx="1883" cy="2529" r="14" fill="#463215" opacity="1"/>
+<text x="1883" y="2532.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">1</text>
+<text x="1907" y="2534" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Зафиксируйте утерю</text>
+<circle cx="1883" cy="2571" r="14" fill="#463215" opacity="1"/>
+<text x="1883" y="2574.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">2</text>
+<text x="1907" y="2576" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Подготовьте фото и заявление</text>
+<circle cx="1883" cy="2613" r="14" fill="#463215" opacity="1"/>
+<text x="1883" y="2616.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">3</text>
+<text x="1907" y="2618" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Оплатите госпошлину</text>
+<circle cx="1883" cy="2655" r="14" fill="#463215" opacity="1"/>
+<text x="1883" y="2658.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#FBBF24" font-weight="900" text-anchor="middle" opacity="1">4</text>
+<text x="1907" y="2660" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Подайте документы в отдел</text>
+<text x="1843" y="2706" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F3FAFF" font-weight="950" text-anchor="start" opacity="1">Пошаговый план</text>
+<rect x="1843" y="2731" width="424" height="112" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1885" cy="2773" r="25" fill="#123B5B" opacity="1"/>
+<text x="1885" y="2778.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">1</text>
+<rect x="2157" y="2755" width="96" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="2205.0" y="2776" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">1–2 дня</text>
+<text x="1921" y="2767" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Подготовить документы</text>
+<text x="1921" y="2801" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Фото, заявление и квитанция.</text>
+<text x="1871" y="2809" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="2809" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Документы</text>
+<text x="2237" y="2795.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="2854" width="424" height="112" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1885" cy="2896" r="25" fill="#123B5B" opacity="1"/>
+<text x="1885" y="2901.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">2</text>
+<rect x="2157" y="2878" width="116" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="2215.0" y="2899" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">до 7 дней</text>
+<text x="1921" y="2890" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Подать заявление</text>
+<text x="1921" y="2924" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">В отдел по гражданству и миграции.</text>
+<text x="1871" y="2932" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="2932" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Заявление</text>
+<text x="2237" y="2918.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="2977" width="424" height="112" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1885" cy="3019" r="25" fill="#123B5B" opacity="1"/>
+<text x="1885" y="3024.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">3</text>
+<rect x="2157" y="3001" width="70" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="2192.0" y="3022" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">опц.</text>
+<text x="1921" y="3013" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Получить временную справку</text>
+<text x="1921" y="3047" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Если паспорт нужен срочно.</text>
+<text x="1871" y="3055" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="3055" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Справка</text>
+<text x="2237" y="3041.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="3100" width="424" height="112" fill="#0F1D2B" rx="22" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1885" cy="3142" r="25" fill="#123B5B" opacity="1"/>
+<text x="1885" y="3147.1" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">4</text>
+<rect x="2157" y="3124" width="126" height="30" fill="#123B5B" rx="15" opacity="1"/>
+<text x="2220.0" y="3145" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">10–20 дней</text>
+<text x="1921" y="3136" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="20" fill="#F4FAFF" font-weight="850" text-anchor="start" opacity="1">Забрать паспорт</text>
+<text x="1921" y="3170" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="15" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Проверьте данные и сроки.</text>
+<text x="1871" y="3178" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="700" text-anchor="start" opacity="1">▤</text>
+<text x="1896" y="3178" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="14" fill="#A8BED1" font-weight="600" text-anchor="start" opacity="1">Паспорт</text>
+<text x="2237" y="3164.0" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="30" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">›</text>
+<rect x="1843" y="3233" width="424" height="170" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1883" cy="3275" r="24" fill="#123B5B" opacity="1"/>
+<text x="1883" y="3280.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">▤</text>
+<text x="1921" y="3271" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Документы</text>
+<circle cx="1883" cy="3306" r="14" fill="#123B5B" opacity="1"/>
+<text x="1883" y="3309.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="3311" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Заявление</text>
+<circle cx="1883" cy="3348" r="14" fill="#123B5B" opacity="1"/>
+<text x="1883" y="3351.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="3353" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">2 фотографии</text>
+<circle cx="1883" cy="3390" r="14" fill="#123B5B" opacity="1"/>
+<text x="1883" y="3393.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#44AFF9" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="3395" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Квитанция об оплате</text>
+<rect x="1843" y="3423" width="424" height="142" fill="#0F1D2B" rx="24" stroke="#244158" stroke-width="1" opacity="1"/>
+<circle cx="1883" cy="3465" r="24" fill="#2F244D" opacity="1"/>
+<text x="1883" y="3470.44" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A78BFA" font-weight="800" text-anchor="middle" opacity="1">🏛</text>
+<text x="1921" y="3461" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="22" fill="#F4FAFF" font-weight="900" text-anchor="start" opacity="1">Куда обращаться</text>
+<circle cx="1883" cy="3496" r="14" fill="#2F244D" opacity="1"/>
+<text x="1883" y="3499.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#A78BFA" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="3501" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#F4FAFF" font-weight="700" text-anchor="start" opacity="1">Отдел по гражданству и миграции</text>
+<circle cx="1883" cy="3538" r="14" fill="#2F244D" opacity="1"/>
+<text x="1883" y="3541.4" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="10" fill="#A78BFA" font-weight="900" text-anchor="middle" opacity="1">✓</text>
+<text x="1907" y="3543" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="16" fill="#A8BED1" font-weight="500" text-anchor="start" opacity="1">Адрес и график уточнить заранее</text>
+<rect x="1817" y="3378" width="476" height="78" fill="#081723" stroke="#284357" stroke-width="1" opacity="1"/>
+<text x="1864.6" y="3408" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">⌂</text>
+<text x="1864.6" y="3436" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#A8BED1" font-weight="600" text-anchor="middle" opacity="1">Главная</text>
+<text x="1959.8" y="3408" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#44AFF9" font-weight="700" text-anchor="middle" opacity="1">⌕</text>
+<text x="1959.8" y="3436" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#44AFF9" font-weight="800" text-anchor="middle" opacity="1">Поиск</text>
+<text x="2055.0" y="3408" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">▣</text>
+<text x="2055.0" y="3436" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#A8BED1" font-weight="600" text-anchor="middle" opacity="1">Ситуации</text>
+<text x="2150.2" y="3408" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">▤</text>
+<text x="2150.2" y="3436" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#A8BED1" font-weight="600" text-anchor="middle" opacity="1">Документы</text>
+<text x="2245.4" y="3408" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="21" fill="#A8BED1" font-weight="700" text-anchor="middle" opacity="1">○</text>
+<text x="2245.4" y="3436" font-family="DejaVu Sans, Inter, Arial, sans-serif" font-size="11" fill="#A8BED1" font-weight="600" text-anchor="middle" opacity="1">Профиль</text>
+</g>
+</svg>
