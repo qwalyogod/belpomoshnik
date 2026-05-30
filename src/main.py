@@ -4831,18 +4831,25 @@ def main(page: ft.Page) -> None:
             page.add(ft.Row(expand=True, spacing=0, controls=row_controls))
 
         else:
-            # ── Mobile: topbar + content + bottom nav ────────────────────────
+            # ── Mobile: minimal topbar on home only, content + bottom nav ───
+            is_home_screen = screen_key == "home"
+            topbar_controls: list[ft.Control] = []
+            if is_home_screen:
+                topbar_controls = [
+                    build_mobile_topbar(
+                        "Белпомощник",
+                        go_to=go_to,
+                        user=app_user,
+                        on_open_ai_chat=open_ai_chat,
+                        minimal=True,
+                    )
+                ]
             page.add(
                 ft.Column(
                     expand=True,
                     spacing=0,
                     controls=[
-                        build_mobile_topbar(
-                            "Белпомощник",
-                            go_to=go_to,
-                            user=app_user,
-                            on_open_ai_chat=open_ai_chat,
-                        ),
+                        *topbar_controls,
                         mobile_page_layout(screen_content, include_bottom_nav=True),
                         bottom_nav_safe_area(
                             build_bottom_nav(
