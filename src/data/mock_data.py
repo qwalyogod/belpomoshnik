@@ -12,6 +12,17 @@ MOCK_USER = {
     "has_car": True,
     "is_homeowner": True,
     "is_tenant": False,
+    "locations": [
+        {
+            "id": "loc-primary",
+            "label": "Прописка",
+            "region": "Минская область",
+            "district": "Минский район",
+            "city": "Минск",
+            "address": "ул. Независимости, 25, кв. 14",
+            "is_primary": True,
+        }
+    ],
     "avatar_url": "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=200&h=200",
     "interests": ["Собственник жилья", "Есть дети", "Авто есть"],
     "interest_tags": ["housing", "family", "auto"],

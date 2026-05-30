@@ -178,10 +178,21 @@ def main(page: ft.Page) -> None:
     app_user = stored_state["app_user"]
     app_user["interests"] = list(app_user.get("interests", []))
     for _profile_key, _profile_default in MOCK_USER.items():
-        if _profile_key in ("interests", "interest_tags"):
+        if _profile_key in ("interests", "interest_tags", "locations"):
             continue
         app_user.setdefault(_profile_key, _profile_default)
     app_user["interest_tags"] = list(app_user.get("interest_tags", []) or [])
+    # Migrate flat region/city/district/address → locations[] (primary)
+    if not app_user.get("locations"):
+        app_user["locations"] = [{
+            "id": "loc-primary",
+            "label": "Прописка",
+            "region": app_user.get("region", "Минская область"),
+            "district": app_user.get("district", ""),
+            "city": app_user.get("city", "Минск"),
+            "address": app_user.get("address", ""),
+            "is_primary": True,
+        }]
     app_settings = stored_state["app_settings"]
     app_settings["dark_theme"] = theme_mode_state["value"] == "dark"
     documents_state = stored_state.get("personal_documents") or stored_state["documents"]
@@ -1242,6 +1253,7 @@ def main(page: ft.Page) -> None:
         password: str,
         confirm_password: str,
         accepted: bool,
+        location: dict | None = None,
     ) -> None:
         normalized_email = (email or "").strip().lower()
         normalized_name = (name or "").strip()
@@ -1264,12 +1276,25 @@ def main(page: ft.Page) -> None:
             _show_message("Пользователь с таким email уже есть.", APP_COLORS["warning"])
             return
 
+        loc = location or {}
+        primary_location = {
+            "id": "loc-primary",
+            "label": loc.get("label", "Прописка"),
+            "region": (loc.get("region") or region or "Минская область").strip(),
+            "district": loc.get("district", ""),
+            "city": (loc.get("city") or city or "Минск").strip(),
+            "address": loc.get("address", ""),
+            "is_primary": True,
+        }
         profile = {
             "name": normalized_name,
             "first_name": normalized_name.split()[0],
             "email": normalized_email,
-            "region": (region or "Минская область").strip(),
-            "city": (city or "Минск").strip(),
+            "region": primary_location["region"],
+            "city": primary_location["city"],
+            "district": primary_location["district"],
+            "address": primary_location["address"],
+            "locations": [primary_location],
             "avatar_url": MOCK_USER["avatar_url"],
             "interests": [],
             "learning_mode": True,
@@ -2645,6 +2670,84 @@ def main(page: ft.Page) -> None:
             users[current_email]["profile"] = app_user.copy()
         save_current_state()
         route_change()
+
+    def _persist_profile() -> None:
+        current_email = auth_state.get("email")
+        if current_email in users:
+            users[current_email]["profile"] = app_user.copy()
+        save_current_state()
+
+    def _sync_primary_from_locations() -> None:
+        locs = app_user.get("locations", [])
+        primary = next((l for l in locs if l.get("is_primary")), locs[0] if locs else None)
+        if primary:
+            app_user["region"] = primary.get("region", "")
+            app_user["district"] = primary.get("district", "")
+            app_user["city"] = primary.get("city", "")
+            app_user["address"] = primary.get("address", "")
+
+    def add_location(loc: dict) -> None:
+        locs: list = app_user.setdefault("locations", [])
+        new_loc = {
+            "id": f"loc-{int(time.time() * 1000)}",
+            "label": loc.get("label", "Адрес"),
+            "region": loc.get("region", ""),
+            "district": loc.get("district", ""),
+            "city": loc.get("city", ""),
+            "address": loc.get("address", ""),
+            "is_primary": not locs,  # first one becomes primary
+        }
+        locs.append(new_loc)
+        _sync_primary_from_locations()
+        _persist_profile()
+        _show_message("Адрес добавлен.")
+        route_change()
+
+    def delete_location(loc_id: str) -> None:
+        locs: list = app_user.get("locations", [])
+        was_primary = any(l.get("id") == loc_id and l.get("is_primary") for l in locs)
+        app_user["locations"] = [l for l in locs if l.get("id") != loc_id]
+        if was_primary and app_user["locations"]:
+            app_user["locations"][0]["is_primary"] = True
+        _sync_primary_from_locations()
+        _persist_profile()
+        _show_message("Адрес удалён.")
+        route_change()
+
+    def set_primary_location(loc_id: str) -> None:
+        for l in app_user.get("locations", []):
+            l["is_primary"] = (l.get("id") == loc_id)
+        _sync_primary_from_locations()
+        _persist_profile()
+        _show_message("Основной адрес обновлён.")
+        route_change()
+
+    def open_add_location_dialog(_=None) -> None:
+        from components.location_picker import build_location_picker
+        picker_control, get_loc = build_location_picker(
+            initial={"label": "Фактический адрес"},
+            show_label_select=True,
+            compact=False,
+        )
+
+        def _submit(dialog) -> None:
+            loc = get_loc()
+            if not loc.get("region"):
+                _show_message("Выберите регион.", APP_COLORS["warning"])
+                return
+            _close(dialog)
+            add_location(loc)
+
+        dialog = _form_dialog(
+            "Добавить местонахождение",
+            [picker_control],
+            [
+                _dialog_button("Отмена", lambda _: _close(dialog)),
+                _dialog_button("Добавить", lambda _: _submit(dialog), primary=True),
+            ],
+            preferred_width=440,
+        )
+        _open_control(dialog)
 
     def admin_select_role(role_id: str) -> None:
         available_role_ids = {role.get("id") for role in admin_roles_state}
@@ -4605,6 +4708,9 @@ def main(page: ft.Page) -> None:
                 on_household_change=set_household_flag,
                 on_toggle_tag=toggle_interest_tag,
                 activity_log=user_activity_log_state,
+                on_add_location=open_add_location_dialog,
+                on_delete_location=delete_location,
+                on_set_primary_location=set_primary_location,
             )
         if screen_key == "utility":
             return build_utility_tracker_page(

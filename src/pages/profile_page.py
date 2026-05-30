@@ -399,6 +399,115 @@ def _household_card(user: dict, on_change=None, desktop: bool = False) -> ft.Con
     )
 
 
+def _locations_card(
+    user: dict,
+    on_add_location=None,
+    on_delete_location=None,
+    on_set_primary=None,
+    desktop: bool = False,
+) -> ft.Container:
+    locations = (user or {}).get("locations", []) or []
+    rows: list[ft.Control] = []
+    for loc in locations:
+        is_primary = bool(loc.get("is_primary"))
+        parts = [p for p in [loc.get("city"), loc.get("district"), loc.get("region")] if p]
+        place = ", ".join(parts) if parts else "Адрес не указан"
+        address = loc.get("address", "")
+
+        primary_badge = [
+            ft.Container(
+                content=ft.Text("основной", size=10, weight=ft.FontWeight.W_800, color=APP_COLORS["blue"]),
+                padding=ft.Padding(left=8, top=2, right=8, bottom=2),
+                border_radius=8,
+                bgcolor=APP_COLORS["active"],
+            )
+        ] if is_primary else []
+
+        actions: list[ft.Control] = []
+        if not is_primary and on_set_primary:
+            actions.append(
+                ft.IconButton(
+                    icon=ft.Icons.STAR_OUTLINE,
+                    icon_color=APP_COLORS["muted"],
+                    icon_size=18,
+                    tooltip="Сделать основным",
+                    on_click=lambda _, lid=loc.get("id"): on_set_primary(lid),
+                )
+            )
+        if on_delete_location and len(locations) > 1:
+            actions.append(
+                ft.IconButton(
+                    icon=ft.Icons.DELETE_OUTLINE,
+                    icon_color=APP_COLORS["red"],
+                    icon_size=18,
+                    tooltip="Удалить",
+                    on_click=lambda _, lid=loc.get("id"): on_delete_location(lid),
+                )
+            )
+
+        rows.append(
+            ft.Container(
+                padding=12,
+                border_radius=16,
+                bgcolor=APP_COLORS["surface2"],
+                border=border_all(APP_COLORS["blue"] if is_primary else APP_COLORS["stroke2"], 2 if is_primary else 1),
+                content=ft.Row(
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        icon_circle(ft.Icons.PLACE_OUTLINED, size=36, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"]),
+                        ft.Column(
+                            spacing=2,
+                            expand=True,
+                            controls=[
+                                ft.Row(spacing=8, controls=[
+                                    ft.Text(loc.get("label", "Адрес"), size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                    *primary_badge,
+                                ]),
+                                ft.Text(place, size=12, color=APP_COLORS["muted"], max_lines=1),
+                                *([ft.Text(address, size=12, color=APP_COLORS["muted2"], max_lines=1)] if address else []),
+                            ],
+                        ),
+                        ft.Row(spacing=0, controls=actions),
+                    ],
+                ),
+            )
+        )
+
+    if not rows:
+        rows = [ft.Text("Адреса не добавлены.", size=13, color=APP_COLORS["muted"])]
+
+    add_btn = ft.Container(
+        ink=True,
+        border_radius=14,
+        padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+        bgcolor=APP_COLORS["surface2"],
+        border=border_all(APP_COLORS["stroke2"]),
+        on_click=lambda _: on_add_location() if on_add_location else None,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8,
+            controls=[
+                ft.Icon(ft.Icons.ADD_LOCATION_ALT_OUTLINED, size=18, color=APP_COLORS["blue"]),
+                ft.Text("Добавить адрес", size=14, weight=ft.FontWeight.W_700, color=APP_COLORS["blue_text"]),
+            ],
+        ),
+    )
+
+    return app_card(
+        ft.Column(
+            spacing=14,
+            controls=[
+                _panel_title("Мои адреса", ft.Icons.PLACE_OUTLINED, "Прописка, учёба, фактический адрес. Привязка к учреждениям и срокам."),
+                ft.Column(spacing=8, controls=rows),
+                add_btn,
+            ],
+        ),
+        padding=22 if desktop else 16,
+        width=float("inf"),
+    )
+
+
 def _interests_card(user: dict, on_add_interest=None, on_toggle_tag=None, desktop: bool = False) -> ft.Container:
     selected_tags = set((user or {}).get("interest_tags", []) or [])
     label_to_key = {label: key for key, label, _ in INTEREST_TAGS}
@@ -776,6 +885,9 @@ def _desktop_profile(
     on_household_change=None,
     on_toggle_tag=None,
     activity_log: list[dict] | None = None,
+    on_add_location=None,
+    on_delete_location=None,
+    on_set_primary_location=None,
 ) -> ft.Control:
     data_card, refs = _personal_data_card(user, True)
 
@@ -789,6 +901,7 @@ def _desktop_profile(
             _profile_hero(user, settings, True, on_logout, save),
             _stats_row(favorite_ids, True, go_to),
             data_card,
+            _locations_card(user, on_add_location, on_delete_location, on_set_primary_location, True),
             _interests_card(user, on_add_interest, on_toggle_tag, True),
             _favorite_scenarios_card(favorite_ids, on_open_scenario, go_to, True),
             _employment_card(user, on_employment_change, True),
@@ -851,6 +964,9 @@ def _mobile_profile(
     on_household_change=None,
     on_toggle_tag=None,
     activity_log: list[dict] | None = None,
+    on_add_location=None,
+    on_delete_location=None,
+    on_set_primary_location=None,
 ) -> ft.Control:
     data_card, refs = _personal_data_card(user, False)
 
@@ -874,6 +990,7 @@ def _mobile_profile(
                 _profile_hero(user, settings, False, on_logout, save),
                 _stats_row(favorite_ids, False, go_to),
                 data_card,
+                _locations_card(user, on_add_location, on_delete_location, on_set_primary_location, False),
                 _interests_card(user, on_add_interest, on_toggle_tag, False),
                 _settings_card(settings, on_setting_change, False),
                 _favorite_scenarios_card(favorite_ids, on_open_scenario, go_to, False),
@@ -906,6 +1023,9 @@ def build_profile_page(
     on_household_change=None,
     on_toggle_tag=None,
     activity_log: list[dict] | None = None,
+    on_add_location=None,
+    on_delete_location=None,
+    on_set_primary_location=None,
 ) -> ft.Control:
     profile_user = user or MOCK_USER
     profile_settings = settings or {"learning_mode": False, "email_notifications": True}
@@ -925,6 +1045,9 @@ def build_profile_page(
             on_household_change,
             on_toggle_tag,
             activity_log,
+            on_add_location=on_add_location,
+            on_delete_location=on_delete_location,
+            on_set_primary_location=on_set_primary_location,
         )
     return _mobile_profile(
         profile_user,
@@ -941,4 +1064,7 @@ def build_profile_page(
         on_household_change,
         on_toggle_tag,
         activity_log,
+        on_add_location=on_add_location,
+        on_delete_location=on_delete_location,
+        on_set_primary_location=on_set_primary_location,
     )

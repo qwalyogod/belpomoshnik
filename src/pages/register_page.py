@@ -15,6 +15,7 @@ from components.auth_forms import (
 )
 from components.buttons import primary_button
 from components.cards import app_card, hint_card
+from components.location_picker import build_location_picker
 from theme.app_theme import APP_COLORS, SPACING
 
 
@@ -26,8 +27,12 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         prefix_icon=ft.Icons.MAIL_OUTLINE,
         keyboard_type=ft.KeyboardType.EMAIL,
     )
-    city_field = auth_text_field("Город", value="Минск", prefix_icon=ft.Icons.LOCATION_CITY_OUTLINED)
-    region_field = auth_text_field("Регион", value="Минская область", prefix_icon=ft.Icons.MAP_OUTLINED)
+    # Location picker (region → district → city + address) replaces flat text fields
+    location_control, get_location = build_location_picker(
+        initial={"label": "Прописка", "region": "Минская область"},
+        show_label_select=False,
+        compact=is_desktop,
+    )
     password_field = auth_text_field("Пароль", prefix_icon=ft.Icons.LOCK_OUTLINE, password=True)
     confirm_field = auth_text_field("Повторите пароль", prefix_icon=ft.Icons.LOCK_RESET_OUTLINED, password=True)
     terms = ft.Checkbox(
@@ -39,7 +44,7 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
     )
     terms_error = ft.Text("", size=12, color=APP_COLORS["red"], weight=ft.FontWeight.W_600, visible=False)
 
-    fields = [name_field, email_field, city_field, region_field, password_field, confirm_field]
+    fields = [name_field, email_field, password_field, confirm_field]
 
     def clear_errors(_=None) -> None:
         for field in fields:
@@ -55,15 +60,14 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
     def submit(_=None) -> None:
         name = (name_field.value or "").strip()
         email = (email_field.value or "").strip()
-        city = (city_field.value or "").strip()
-        region = (region_field.value or "").strip()
+        location = get_location()
+        region = location.get("region", "")
+        city = location.get("city", "") or location.get("district", "") or region
         password = password_field.value or ""
         confirm = confirm_field.value or ""
         errors = [
             (name_field, "Введите имя и фамилию." if len(name) < 2 else None),
             (email_field, "Введите корректный email." if "@" not in email else None),
-            (city_field, "Укажите город." if not city else None),
-            (region_field, "Укажите регион." if not region else None),
             (password_field, "Пароль должен быть не короче 6 символов." if len(password) < 6 else None),
             (confirm_field, "Пароли не совпадают." if password != confirm else None),
         ]
@@ -71,7 +75,11 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         for field, message in errors:
             set_field_error(field, message)
             has_error = has_error or bool(message)
-        if not terms.value:
+        if not region:
+            terms_error.value = "Выберите регион проживания."
+            terms_error.visible = True
+            has_error = True
+        elif not terms.value:
             terms_error.value = "Подтвердите условия демо-профиля."
             terms_error.visible = True
             has_error = True
@@ -82,21 +90,18 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         if has_error:
             return
         if on_register:
-            on_register(name, email, city, region, password, confirm, bool(terms.value))
+            on_register(name, email, city, region, password, confirm, bool(terms.value), location)
 
     confirm_field.on_submit = submit
 
-    location_controls: ft.Control
-    if is_desktop:
-        location_controls = ft.Row(
-            spacing=10,
-            controls=[
-                ft.Container(content=region_field, expand=True),
-                ft.Container(content=city_field, expand=True),
-            ],
-        )
-    else:
-        location_controls = ft.Column(spacing=10, controls=[region_field, city_field])
+    location_block = ft.Column(
+        spacing=10,
+        controls=[
+            ft.Text("Местонахождение", size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+            ft.Text("Регион и район нужны для учреждений и сроков.", size=12, color=APP_COLORS["muted"]),
+            location_control,
+        ],
+    )
 
     controls: list[ft.Control] = [
         auth_logo(),
@@ -114,7 +119,7 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         ),
         name_field,
         email_field,
-        location_controls,
+        location_block,
         password_field,
         confirm_field,
         ft.Column(spacing=0, controls=[terms, terms_error]),

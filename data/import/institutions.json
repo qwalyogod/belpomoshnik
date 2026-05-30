@@ -1,0 +1,761 @@
+{
+  "status": "incomplete",
+  "reason": "Возвращён только высокодостоверный поднабор. Не выполнены требования пользователя по минимуму 80 учреждений, охвату всех 6 областей + г. Минск и реальным координатам для каждого объекта. Чтобы не подставлять непроверенные данные, координаты в этом поднаборе оставлены null.",
+  "coverage": [
+    "Брестская область",
+    "Витебская область",
+    "Гомельская область"
+  ],
+  "items": [
+    {
+      "id": "ispolkom-baranovichi-gorispolkom",
+      "short_name": "Барановичский горисполком",
+      "full_name": "Барановичский городской исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Брестская область",
+      "city": "Барановичи",
+      "district": "",
+      "settlement": "Барановичи",
+      "address": "225409, Брестская область, г. Барановичи, пл. Ленина, 2",
+      "phone": "+375 163 65-17-51",
+      "website": "https://brest-region.gov.by/142/organization.php?id=352",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "город"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-baranovichi-raion-gorod",
+      "short_name": "Суд Барановичского района и г. Барановичи",
+      "full_name": "Суд Барановичского района и г. Барановичи",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Брестская область",
+      "city": "Барановичи",
+      "district": "Барановичский район",
+      "settlement": "Барановичи",
+      "address": "225411, Брестская область, г. Барановичи, ул. Пролетарская, 30",
+      "phone": "+375 163 59-96-53",
+      "website": "https://court.gov.by/ru/court_apply/rai/brest/e01072c5f9461be5.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я среда 09:00-13:00, 14:00-20:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-pinsk-gorispolkom",
+      "short_name": "Пинский горисполком",
+      "full_name": "Пинский городской исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Брестская область",
+      "city": "Пинск",
+      "district": "",
+      "settlement": "Пинск",
+      "address": "225710, Брестская область, г. Пинск, ул. Днепровской Флотилии, 21",
+      "phone": "+375 165 31-72-27",
+      "website": "https://brest-region.gov.by/142/organization.php?id=489",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "город"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-pinsk-raion-gorod",
+      "short_name": "Суд Пинского района и г. Пинска",
+      "full_name": "Суд Пинского района и города Пинска",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Брестская область",
+      "city": "Пинск",
+      "district": "Пинский район",
+      "settlement": "Пинск",
+      "address": "225710, Брестская область, г. Пинск, ул. Пушкина, 14",
+      "phone": "+375 165 36-97-30",
+      "website": "https://court.gov.by/ru/court_apply/rai/brest/d6a92872d48e150b.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я среда 09:00-13:00, 14:00-20:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-kobrin-raispolkom",
+      "short_name": "Кобринский райисполком",
+      "full_name": "Кобринский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Брестская область",
+      "city": "Кобрин",
+      "district": "Кобринский район",
+      "settlement": "Кобрин",
+      "address": "225306, Брестская область, г. Кобрин, ул. Суворова, 25",
+      "phone": "+375 1642 3-00-50",
+      "website": "https://brest-region.gov.by/142/organization.php?id=38",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-kobrin-raion",
+      "short_name": "Суд Кобринского района",
+      "full_name": "Суд Кобринского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Брестская область",
+      "city": "Кобрин",
+      "district": "Кобринский район",
+      "settlement": "Кобрин",
+      "address": "225305, Брестская область, г. Кобрин, ул. Пролетарская, 183",
+      "phone": "+375 1642 3-92-06",
+      "website": "https://court.gov.by/ru/court_apply/rai/brest/dadbcd426e471cab.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я среда 09:00-13:00, 14:00-20:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-bereza-raispolkom",
+      "short_name": "Берёзовский райисполком",
+      "full_name": "Березовский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Брестская область",
+      "city": "Берёза",
+      "district": "Березовский район",
+      "settlement": "Берёза",
+      "address": "225209, Брестская область, г. Берёза, ул. Красноармейская, 27",
+      "phone": "+375 1643 2-22-50",
+      "website": "https://brest-region.gov.by/142/organization.php?id=131",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-bereza-raion",
+      "short_name": "Суд Березовского района",
+      "full_name": "Суд Березовского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Брестская область",
+      "city": "Берёза",
+      "district": "Березовский район",
+      "settlement": "Берёза",
+      "address": "225209, Брестская область, г. Берёза, ул. Красноармейская, 28",
+      "phone": "+375 1643 4-57-65",
+      "website": "https://court.gov.by/ru/court_apply/rai/brest/efacd86b68942a94.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я среда 09:00-13:00, 14:00-20:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-luninets-raispolkom",
+      "short_name": "Лунинецкий райисполком",
+      "full_name": "Лунинецкий районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Брестская область",
+      "city": "Лунинец",
+      "district": "Лунинецкий район",
+      "settlement": "Лунинец",
+      "address": "225644, Брестская область, г. Лунинец, ул. Красная, 1",
+      "phone": "+375 1647 2-65-36",
+      "website": "https://brest-region.gov.by/142/organization.php?id=702",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-luninets-raion",
+      "short_name": "Суд Лунинецкого района",
+      "full_name": "Суд Лунинецкого района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Брестская область",
+      "city": "Лунинец",
+      "district": "Лунинецкий район",
+      "settlement": "Лунинец",
+      "address": "225644, Брестская область, г. Лунинец, ул. Фрунзе, 12-3",
+      "phone": "+375 1647 4-78-39",
+      "website": "https://court.gov.by/ru/court_apply/rai/brest/e9fc98e35c60b500.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я среда 09:00-13:00, 14:00-20:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-orsha-raispolkom",
+      "short_name": "Оршанский райисполком",
+      "full_name": "Оршанский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Витебская область",
+      "city": "Орша",
+      "district": "Оршанский район",
+      "settlement": "Орша",
+      "address": "211391, Витебская область, г. Орша, ул. Александра Островского, 2",
+      "phone": "+375 216 51-12-12",
+      "website": "https://orsha.vitebsk-region.gov.by/telefony-pervoj-neobkhodimosti",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-orsha-raion-gorod",
+      "short_name": "Суд Оршанского района и г. Орши",
+      "full_name": "Суд Оршанского района и города Орши",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Витебская область",
+      "city": "Орша",
+      "district": "Оршанский район",
+      "settlement": "Орша",
+      "address": "211391, Витебская область, г. Орша, ул. Советская, 5",
+      "phone": "+375 216 51-84-95",
+      "website": "https://court.gov.by/ru/court_apply/rai/vitebsk/c719f79277c06ff6.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-novopolotsk-gorispolkom",
+      "short_name": "Новополоцкий горисполком",
+      "full_name": "Новополоцкий городской исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Витебская область",
+      "city": "Новополоцк",
+      "district": "",
+      "settlement": "Новополоцк",
+      "address": "211440, Витебская область, г. Новополоцк, ул. Молодежная, 74",
+      "phone": "+375 214 50-31-50",
+      "website": "https://www.novopolotsk.gov.by/ru/priemnaya/kontaktnye-dannye-ispolkoma",
+      "working_hours": "пн-пт 08:00-17:00, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "город"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-novopolotsk-gorod",
+      "short_name": "Суд г. Новополоцка",
+      "full_name": "Суд города Новополоцка",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Витебская область",
+      "city": "Новополоцк",
+      "district": "",
+      "settlement": "Новополоцк",
+      "address": "211449, Витебская область, г. Новополоцк, ул. Дружбы, 21",
+      "phone": "+375 214 54-08-00",
+      "website": "https://court.gov.by/ru/court_apply/rai/vitebsk/d2c2333c610fc0a4.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-polotsk-raispolkom",
+      "short_name": "Полоцкий райисполком",
+      "full_name": "Полоцкий районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Витебская область",
+      "city": "Полоцк",
+      "district": "Полоцкий район",
+      "settlement": "Полоцк",
+      "address": "211400, Витебская область, г. Полоцк, ул. Толстого, 6",
+      "phone": "+375 214 46-35-22",
+      "website": "https://polotsk.vitebsk-region.gov.by/ru/delovym-lyudyam/kontakty",
+      "working_hours": "пн-пт 08:00-17:00, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-polotsk-raion-gorod",
+      "short_name": "Суд Полоцкого района и г. Полоцка",
+      "full_name": "Суд Полоцкого района и города Полоцка",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Витебская область",
+      "city": "Полоцк",
+      "district": "Полоцкий район",
+      "settlement": "Полоцк",
+      "address": "211415, Витебская область, г. Полоцк, ул. Успенская, 2",
+      "phone": "+375 214 49-27-10",
+      "website": "https://court.gov.by/ru/court_apply/rai/vitebsk/cbbf5864d7364f09.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-lepel-raispolkom",
+      "short_name": "Лепельский райисполком",
+      "full_name": "Лепельский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Витебская область",
+      "city": "Лепель",
+      "district": "Лепельский район",
+      "settlement": "Лепель",
+      "address": "211174, Витебская область, г. Лепель, ул. Ленинская, 6",
+      "phone": "+375 2132 6-70-46",
+      "website": "https://lepel.vitebsk-region.gov.by/rukovodstvo/administratsiya-rayispolkoma/struktura-rayispolkoma/",
+      "working_hours": "пн-пт 08:00-17:00, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-lepel-raion",
+      "short_name": "Суд Лепельского района",
+      "full_name": "Суд Лепельского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Витебская область",
+      "city": "Лепель",
+      "district": "Лепельский район",
+      "settlement": "Лепель",
+      "address": "211174, Витебская область, г. Лепель, ул. Советская, 50",
+      "phone": "+375 2132 3-48-38",
+      "website": "https://court.gov.by/ru/court_apply/rai/vitebsk/dd0652864fdc1b8b.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-glubokoe-raispolkom",
+      "short_name": "Глубокский райисполком",
+      "full_name": "Глубокский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Витебская область",
+      "city": "Глубокое",
+      "district": "Глубокский район",
+      "settlement": "Глубокое",
+      "address": "211800, Витебская область, г. Глубокое, ул. Ленина, 42",
+      "phone": "+375 2156 2-58-65",
+      "website": "https://glubokoe.vitebsk-region.gov.by/",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-17:00",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-glubokoe-raion",
+      "short_name": "Суд Глубокского района",
+      "full_name": "Суд Глубокского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Витебская область",
+      "city": "Глубокое",
+      "district": "Глубокский район",
+      "settlement": "Глубокое",
+      "address": "211793, Витебская область, г. Глубокое, ул. Ясная, 29",
+      "phone": "+375 2156 5-72-88",
+      "website": "https://court.gov.by/ru/court_apply/rai/vitebsk/ae3edb24fe468411.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 2-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-mozyr-raispolkom",
+      "short_name": "Мозырский райисполком",
+      "full_name": "Мозырский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Гомельская область",
+      "city": "Мозырь",
+      "district": "Мозырский район",
+      "settlement": "Мозырь",
+      "address": "247760, Гомельская область, г. Мозырь, пл. Ленина, 16",
+      "phone": "+375 236 30-01-11",
+      "website": "https://mozyrisp.gov.by/ru/rukovodstvo/mozyrskij-rajonnyj-ispolnitelnyj-komitet.html",
+      "working_hours": "пн-пт 08:30-17:30, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-mozyr-raion",
+      "short_name": "Суд Мозырского района",
+      "full_name": "Суд Мозырского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Гомельская область",
+      "city": "Мозырь",
+      "district": "Мозырский район",
+      "settlement": "Мозырь",
+      "address": "247772, Гомельская область, г. Мозырь, ул. Пролетарская, 86",
+      "phone": "+375 236 25-19-55",
+      "website": "https://court.gov.by/ru/court_apply/rai/gomel/d282452bd6c62071.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-zhlobin-raispolkom",
+      "short_name": "Жлобинский райисполком",
+      "full_name": "Жлобинский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Гомельская область",
+      "city": "Жлобин",
+      "district": "Жлобинский район",
+      "settlement": "Жлобин",
+      "address": "247210, Гомельская область, г. Жлобин, ул. Петровского, 31",
+      "phone": "+375 2334 3-50-10",
+      "website": "https://gisp.gov.by/kontakty/",
+      "working_hours": "пн-пт 08:30-17:30, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-zhlobin-raion",
+      "short_name": "Суд Жлобинского района",
+      "full_name": "Суд Жлобинского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Гомельская область",
+      "city": "Жлобин",
+      "district": "Жлобинский район",
+      "settlement": "Жлобин",
+      "address": "247210, Гомельская область, г. Жлобин, ул. Урицкого, 59",
+      "phone": "+375 2334 3-64-25",
+      "website": "https://court.gov.by/ru/court_apply/rai/gomel/db3fd9474c9720d6.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-rechitsa-raispolkom",
+      "short_name": "Речицкий райисполком",
+      "full_name": "Речицкий районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Гомельская область",
+      "city": "Речица",
+      "district": "Речицкий район",
+      "settlement": "Речица",
+      "address": "247500, Гомельская область, г. Речица, пл. Октября, 6",
+      "phone": "+375 2340 3-41-71",
+      "website": "https://rechitsa.by/ru/rezhim-raboty-ru/",
+      "working_hours": "пн-пт 08:30-17:30, 13:00-14:00 обед",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-rechitsa-raion",
+      "short_name": "Суд Речицкого района",
+      "full_name": "Суд Речицкого района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Гомельская область",
+      "city": "Речица",
+      "district": "Речицкий район",
+      "settlement": "Речица",
+      "address": "247483, Гомельская область, г. Речица, ул. Ленина, 49",
+      "phone": "+375 2340 4-81-65",
+      "website": "https://court.gov.by/ru/court_apply/rai/gomel/c33b76dfa7eecb44.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 3-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-svetlogorsk-raispolkom",
+      "short_name": "Светлогорский райисполком",
+      "full_name": "Светлогорский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Гомельская область",
+      "city": "Светлогорск",
+      "district": "Светлогорский район",
+      "settlement": "Светлогорск",
+      "address": "247439, Гомельская область, г. Светлогорск, пл. Центральная, 1",
+      "phone": "+375 2342 7-12-10",
+      "website": "https://svetlogorsk.gov.by/ru/pages/uncategorized/contact-info/",
+      "working_hours": "пн-пт 08:30-13:00, 14:00-17:30",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-svetlogorsk-raion",
+      "short_name": "Суд Светлогорского района",
+      "full_name": "Суд Светлогорского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Гомельская область",
+      "city": "Светлогорск",
+      "district": "Светлогорский район",
+      "settlement": "Светлогорск",
+      "address": "247434, Гомельская область, г. Светлогорск, ул. Ленина, 82",
+      "phone": "+375 2342 7-40-02",
+      "website": "https://court.gov.by/ru/court_apply/rai/gomel/f2cecce99edddca7.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "ispolkom-kalinkovichi-raispolkom",
+      "short_name": "Калинковичский райисполком",
+      "full_name": "Калинковичский районный исполнительный комитет",
+      "institution_type": "Исполком (городской/районный исполнительный комитет)",
+      "region": "Гомельская область",
+      "city": "Калинковичи",
+      "district": "Калинковичский район",
+      "settlement": "Калинковичи",
+      "address": "247710, Гомельская область, г. Калинковичи, пл. Ленина, 1",
+      "phone": "+375 2345 3-21-40",
+      "website": "https://www.kalinkovichi.gov.by/ru/kontakti-ru/",
+      "working_hours": "пн-пт 08:30-13:00, 14:00-17:30",
+      "services": [
+        "приём граждан",
+        "рассмотрение обращений"
+      ],
+      "tags": [
+        "исполком",
+        "район"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    },
+    {
+      "id": "sud-kalinkovichi-raion",
+      "short_name": "Суд Калинковичского района",
+      "full_name": "Суд Калинковичского района",
+      "institution_type": "Суд (районный/городской)",
+      "region": "Гомельская область",
+      "city": "Калинковичи",
+      "district": "Калинковичский район",
+      "settlement": "Калинковичи",
+      "address": "247710, Гомельская область, г. Калинковичи, ул. Карла Маркса, 22",
+      "phone": "+375 2345 3-93-17",
+      "website": "https://court.gov.by/ru/court_apply/rai/gomel/ca0d566d28a5d45d.html",
+      "working_hours": "пн-пт 08:00-13:00, 14:00-18:00; 1-я суббота 09:00-13:00",
+      "services": [
+        "рассмотрение гражданских дел",
+        "рассмотрение уголовных и административных дел"
+      ],
+      "tags": [
+        "суд",
+        "правосудие"
+      ],
+      "latitude": null,
+      "longitude": null,
+      "is_active": true
+    }
+  ]
+}
