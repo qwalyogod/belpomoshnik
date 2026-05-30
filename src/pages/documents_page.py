@@ -1,69 +1,34 @@
+"""Documents page — passport-card hero design with animated switching."""
 from __future__ import annotations
 
 from datetime import date
 
 import flet as ft
 
-from components.buttons import primary_button
-from components.cards import app_card, badge, empty_state_card, hint_card, icon_circle, info_card, search_box
 from components.layout import desktop_content
+from data.mock_data import MOCK_USER
 from services.dashboard import parse_due_date
-from theme.app_theme import APP_COLORS, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import (
+    ANIM_FAST,
+    ANIM_NORMAL,
+    APP_COLORS,
+    APP_RADIUS,
+    CENTER,
+    border_all,
+    border_bottom,
+    get_badge_palette,
+    padding_symmetric,
+)
 
 
-FILTERS = [
-    ("all", "Все"),
-    ("active", "Активные"),
-    ("expiring", "Истекают скоро"),
-    ("expired", "Истёкшие"),
-    ("with_scan", "Со сканом"),
-    ("without_scan", "Без файла"),
-]
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-
-def _icon(name: str | None) -> str:
-    return getattr(ft.Icons, name or "ARTICLE_OUTLINED", ft.Icons.ARTICLE_OUTLINED)
-
-
-def _variant(status: str) -> str:
-    if status == "Активен":
-        return "success"
-    if status == "Истекает скоро":
-        return "warning"
-    if status in {"Требуется обновление", "Истёк"}:
-        return "error"
-    return "default"
-
-
-def _tone(status: str) -> tuple[str, str]:
-    palette = get_badge_palette()
-    if status == "Истекает скоро":
-        return palette["orange"][1], palette["orange"][0]
-    if status in {"Требуется обновление", "Истёк"}:
-        return palette["red"][1], palette["red"][0]
-    return palette["green"][1], palette["green"][0]
-
-
-def _mask_value(value: str) -> str:
-    clean_value = (value or "").strip()
-    if not clean_value:
-        return "Не указан"
-    if len(clean_value) <= 4:
-        return "×" * len(clean_value)
-    return f"{clean_value[:2]}{'×' * max(4, len(clean_value) - 6)}{clean_value[-4:]}"
-
-
-def _document_number(document: dict, hide_sensitive: bool, visible: bool) -> str:
-    number = document.get("document_number") or document.get("details", "")
-    if not number:
-        return "Не указан"
-    return number if visible or not hide_sensitive else _mask_value(number)
-
-
-def _document_status(document: dict, reminder_days: int = 30) -> str:
-    expiry = parse_due_date(document.get("expiry_date"))
+def _document_status(doc: dict, reminder_days: int = 30) -> str:
+    expiry = parse_due_date(doc.get("expiry_date"))
     if not expiry:
-        return document.get("status", "Активен")
+        return doc.get("status", "Активен")
     days_left = (expiry - date.today()).days
     if days_left < 0:
         return "Истёк"
@@ -72,662 +37,614 @@ def _document_status(document: dict, reminder_days: int = 30) -> str:
     return "Активен"
 
 
-def _group_documents(documents: list[dict], reminder_days: int = 30) -> tuple[list[dict], list[dict], list[dict]]:
-    overdue, expiring, normal = [], [], []
-    for document in documents:
-        enriched = dict(document)
-        enriched["status"] = _document_status(enriched, reminder_days)
-        if enriched["status"] == "Истёк":
-            overdue.append(enriched)
-        elif enriched["status"] == "Истекает скоро":
-            expiring.append(enriched)
-        else:
-            normal.append(enriched)
-    return overdue, expiring, normal
+def _days_left(doc: dict) -> int | None:
+    expiry = parse_due_date(doc.get("expiry_date"))
+    if not expiry:
+        return None
+    return (expiry - date.today()).days
 
 
-def _filter_chip(label: str, selected: bool = False) -> ft.Container:
+def _status_color(status: str) -> str:
+    if status == "Активен":
+        return APP_COLORS["green"]
+    if status == "Истекает скоро":
+        return APP_COLORS["orange"]
+    return APP_COLORS["red"]
+
+
+def _mask_number(value: str) -> str:
+    clean = (value or "").strip()
+    if not clean:
+        return "Не указан"
+    parts = clean.split()
+    if len(parts) >= 2:
+        # "КН 1234567" → "КН •••• 567"
+        prefix = parts[0]
+        num = parts[-1]
+        suffix = num[-3:] if len(num) > 3 else num
+        return f"{prefix} •••• {suffix}"
+    if len(clean) <= 4:
+        return "•" * len(clean)
+    return f"{clean[:2]}{'•' * 4}{clean[-3:]}"
+
+
+def _fmt_date(raw: str) -> str:
+    """Format ISO or dotted date for display."""
+    if not raw:
+        return "—"
+    try:
+        from datetime import datetime
+        if "-" in raw:
+            return datetime.strptime(raw, "%Y-%m-%d").strftime("%d.%m.%Y")
+        return raw  # already formatted
+    except ValueError:
+        return raw
+
+
+def _display_number(doc: dict, hide_sensitive: bool, visible: bool) -> str:
+    number = doc.get("document_number") or doc.get("details", "")
+    if not number:
+        return "Не указан"
+    if hide_sensitive and not visible:
+        return _mask_number(number)
+    return number
+
+
+def _enrich(docs: list[dict], reminder_days: int = 30) -> list[dict]:
+    result = []
+    for doc in docs:
+        d = dict(doc)
+        d["_status"] = _document_status(d, reminder_days)
+        d["_days"] = _days_left(d)
+        result.append(d)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Security banner
+# ---------------------------------------------------------------------------
+
+def _security_banner() -> ft.Container:
     return ft.Container(
-        content=ft.Text(
-            label,
-            size=13,
-            weight=ft.FontWeight.W_800,
-            color=ft.Colors.WHITE if selected else APP_COLORS["text"],
-            no_wrap=True,
-        ),
-        padding=padding_symmetric(horizontal=14, vertical=8),
-        border_radius=18,
-        bgcolor=APP_COLORS["blue"] if selected else APP_COLORS["surface2"],
-        border=border_all(APP_COLORS["blue"] if selected else APP_COLORS["stroke2"]),
-    )
-
-
-def _filter_bar() -> ft.Row:
-    return ft.Row(
-        wrap=True,
-        spacing=8,
-        run_spacing=8,
-        controls=[
-            _filter_chip(label, key == "all")
-            for key, label in FILTERS
-        ],
-    )
-
-
-def _stat_tile(label: str, value: str | int, icon: str, tone: str = "blue", compact: bool = False) -> ft.Container:
-    palette = get_badge_palette()
-    bg, fg = palette.get(tone, palette["blue"])
-    if compact:
-        return ft.Container(
-            padding=12,
-            border_radius=18,
-            bgcolor=APP_COLORS["surface"],
-            border=border_all(APP_COLORS["stroke2"]),
-            content=ft.Row(
-                spacing=10,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    icon_circle(icon, color=fg, bgcolor=bg, size=36),
-                    ft.Column(
-                        spacing=0,
-                        controls=[
-                            ft.Text(str(value), size=20, weight=ft.FontWeight.W_900, color=fg),
-                            ft.Text(label, size=11, color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
-                        ],
-                    ),
-                ],
-            ),
-        )
-    return ft.Container(
-        padding=16,
-        border_radius=22,
-        bgcolor=APP_COLORS["surface"],
-        border=border_all(APP_COLORS["stroke2"]),
-        content=ft.Column(
-            spacing=8,
-            controls=[
-                icon_circle(icon, color=fg, bgcolor=bg, size=42),
-                ft.Text(str(value), size=25, weight=ft.FontWeight.W_900, color=fg),
-                ft.Text(label, size=12, color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
-            ],
-        ),
-    )
-
-
-def _stats_row(documents: list[dict], desktop: bool, reminder_days: int = 30) -> ft.Control:
-    overdue, expiring, normal = _group_documents(documents, reminder_days)
-    active = len([doc for doc in normal if _document_status(doc, reminder_days) == "Активен"])
-    tiles = [
-        _stat_tile("Всего", len(documents), ft.Icons.FOLDER_OUTLINED, "blue", not desktop),
-        _stat_tile("Активны", active, ft.Icons.CHECK_CIRCLE_OUTLINE, "green", not desktop),
-        _stat_tile("Истекают", len(expiring), ft.Icons.SCHEDULE_OUTLINED, "orange", not desktop),
-        _stat_tile("Истёкшие", len(overdue), ft.Icons.ERROR_OUTLINE, "red", not desktop),
-    ]
-    if desktop:
-        return ft.Row(spacing=12, controls=[ft.Container(expand=True, content=tile) for tile in tiles])
-    return ft.Column(
-        spacing=10,
-        controls=[
-            ft.Row(spacing=10, controls=[ft.Container(expand=True, content=tiles[0]), ft.Container(expand=True, content=tiles[1])]),
-            ft.Row(spacing=10, controls=[ft.Container(expand=True, content=tiles[2]), ft.Container(expand=True, content=tiles[3])]),
-        ],
-    )
-
-
-def _metadata_item(label: str, value: str, icon: str | None = None) -> ft.Column:
-    label_row_controls: list[ft.Control] = []
-    if icon:
-        label_row_controls.append(ft.Icon(icon, size=14, color=APP_COLORS["muted2"]))
-    label_row_controls.append(ft.Text(label, size=11, weight=ft.FontWeight.W_700, color=APP_COLORS["muted2"]))
-    return ft.Column(
-        spacing=3,
-        controls=[
-            ft.Row(spacing=5, controls=label_row_controls),
-            ft.Text(value or "Не указано", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"], max_lines=2),
-        ],
-    )
-
-
-def _scan_placeholder(document: dict, compact: bool = False) -> ft.Container:
-    status = document.get("status", "Активен")
-    color, bg = _tone(status)
-    return ft.Container(
-        width=54 if compact else 62,
-        height=72 if compact else 82,
-        border_radius=16,
-        bgcolor=bg,
-        border=border_all(APP_COLORS["stroke2"]),
-        padding=6,
-        content=ft.Container(
-            alignment=ft.Alignment(0, 0),
-            border_radius=12,
-            border=border_all(APP_COLORS["stroke2"]),
-            content=ft.Column(
-                spacing=3,
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Icon(_icon(document.get("icon")), size=20, color=color),
-                    ft.Text("скан", size=9, color=APP_COLORS["muted2"], text_align=ft.TextAlign.CENTER),
-                ],
-            ),
-        ),
-    )
-
-
-def _status_strip(status: str) -> str:
-    color, _ = _tone(status)
-    return color
-
-
-def _doc_card(
-    document: dict,
-    desktop: bool,
-    hide_sensitive: bool,
-    visible: bool,
-    on_edit_document=None,
-    on_delete_document=None,
-    on_toggle_sensitive=None,
-    on_open_scan=None,
-) -> ft.Container:
-    status = document.get("status", "Активен")
-    has_sensitive = bool(document.get("document_number") or document.get("details"))
-    scan_path = document.get("scan_path", "")
-    number_text = _document_number(document, hide_sensitive, visible)
-    expiry = document.get("expiry_date") or "Не указан"
-    issue = document.get("issue_date") or "Не указана"
-    issuer = document.get("issuer") or "Не указано"
-    scan_text = "Скан загружен" if scan_path else "Файл не добавлен"
-
-    edit_actions = ft.Row(
-        spacing=0,
-        controls=[
-            ft.IconButton(
-                icon=ft.Icons.EDIT_OUTLINED,
-                icon_size=20,
-                icon_color=APP_COLORS["muted2"],
-                tooltip="Редактировать",
-                on_click=lambda _, doc_id=document["id"]: on_edit_document(doc_id) if on_edit_document else None,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.DELETE_OUTLINE,
-                icon_size=20,
-                icon_color=APP_COLORS["red"],
-                tooltip="Удалить",
-                on_click=lambda _, doc_id=document["id"]: on_delete_document(doc_id) if on_delete_document else None,
-            ),
-        ],
-    )
-
-    number_actions: list[ft.Control] = []
-    if scan_path:
-        number_actions.append(
-            ft.IconButton(
-                icon=ft.Icons.ATTACH_FILE,
-                icon_size=16,
-                icon_color=APP_COLORS["blue_text"],
-                tooltip="Открыть скан",
-                on_click=lambda _, doc_id=document["id"]: on_open_scan(doc_id) if on_open_scan else None,
-            )
-        )
-    if hide_sensitive and has_sensitive:
-        number_actions.append(
-            ft.IconButton(
-                icon=ft.Icons.VISIBILITY_OFF_OUTLINED if visible else ft.Icons.VISIBILITY_OUTLINED,
-                icon_size=16,
-                icon_color=APP_COLORS["blue_text"],
-                tooltip="Скрыть данные" if visible else "Показать данные",
-                on_click=lambda _, doc_id=document["id"]: on_toggle_sensitive(doc_id) if on_toggle_sensitive else None,
-            )
-        )
-    else:
-        number_actions.append(
-            ft.Icon(
-                ft.Icons.LOCK_OPEN_OUTLINED if visible else ft.Icons.LOCK_OUTLINE,
-                size=16,
-                color=APP_COLORS["muted2"],
-            )
-        )
-
-    number_box = ft.Container(
-        padding=padding_symmetric(horizontal=14, vertical=10),
-        border_radius=16,
+        border_radius=APP_RADIUS["card"],
         bgcolor=APP_COLORS["surface2"],
-        border=border_all(APP_COLORS["stroke2"]),
+        padding=ft.Padding(left=18, top=14, right=18, bottom=14),
         content=ft.Row(
-            spacing=8,
+            spacing=14,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.BADGE_OUTLINED, size=17, color=APP_COLORS["blue_text"]),
-                ft.Text(number_text, size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
-            ] + number_actions,
+                ft.Container(
+                    width=38, height=38, border_radius=19,
+                    bgcolor=APP_COLORS["active"],
+                    alignment=CENTER,
+                    content=ft.Icon(ft.Icons.SHIELD_OUTLINED, size=20, color=APP_COLORS["blue"]),
+                ),
+                ft.Column(
+                    spacing=2, expand=True,
+                    controls=[
+                        ft.Text("Защищено биометрией", size=14, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                        ft.Text("Сканы хранятся локально на устройстве и шифруются ключом МСИ.", size=12, color=APP_COLORS["muted"]),
+                    ],
+                ),
+                ft.Icon(ft.Icons.FINGERPRINT, size=28, color=APP_COLORS["blue_text"]),
+            ],
         ),
     )
 
-    meta_grid = ft.Column(
-        spacing=12,
-        controls=[
-            ft.Row(
-                spacing=12,
-                vertical_alignment=ft.CrossAxisAlignment.START,
-                controls=[
-                    ft.Container(expand=True, content=_metadata_item("Дата выдачи", issue, ft.Icons.EVENT_AVAILABLE_OUTLINED)),
-                    ft.Container(expand=True, content=_metadata_item("Срок действия", expiry, ft.Icons.SCHEDULE_OUTLINED)),
-                ],
-            ),
-            ft.Row(
-                spacing=12,
-                vertical_alignment=ft.CrossAxisAlignment.START,
-                controls=[
-                    ft.Container(expand=True, content=_metadata_item("Организация", issuer, ft.Icons.ACCOUNT_BALANCE_OUTLINED)),
-                    ft.Container(expand=True, content=_metadata_item("Файл / скан", scan_text, ft.Icons.ATTACH_FILE)),
-                ],
-            ),
-        ],
-    )
 
-    warning: ft.Control | None = None
-    if status == "Истекает скоро":
-        warning = ft.Container(
-            padding=padding_symmetric(horizontal=12, vertical=9),
-            border_radius=14,
-            bgcolor=get_badge_palette()["orange"][0],
-            content=ft.Text("Истекает скоро — проверьте замену", size=12, weight=ft.FontWeight.W_800, color=get_badge_palette()["orange"][1]),
-        )
+# ---------------------------------------------------------------------------
+# Hero passport card
+# ---------------------------------------------------------------------------
+
+def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
+    """Big gradient passport-style card."""
+    status = doc.get("_status", "Активен")
+    days = doc.get("_days")
+    user_name = MOCK_USER.get("name", "Климович А.В.")
+
+    number = _mask_number(doc.get("document_number") or "") if not show_number else (doc.get("document_number") or "Не указан")
+
+    # Expiry badge
+    expiry_badge: list[ft.Control] = []
     if status == "Истёк":
-        warning = ft.Container(
-            padding=padding_symmetric(horizontal=12, vertical=9),
-            border_radius=14,
-            bgcolor=get_badge_palette()["red"][0],
-            content=ft.Text("Срок истёк — требуется замена", size=12, weight=ft.FontWeight.W_800, color=get_badge_palette()["red"][1]),
-        )
+        expiry_badge = [
+            ft.Container(
+                content=ft.Text("ПРОСРОЧЕН", size=9, weight=ft.FontWeight.W_800, color=APP_COLORS["red"]),
+                padding=ft.Padding(left=8, top=3, right=8, bottom=3),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.18, APP_COLORS["red"]),
+            )
+        ]
+    elif status == "Истекает скоро":
+        expiry_badge = [
+            ft.Container(
+                content=ft.Text("ИСТЕКАЕТ", size=9, weight=ft.FontWeight.W_800, color="#FF9500"),
+                padding=ft.Padding(left=8, top=3, right=8, bottom=3),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.2, "#FF9500"),
+            )
+        ]
 
-    card_controls: list[ft.Control] = [
-        ft.Container(height=5, border_radius=3, bgcolor=_status_strip(status)),
-        ft.Row(
-            spacing=14,
-            vertical_alignment=ft.CrossAxisAlignment.START,
+    return ft.Container(
+        border_radius=APP_RADIUS["hero"],
+        animate=ft.Animation(ANIM_NORMAL, ft.AnimationCurve.EASE_OUT),
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment(-1, -1),
+            end=ft.Alignment(1, 1),
+            colors=["#0A2FBE", "#0056FF", "#0D1A6A"],
+        ),
+        shadow=[ft.BoxShadow(blur_radius=32, offset=ft.Offset(0, 16), color="#400056FF")],
+        padding=ft.Padding(left=28, top=24, right=28, bottom=28),
+        content=ft.Stack(
+            expand=True,
             controls=[
-                _scan_placeholder(document, not desktop),
+                # Decorative glow circle (top-right)
+                ft.Container(
+                    width=200, height=200,
+                    border_radius=100,
+                    bgcolor=ft.Colors.with_opacity(0.07, ft.Colors.WHITE),
+                    right=-40,
+                    top=-40,
+                ),
+                # Smaller circle (bottom-left)
+                ft.Container(
+                    width=100, height=100,
+                    border_radius=50,
+                    bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                    left=-20,
+                    bottom=-20,
+                ),
+                # Card content
                 ft.Column(
-                    spacing=8,
-                    expand=True,
+                    spacing=0,
                     controls=[
+                        # Top row: country + verified icon
                         ft.Row(
-                            spacing=8,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             vertical_alignment=ft.CrossAxisAlignment.START,
                             controls=[
-                                ft.Column(
-                                    spacing=6,
-                                    expand=True,
-                                    controls=[
-                                        ft.Text(document.get("title", "Документ"), size=19 if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                                        ft.Text(document.get("document_type", "Другое"), size=12, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
-                                    ],
+                                ft.Text(
+                                    "РЕСПУБЛИКА БЕЛАРУСЬ",
+                                    size=10,
+                                    weight=ft.FontWeight.W_700,
+                                    color=ft.Colors.with_opacity(0.65, ft.Colors.WHITE),
                                 ),
-                                badge(status, _variant(status)),
+                                ft.Container(
+                                    width=34, height=34,
+                                    border_radius=17,
+                                    bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
+                                    alignment=CENTER,
+                                    content=ft.Icon(ft.Icons.VERIFIED_OUTLINED, size=18, color=ft.Colors.WHITE),
+                                ),
                             ],
                         ),
-                        number_box,
-                    ],
-                ),
-            ] + ([edit_actions] if desktop else []),
-        ),
-        meta_grid,
-    ]
-    if document.get("comment"):
-        card_controls.append(ft.Text(document.get("comment", ""), size=12, color=APP_COLORS["muted"], max_lines=2))
-    if warning:
-        card_controls.append(warning)
-    if not desktop:
-        card_controls.append(edit_actions)
-
-    return app_card(
-        ft.Column(
-            spacing=13,
-            controls=card_controls,
-        ),
-        padding=18 if desktop else 14,
-    )
-
-
-def _security_card(hide_sensitive: bool, on_privacy_change=None) -> ft.Container:
-    return app_card(
-        ft.Column(
-            spacing=14,
-            controls=[
-                ft.Row(
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.START,
-                    controls=[
-                        icon_circle(ft.Icons.PRIVACY_TIP_OUTLINED, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=48),
-                        ft.Column(
-                            spacing=5,
-                            expand=True,
+                        ft.Container(height=6),
+                        ft.Text(
+                            doc.get("title", "Документ"),
+                            size=28,
+                            weight=ft.FontWeight.W_900,
+                            color=ft.Colors.WHITE,
+                        ),
+                        ft.Container(height=20),
+                        # Field grid row 1: owner + number
+                        ft.Row(
+                            spacing=0,
                             controls=[
-                                ft.Text("Защита данных", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text("Личные номера скрыты по умолчанию. Перед просмотром скана показывается предупреждение.", size=13, color=APP_COLORS["muted"]),
+                                ft.Container(
+                                    expand=True,
+                                    content=ft.Column(
+                                        spacing=3,
+                                        controls=[
+                                            ft.Text("ВЛАДЕЛЕЦ", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(user_name, size=15, weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
+                                        ],
+                                    ),
+                                ),
+                                ft.Container(
+                                    expand=True,
+                                    content=ft.Column(
+                                        spacing=3,
+                                        controls=[
+                                            ft.Text("НОМЕР", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(number, size=15, weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
+                                        ],
+                                    ),
+                                ),
+                            ],
+                        ),
+                        ft.Container(height=16),
+                        # Field grid row 2: issued + expiry
+                        ft.Row(
+                            spacing=0,
+                            controls=[
+                                ft.Container(
+                                    expand=True,
+                                    content=ft.Column(
+                                        spacing=3,
+                                        controls=[
+                                            ft.Text("ВЫДАН", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(_fmt_date(doc.get("issue_date") or ""), size=14, color=ft.Colors.WHITE),
+                                        ],
+                                    ),
+                                ),
+                                ft.Container(
+                                    expand=True,
+                                    content=ft.Column(
+                                        spacing=3,
+                                        controls=[
+                                            ft.Text("ДО", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Row(
+                                                spacing=8,
+                                                controls=[
+                                                    ft.Text(_fmt_date(doc.get("expiry_date") or ""), size=14, color=ft.Colors.WHITE),
+                                                    *expiry_badge,
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                ),
                             ],
                         ),
                     ],
                 ),
-                ft.Container(
-                    padding=14,
-                    border_radius=18,
-                    bgcolor=APP_COLORS["surface2"],
-                    border=border_all(APP_COLORS["stroke2"]),
-                    content=ft.Row(
-                        spacing=10,
-                        controls=[
-                            ft.Icon(ft.Icons.LOCK_OUTLINE, size=20, color=APP_COLORS["blue_text"]),
-                            ft.Column(
-                                spacing=3,
-                                expand=True,
-                                controls=[
-                                    ft.Text("Маскирование номера", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                    ft.Text("Включено" if hide_sensitive else "Выключено", size=12, color=APP_COLORS["muted"]),
-                                ],
-                            ),
-                            ft.Switch(
-                                value=hide_sensitive,
-                                active_color=APP_COLORS["blue"],
-                                on_change=lambda event: on_privacy_change(bool(event.control.value)) if on_privacy_change else None,
-                            ),
-                        ],
-                    ),
-                ),
-                ft.Container(
-                    padding=14,
-                    border_radius=18,
-                    bgcolor=APP_COLORS["surface2"],
-                    border=border_all(APP_COLORS["stroke2"]),
-                    content=ft.Row(
-                        spacing=10,
-                        controls=[
-                            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE_OUTLINED, size=20, color=APP_COLORS["orange"]),
-                            ft.Text("Напоминания по срокам документов включены в демо-режиме.", size=12, color=APP_COLORS["muted"], expand=True),
-                        ],
-                    ),
-                ),
             ],
         ),
-        padding=20,
     )
 
 
-def _scan_warning_card() -> ft.Container:
-    return info_card(
-        "Предупреждение перед просмотром скана",
-        "Перед открытием файла приложение показывает предупреждение: документ содержит личные данные.",
-        ft.Icons.WARNING_AMBER_OUTLINED,
-        "warning",
-    )
+# ---------------------------------------------------------------------------
+# Doc list row (right panel / mobile switcher)
+# ---------------------------------------------------------------------------
 
-
-def _document_form_hint(on_add_document=None) -> ft.Container:
-    rows = [
-        ("Тип документа", "ID / паспорт / медкнижка"),
-        ("Серия / номер", "хранится с маской"),
-        ("Дата выдачи", "дд.мм.гггг"),
-        ("Срок действия", "автостатус"),
-        ("Организация", "кто выдал"),
-        ("Комментарий", "личная заметка"),
-    ]
-    return app_card(
-        ft.Column(
-            spacing=12,
-            controls=[
-                ft.Text("Форма документа", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                ft.Column(
-                    spacing=8,
-                    controls=[
-                        ft.Container(
-                            padding=padding_symmetric(horizontal=12, vertical=8),
-                            border_radius=14,
-                            bgcolor=APP_COLORS["surface2"],
-                            border=border_all(APP_COLORS["stroke2"]),
-                            content=ft.Row(
-                                spacing=8,
-                                controls=[
-                                    ft.Text(label, size=12, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
-                                    ft.Text(value, size=12, color=APP_COLORS["muted"], expand=True),
-                                ],
-                            ),
-                        )
-                        for label, value in rows
-                    ],
-                ),
-                primary_button("Добавить документ", icon=ft.Icons.ADD, expand=True, on_click=on_add_document),
-            ],
+def _validity_bar(status: str, total_days: int = 365 * 10) -> ft.Container:
+    color = _status_color(status)
+    progress = 0.7 if status == "Активен" else 0.25 if status == "Истекает скоро" else 0.05
+    return ft.Container(
+        height=4,
+        border_radius=2,
+        bgcolor=APP_COLORS["stroke2"],
+        content=ft.Container(
+            width=None,
+            height=4,
+            border_radius=2,
+            bgcolor=color,
+            # fraction via padding trick since ProgressBar has color issues in old Flet
         ),
-        padding=20,
+        # Use ProgressBar as inner
+        padding=0,
     )
 
 
-def _activity_log_card(log: list[dict]) -> ft.Container | None:
-    if not log:
-        return None
-    action_labels = {"created": "Добавлен", "updated": "Изменён", "deleted": "Удалён"}
-    action_variants = {"created": "success", "updated": "blue", "deleted": "error"}
-    return app_card(
-        ft.Column(
-            spacing=12,
+def _doc_list_item(
+    doc: dict,
+    selected: bool,
+    on_select,
+) -> ft.Container:
+    status = doc.get("_status", "Активен")
+    days = doc.get("_days")
+    color = _status_color(status)
+
+    # Validity subtitle
+    if status == "Истёк":
+        subtitle = "Истёк"
+    elif status == "Истекает скоро" and days is not None:
+        subtitle = f"Истекает через {days} дн."
+    else:
+        expiry = doc.get("expiry_date")
+        subtitle = f"Действует до {_fmt_date(expiry)}" if expiry else "Активен"
+
+    # Validity bar value
+    total = 3650  # 10 years default
+    expiry = parse_due_date(doc.get("expiry_date"))
+    issued = parse_due_date(doc.get("issue_date"))
+    if expiry and issued:
+        total = max(1, (expiry - issued).days)
+    days_left_val = max(0, (days or 0))
+    bar_value = min(1.0, days_left_val / max(1, total)) if days is not None else 0.7
+
+    container = ft.Container(
+        ink=True,
+        border_radius=14,
+        padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+        bgcolor=APP_COLORS["active"] if selected else None,
+        border=border_all(APP_COLORS["blue"] if selected else APP_COLORS["stroke2"], 2 if selected else 1),
+        animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
+        on_click=lambda _: on_select(doc["id"]),
+        content=ft.Column(
+            spacing=6,
             controls=[
                 ft.Row(
                     spacing=10,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.HISTORY_OUTLINED, size=22, color=APP_COLORS["blue_text"]),
-                        ft.Text("Журнал изменений", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Container(
+                            width=32, height=32, border_radius=10,
+                            bgcolor=APP_COLORS["surface2"],
+                            alignment=CENTER,
+                            content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=16, color=APP_COLORS["blue"]),
+                        ),
+                        ft.Column(
+                            spacing=1, expand=True,
+                            controls=[
+                                ft.Text(doc.get("title", "Документ"), size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"], max_lines=1, no_wrap=True),
+                                ft.Text(subtitle, size=11, color=APP_COLORS["muted"], max_lines=1),
+                            ],
+                        ),
                     ],
                 ),
-                ft.Column(
-                    spacing=7,
-                    controls=[
-                        ft.Row(
-                            spacing=8,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=[
-                                badge(action_labels.get(entry.get("action", ""), entry.get("action", "")), action_variants.get(entry.get("action", ""), "default")),
-                                ft.Text(entry.get("doc_title", ""), size=13, color=APP_COLORS["text"], expand=True),
-                                ft.Text(entry.get("date", ""), size=11, color=APP_COLORS["muted"]),
-                            ],
-                        )
-                        for entry in reversed(log[-8:])
-                    ],
+                ft.ProgressBar(
+                    value=bar_value,
+                    bar_height=4,
+                    border_radius=2,
+                    color=color,
+                    bgcolor=APP_COLORS["stroke2"],
                 ),
             ],
         ),
-        padding=18,
+    )
+
+    def _hover(e: ft.HoverEvent) -> None:
+        if not selected:
+            container.bgcolor = APP_COLORS["surface2"] if e.data == "true" else None
+            container.update()
+
+    container.on_hover = _hover
+    return container
+
+
+# ---------------------------------------------------------------------------
+# Action buttons
+# ---------------------------------------------------------------------------
+
+def _action_button(label: str, icon, on_click=None, primary: bool = False) -> ft.Container:
+    btn = ft.Container(
+        ink=True,
+        border_radius=14,
+        padding=ft.Padding(left=16, top=12, right=16, bottom=12),
+        bgcolor=APP_COLORS["blue"] if primary else APP_COLORS["surface"],
+        border=border_all(APP_COLORS["blue"] if primary else APP_COLORS["stroke2"]),
+        animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
+        on_click=on_click,
+        content=ft.Row(
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(icon, size=18, color=ft.Colors.WHITE if primary else APP_COLORS["blue"]),
+                ft.Text(label, size=14, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE if primary else APP_COLORS["text"]),
+            ],
+        ),
+    )
+
+    def _hover(e: ft.HoverEvent) -> None:
+        if primary:
+            btn.bgcolor = APP_COLORS["blue_text"] if e.data == "true" else APP_COLORS["blue"]
+        else:
+            btn.bgcolor = APP_COLORS["surface2"] if e.data == "true" else APP_COLORS["surface"]
+        btn.update()
+
+    btn.on_hover = _hover
+    return btn
+
+
+def _scan_button(on_click=None) -> ft.Container:
+    """Dashed border scan button matching screenshot."""
+    return ft.Container(
+        ink=True,
+        border_radius=APP_RADIUS["card"],
+        border=ft.Border(
+            top=ft.BorderSide(1.5, APP_COLORS["stroke2"], ft.BorderSideStrokeAlign.CENTER),
+            bottom=ft.BorderSide(1.5, APP_COLORS["stroke2"], ft.BorderSideStrokeAlign.CENTER),
+            left=ft.BorderSide(1.5, APP_COLORS["stroke2"], ft.BorderSideStrokeAlign.CENTER),
+            right=ft.BorderSide(1.5, APP_COLORS["stroke2"], ft.BorderSideStrokeAlign.CENTER),
+        ),
+        padding=ft.Padding(left=0, top=16, right=0, bottom=16),
+        on_click=on_click,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10,
+            controls=[
+                ft.Icon(ft.Icons.DOCUMENT_SCANNER_OUTLINED, size=20, color=APP_COLORS["muted"]),
+                ft.Text("Отсканировать новый документ", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
+            ],
+        ),
     )
 
 
-def _documents_list(
-    documents: list[dict],
-    desktop: bool,
+# ---------------------------------------------------------------------------
+# Main builders (desktop / mobile)
+# ---------------------------------------------------------------------------
+
+def _build_layout(
+    is_desktop: bool,
+    docs: list[dict],
     hide_sensitive: bool,
-    visible_ids: set[str],
+    visible_ids: set,
     on_add_document=None,
     on_edit_document=None,
     on_delete_document=None,
-    on_toggle_sensitive=None,
     on_open_scan=None,
+    on_toggle_sensitive=None,
+    on_export_pdf=None,
+    on_import_pdf=None,
     reminder_days: int = 30,
 ) -> ft.Control:
-    overdue, expiring, normal = _group_documents(documents, reminder_days)
-    ordered_documents = overdue + expiring + normal
-    if not ordered_documents:
-        return empty_state_card(
-            "Документов пока нет",
-            "Добавьте паспорт, медкнижку или другой важный документ, чтобы отслеживать сроки и хранить реквизиты.",
-            "Добавить документ",
-            on_add_document,
-            ft.Icons.DESCRIPTION_OUTLINED,
+    if not docs:
+        # Empty state
+        return ft.Container(
+            padding=24,
+            content=ft.Column(
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, size=56, color=APP_COLORS["muted2"]),
+                    ft.Text("Нет документов", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Добавьте первый документ чтобы отслеживать сроки.", size=14, color=APP_COLORS["muted"]),
+                    _action_button("Добавить документ", ft.Icons.ADD, on_click=on_add_document, primary=True),
+                ],
+            ),
         )
+
+    selected_state = {"id": docs[0]["id"]}
+    show_number = {"v": not hide_sensitive or (docs[0]["id"] in visible_ids)}
+
+    # AnimatedSwitcher for hero card transitions
+    hero_switcher = ft.AnimatedSwitcher(
+        transition=ft.AnimatedSwitcherTransition.FADE,
+        duration=280,
+        switch_in_curve=ft.AnimationCurve.EASE_OUT,
+        switch_out_curve=ft.AnimationCurve.EASE_IN,
+        content=_hero_card(docs[0], show_number["v"]),
+        expand=True,
+    )
+
+    # Doc list column — will be rebuilt on selection
+    doc_list_col = ft.Column(spacing=8, controls=[])
+
+    def _rebuild_doc_list(do_update: bool = True) -> None:
+        doc_list_col.controls = [
+            _doc_list_item(doc, doc["id"] == selected_state["id"], _on_select)
+            for doc in docs
+        ]
+        if do_update:
+            doc_list_col.update()
+
+    def _on_select(doc_id: str) -> None:
+        if doc_id == selected_state["id"]:
+            return
+        selected_state["id"] = doc_id
+        sel_doc = next((d for d in docs if d["id"] == doc_id), docs[0])
+        show_number["v"] = not hide_sensitive or (doc_id in visible_ids)
+        hero_switcher.content = _hero_card(sel_doc, show_number["v"])
+        hero_switcher.update()
+        _rebuild_doc_list()
+
+    _rebuild_doc_list(do_update=False)
+
+    # "Показать реквизиты" toggle
+    reveal_btn = ft.Container(
+        ink=True,
+        border_radius=10,
+        padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+        bgcolor=APP_COLORS["surface2"],
+        content=ft.Row(
+            spacing=6,
+            controls=[
+                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=APP_COLORS["muted"]),
+                ft.Text("Показать реквизиты", size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
+            ],
+        ),
+        on_click=lambda _: on_toggle_sensitive(None) if on_toggle_sensitive else None,
+    )
+
+    if is_desktop:
+        # ── Desktop layout ───────────────────────────────────────────────
+        return desktop_content(
+            ft.Column(
+                spacing=20,
+                controls=[
+                    # Page heading
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Column(
+                                spacing=4,
+                                controls=[
+                                    ft.Text("Мои документы", size=38, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                    ft.Text("Локальное хранилище. Защищено биометрией.", size=15, color=APP_COLORS["muted"]),
+                                ],
+                            ),
+                            reveal_btn,
+                        ],
+                    ),
+                    # Security banner
+                    _security_banner(),
+                    # Hero + doc list row
+                    ft.Row(
+                        spacing=20,
+                        vertical_alignment=ft.CrossAxisAlignment.START,
+                        controls=[
+                            # Hero card (left)
+                            ft.Container(expand=True, content=hero_switcher),
+                            # Doc switcher list (right)
+                            ft.Container(
+                                width=280,
+                                content=ft.Column(
+                                    spacing=0,
+                                    controls=[
+                                        doc_list_col,
+                                    ],
+                                ),
+                            ),
+                        ],
+                    ),
+                    # Action bar
+                    _scan_button(on_click=on_open_scan or on_add_document),
+                    ft.Row(
+                        spacing=12,
+                        controls=[
+                            ft.Container(expand=True, content=_action_button(
+                                "Экспорт PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED, on_click=on_export_pdf,
+                            )),
+                            ft.Container(expand=True, content=_action_button(
+                                "Импорт PDF", ft.Icons.UPLOAD_FILE_OUTLINED, on_click=on_import_pdf,
+                            )),
+                            ft.Container(expand=True, content=_action_button(
+                                "Добавить документ", ft.Icons.ADD, on_click=on_add_document, primary=True,
+                            )),
+                        ],
+                    ),
+                ],
+            ),
+            width=1100,
+            top=36,
+            bottom=60,
+        )
+
+    # ── Mobile layout ────────────────────────────────────────────────────
     return ft.Column(
-        spacing=14,
+        spacing=18,
         controls=[
-            _doc_card(
-                document,
-                desktop,
-                hide_sensitive,
-                str(document.get("id")) in visible_ids,
-                on_edit_document,
-                on_delete_document,
-                on_toggle_sensitive,
-                on_open_scan,
-            )
-            for document in ordered_documents
+            # Heading
+            ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Column(
+                        spacing=2,
+                        controls=[
+                            ft.Text("Мои документы", size=28, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Защищено биометрией.", size=13, color=APP_COLORS["muted"]),
+                        ],
+                    ),
+                    reveal_btn,
+                ],
+            ),
+            # Security banner
+            _security_banner(),
+            # Hero card
+            hero_switcher,
+            # Doc list
+            doc_list_col,
+            # Action bar
+            _scan_button(on_click=on_open_scan or on_add_document),
+            ft.Row(
+                spacing=10,
+                controls=[
+                    ft.Container(expand=True, content=_action_button(
+                        "Экспорт PDF", ft.Icons.PICTURE_AS_PDF_OUTLINED, on_click=on_export_pdf,
+                    )),
+                    ft.Container(expand=True, content=_action_button(
+                        "Импорт PDF", ft.Icons.UPLOAD_FILE_OUTLINED, on_click=on_import_pdf,
+                    )),
+                ],
+            ),
         ],
     )
 
 
-def _desktop_documents(
-    documents: list[dict],
-    hide_sensitive: bool,
-    visible_ids: set[str],
-    on_add_document=None,
-    on_edit_document=None,
-    on_delete_document=None,
-    on_toggle_sensitive=None,
-    on_privacy_change=None,
-    on_open_scan=None,
-    reminder_days: int = 30,
-    activity_log: list[dict] | None = None,
-) -> ft.Control:
-    left_controls: list[ft.Control] = [
-        ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-            controls=[
-                ft.Column(
-                    spacing=8,
-                    expand=True,
-                    controls=[
-                        ft.Text("Документы", size=40, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Личный сейф документов: реквизиты, сроки действия, сканы и напоминания.", size=15, color=APP_COLORS["muted"]),
-                    ],
-                ),
-                ft.Row(
-                    spacing=10,
-                    controls=[
-                        icon_circle(ft.Icons.PERSON_OUTLINE, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=42),
-                        icon_circle(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=42),
-                    ],
-                ),
-            ],
-        ),
-        ft.Row(
-            spacing=12,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Container(expand=True, content=search_box(hint="Поиск по документам, номеру, сроку или организации...")),
-                primary_button("Добавить документ", icon=ft.Icons.ADD, width=210, height=50, on_click=on_add_document),
-            ],
-        ),
-        _filter_bar(),
-        _stats_row(documents, True, reminder_days),
-        ft.Row(
-            spacing=10,
-            controls=[
-                ft.Text("Мои личные документы", size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                badge("Маскирование включено" if hide_sensitive else "Данные видны", "success" if hide_sensitive else "warning"),
-            ],
-        ),
-        _documents_list(
-            documents,
-            True,
-            hide_sensitive,
-            visible_ids,
-            on_add_document,
-            on_edit_document,
-            on_delete_document,
-            on_toggle_sensitive,
-            on_open_scan,
-            reminder_days,
-        ),
-    ]
-    log_card = _activity_log_card(activity_log or [])
-    if log_card:
-        left_controls.append(log_card)
-
-    right_controls = [
-        _security_card(hide_sensitive, on_privacy_change),
-        _scan_warning_card(),
-        _document_form_hint(on_add_document),
-        hint_card("Номера документов лучше показывать только после подтверждения. Сканы остаются локально в демо-версии.", ft.Icons.LIGHTBULB_OUTLINE),
-    ]
-
-    return desktop_content(
-        ft.Row(
-            spacing=26,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-            controls=[
-                ft.Column(spacing=20, expand=True, controls=left_controls),
-                ft.Column(spacing=16, width=330, controls=right_controls),
-            ],
-        ),
-        width=1180,
-        top=46,
-        bottom=120,
-    )
-
-
-def _mobile_documents(
-    documents: list[dict],
-    hide_sensitive: bool,
-    visible_ids: set[str],
-    on_add_document=None,
-    on_edit_document=None,
-    on_delete_document=None,
-    on_toggle_sensitive=None,
-    on_privacy_change=None,
-    on_open_scan=None,
-    reminder_days: int = 30,
-    activity_log: list[dict] | None = None,
-) -> ft.Control:
-    controls: list[ft.Control] = [
-        ft.Row(
-            spacing=8,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Icon(ft.Icons.ARROW_BACK, size=21, color=APP_COLORS["muted"]),
-                ft.Text("Документы", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
-                icon_circle(ft.Icons.PERSON_OUTLINE, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=36),
-                icon_circle(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=36),
-            ],
-        ),
-        primary_button("Добавить документ", icon=ft.Icons.ADD, expand=True, on_click=on_add_document),
-        search_box(hint="Поиск по документам...", expand=False),
-        _filter_bar(),
-        _stats_row(documents, False, reminder_days),
-        ft.Row(
-            spacing=8,
-            controls=[
-                ft.Text("Мои документы", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
-                ft.Text("Скрыто" if hide_sensitive else "Видно", size=12, weight=ft.FontWeight.W_900, color=APP_COLORS["green"] if hide_sensitive else APP_COLORS["orange"]),
-            ],
-        ),
-        _documents_list(
-            documents,
-            False,
-            hide_sensitive,
-            visible_ids,
-            on_add_document,
-            on_edit_document,
-            on_delete_document,
-            on_toggle_sensitive,
-            on_open_scan,
-            reminder_days,
-        ),
-        _security_card(hide_sensitive, on_privacy_change),
-        _scan_warning_card(),
-    ]
-    log_card = _activity_log_card(activity_log or [])
-    if log_card:
-        controls.append(log_card)
-    return ft.Container(width=340, content=ft.Column(spacing=16, controls=controls))
-
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def build_documents_page(
     is_desktop: bool = False,
@@ -742,33 +659,22 @@ def build_documents_page(
     on_open_scan=None,
     reminder_days: int = 30,
     activity_log: list[dict] | None = None,
+    on_export_pdf=None,
+    on_import_pdf=None,
 ) -> ft.Control:
-    dataset = documents or []
+    dataset = _enrich(documents or [], reminder_days)
     visible_ids = set(visible_document_ids or set())
-    if is_desktop:
-        return _desktop_documents(
-            dataset,
-            hide_sensitive,
-            visible_ids,
-            on_add_document,
-            on_edit_document,
-            on_delete_document,
-            on_toggle_sensitive,
-            on_privacy_change,
-            on_open_scan,
-            reminder_days,
-            activity_log,
-        )
-    return _mobile_documents(
-        dataset,
-        hide_sensitive,
-        visible_ids,
-        on_add_document,
-        on_edit_document,
-        on_delete_document,
-        on_toggle_sensitive,
-        on_privacy_change,
-        on_open_scan,
-        reminder_days,
-        activity_log,
+    return _build_layout(
+        is_desktop=is_desktop,
+        docs=dataset,
+        hide_sensitive=hide_sensitive,
+        visible_ids=visible_ids,
+        on_add_document=on_add_document,
+        on_edit_document=on_edit_document,
+        on_delete_document=on_delete_document,
+        on_open_scan=on_open_scan,
+        on_toggle_sensitive=on_toggle_sensitive,
+        on_export_pdf=on_export_pdf,
+        on_import_pdf=on_import_pdf,
+        reminder_days=reminder_days,
     )
