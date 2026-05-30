@@ -169,9 +169,9 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
         border_radius=APP_RADIUS["hero"],
         animate=ft.Animation(ANIM_NORMAL, ft.AnimationCurve.EASE_OUT),
         gradient=ft.LinearGradient(
-            begin=ft.Alignment(-1, -1),
+            begin=ft.Alignment(-1, -0.5),
             end=ft.Alignment(1, 1),
-            colors=["#0A2FBE", "#0056FF", "#0D1A6A"],
+            colors=["#010F28", "#0038E1"],  # Midnight Surge
         ),
         shadow=[ft.BoxShadow(blur_radius=32, offset=ft.Offset(0, 16), color="#400056FF")],
         padding=ft.Padding(left=28, top=24, right=28, bottom=28),

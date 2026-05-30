@@ -143,9 +143,9 @@ PORTRAIT_MOBILE_MAX_WIDTH = 1099
 SIDEBAR_WIDTH_DESKTOP = 268
 SIDEBAR_WIDTH_TABLET = 228
 
-# Gradients (placeholder hex — update when user provides exact values)
-GRADIENT_FUTUREWAFE = ["#1A1A2E", "#16213E", "#0F3460"]   # dark navy
-GRADIENT_MIDNIGHT_SURGE = ["#0056FF", "#2277FF", "#7B2FBE"]  # blue → violet
+# Gradients (confirmed by user)
+GRADIENT_FUTUREWAFE = ["#1E65FF", "#88B2FF"]       # blue → light blue
+GRADIENT_MIDNIGHT_SURGE = ["#010F28", "#0038E1"]   # dark navy → deep blue
 
 # AI Chat panel
 AI_CHAT_PANEL_WIDTH = 360

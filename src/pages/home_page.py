@@ -8,7 +8,7 @@ from components.buttons import ghost_button, primary_button, secondary_button
 from components.cards import app_card, badge, category_chip, empty_state_card, icon_circle, section_title
 from components.layout import desktop_content
 from data.mock_data import CATEGORIES, LEGAL_UPDATES, MOCK_USER, NOTIFICATIONS, PROBLEMS, SCENARIO_TEMPLATES
-from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, SPACING, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, GRADIENT_FUTUREWAFE, SPACING, border_all, padding_symmetric
 
 
 def _icon(name: str) -> str:
@@ -714,7 +714,11 @@ def _desktop_home(
     hero_banner = ft.Container(
         border_radius=APP_RADIUS["hero"],
         padding=ft.Padding(left=32, top=28, right=32, bottom=28),
-        bgcolor=APP_COLORS["blue"],
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment(-1, -1),
+            end=ft.Alignment(1, 1),
+            colors=GRADIENT_FUTUREWAFE,
+        ),
         content=ft.Row(
             spacing=24,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -858,7 +862,11 @@ def _mobile_home(
     mobile_hero = ft.Container(
         border_radius=APP_RADIUS["hero"],
         padding=ft.Padding(left=20, top=20, right=20, bottom=20),
-        bgcolor=APP_COLORS["blue"],
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment(-1, -1),
+            end=ft.Alignment(1, 1),
+            colors=GRADIENT_FUTUREWAFE,
+        ),
         content=ft.Column(
             spacing=10,
             controls=[
@@ -959,7 +967,11 @@ def _tablet_home(
     hero = ft.Container(
         border_radius=APP_RADIUS["hero"],
         padding=ft.Padding(left=28, top=22, right=28, bottom=22),
-        bgcolor=APP_COLORS["blue"],
+        gradient=ft.LinearGradient(
+            begin=ft.Alignment(-1, -1),
+            end=ft.Alignment(1, 1),
+            colors=GRADIENT_FUTUREWAFE,
+        ),
         content=ft.Column(
             spacing=10,
             controls=[
