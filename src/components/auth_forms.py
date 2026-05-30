@@ -244,9 +244,9 @@ def animated_auth_background(page, *, content: ft.Control, mobile: bool = False)
     """Full-bleed animated gradient background with floating, pulsing blobs."""
     import math
 
-    blob_a = _gradient_blob(360, GRADIENT_FUTUREWAFE, left=-90, top=-60)
-    blob_b = _gradient_blob(300, GRADIENT_MIDNIGHT_SURGE, right=-70, top=120)
-    blob_c = _gradient_blob(260, GRADIENT_FUTUREWAFE, left=40, bottom=-90)
+    blob_a = _gradient_blob(340, GRADIENT_FUTUREWAFE, left=-110, top=-80)
+    blob_b = _gradient_blob(280, GRADIENT_MIDNIGHT_SURGE, right=-110, bottom=-60)
+    blob_c = _gradient_blob(220, GRADIENT_FUTUREWAFE, right=180, top=-50)
     blobs = [blob_a, blob_b, blob_c]
 
     async def _pulse_loop() -> None:
@@ -346,17 +346,20 @@ def auth_shell(
             ),
         ],
     )
-    content = ft.Row(
-        spacing=30,
-        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Container(width=380, content=side),       # info — left
-            ft.Container(width=AUTH_CARD_WIDTH, content=card),  # input fields — right
-        ],
+    content = ft.Container(
+        width=1180,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Container(width=460, content=side),       # info — left
+                ft.Container(width=AUTH_CARD_WIDTH, content=card),  # input fields — right
+            ],
+        ),
     )
     if page is not None:
         return animated_auth_background(page, content=content)
-    return desktop_content(content, width=900, top=52, bottom=80)
+    return desktop_content(content, width=1180, top=52, bottom=80)
 
 
 def _important_row(index: str, title: str, subtitle: str) -> ft.Row:
