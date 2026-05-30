@@ -36,6 +36,14 @@ SORT_FILTERS = [
     {"id": "priority", "name": "По приоритету"},
 ]
 
+_ACTIVE_USER_TAGS: set = set()
+
+
+def _set_active_user_tags(tags: set | None) -> None:
+    global _ACTIVE_USER_TAGS
+    _ACTIVE_USER_TAGS = set(tags or [])
+
+
 PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 PRIORITY_META = {
     "high": ("Срочно", "red"),
@@ -206,7 +214,8 @@ def _law_card(law: dict, open_law, desktop: bool, user_tags: set | None = None) 
     if is_new:
         badges.append(badge("Новое", "new"))
     law_tags = set(law.get("profile_tags") or [])
-    if user_tags and law_tags & user_tags:
+    active_tags = user_tags if user_tags is not None else _ACTIVE_USER_TAGS
+    if active_tags and law_tags & active_tags:
         badges.append(badge("Для вас", "green"))
 
     source_btn: list[ft.Control] = []
@@ -579,11 +588,13 @@ def build_legal_updates_page(
     important_laws: list[dict] | None = None,
     sort_mode: str = "new",
     on_sort_change=None,
+    user_tags: set | None = None,
 ) -> ft.Control:
     selected = selected_category if selected_category in {item["id"] for item in LAW_FILTERS} else "all"
     sort_selected = sort_mode if sort_mode in {item["id"] for item in SORT_FILTERS} else "new"
     dataset = laws or LEGAL_UPDATES
     important_dataset = important_laws or []
+    _set_active_user_tags(user_tags)
     if is_desktop:
         return _desktop_laws(
             open_law,

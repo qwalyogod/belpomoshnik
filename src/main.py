@@ -214,7 +214,9 @@ def main(page: ft.Page) -> None:
     utility_accounts_state: list[dict] = stored_state.get("utility_accounts", copy.deepcopy(UTILITY_ACCOUNTS))
     utility_payments_state: list[dict] = stored_state.get("utility_payments", copy.deepcopy(UTILITY_PAYMENTS))
     tax_obligations_state: list[dict] = stored_state.get("tax_obligations", copy.deepcopy(TAX_OBLIGATIONS))
-    law_updates_state = stored_state.get("law_updates", copy.deepcopy(LEGAL_UPDATES))
+    from services.import_loader import load_news as _load_news
+    _imported_news = _load_news()
+    law_updates_state = _imported_news if _imported_news else stored_state.get("law_updates", copy.deepcopy(LEGAL_UPDATES))
     law_detail_state = stored_state.get("law_detail", copy.deepcopy(LAW_DETAIL))
     saved_problem_ids: set[str] = set(stored_state.get("saved_problem_ids", []))
     saved_law_ids: set[str] = set(stored_state.get("saved_law_ids", []))
@@ -2899,6 +2901,25 @@ def main(page: ft.Page) -> None:
             _normalize_law_update(law)
         return [item for item in law_updates_state if item.get("status", "published") == "published"]
 
+    def _collect_user_tags() -> set[str]:
+        tags: set[str] = set(app_user.get("interest_tags") or [])
+        employment = app_user.get("employment_status", "")
+        if employment == "ip":
+            tags.add("ip")
+        if employment == "student":
+            tags.add("student")
+        if employment == "retired":
+            tags.add("retired")
+        if app_user.get("has_children"):
+            tags.update({"has_children", "family"})
+        if app_user.get("is_homeowner") or app_user.get("owns_property"):
+            tags.update({"housing", "housing_owner", "utility"})
+        if app_user.get("is_tenant"):
+            tags.update({"housing", "utility"})
+        if app_user.get("has_car"):
+            tags.add("auto")
+        return tags
+
     def _important_laws_for_user(published_laws: list[dict]) -> list[dict]:
         interests = {str(item).lower() for item in app_user.get("interests", [])}
         active_situation_titles = {
@@ -4680,6 +4701,7 @@ def main(page: ft.Page) -> None:
                 _important_laws_for_user(published_laws),
                 law_filters["sort"],
                 update_law_sort,
+                user_tags=_collect_user_tags(),
             ), "laws")
         if screen_key == "law_detail":
             return _with_offline_banner(build_law_detail_page(
