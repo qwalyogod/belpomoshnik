@@ -22,7 +22,7 @@ _PRODUCT_ITEMS = [
     ("situations", "Мои ситуации", ft.Icons.TASK_ALT_OUTLINED, "/situations"),
     ("documents", "Документы", ft.Icons.ARTICLE_OUTLINED, "/documents"),
     ("notifications", "Уведомления", ft.Icons.NOTIFICATIONS_NONE_OUTLINED, "/notifications"),
-    ("laws", "Правовые обновления", ft.Icons.BALANCE_OUTLINED, "/legal-updates"),
+    ("laws", "Новости", ft.Icons.NEWSPAPER_OUTLINED, "/legal-updates"),
 ]
 
 _SERVICE_ITEMS = [

@@ -7,27 +7,27 @@ import flet as ft
 
 LIGHT = {
     "panel": "#FFFFFF",
-    "sidebar": "#F7FBFF",
+    "sidebar": "#F8F9FF",
     "screen": "#FFFFFF",
     "surface": "#FFFFFF",
-    "surface2": "#F3F8FD",
-    "surface3": "#EBF6FF",
-    "canvas_start": "#F6FBFF",
-    "canvas_mid": "#EEF6FD",
-    "canvas_end": "#F8FBFF",
-    "stroke": "#DDE8F2",
-    "stroke2": "#D6E4EF",
-    "text": "#111827",
-    "muted": "#5D6D7E",
-    "muted2": "#7B8C9F",
-    "blue": "#199BEA",
-    "blue_text": "#168DDB",
+    "surface2": "#F0F2FF",
+    "surface3": "#E8EEFF",
+    "canvas_start": "#F5F7FF",
+    "canvas_mid": "#EEF1FF",
+    "canvas_end": "#F5F7FF",
+    "stroke": "#D8DEFF",
+    "stroke2": "#C8CFFF",
+    "text": "#000000",
+    "muted": "#4A5070",
+    "muted2": "#6B7490",
+    "blue": "#0056FF",
+    "blue_text": "#2277FF",
     "green": "#20A462",
     "orange": "#F59E0B",
     "purple": "#8B5CF6",
     "red": "#EF4444",
     "cyan": "#06A6B2",
-    "active": "#E5F4FF",
+    "active": "#E3E7FC",
     "search": "#FFFFFF",
     "on_accent": "#FFFFFF",
 }
@@ -60,7 +60,7 @@ DARK = {
 }
 
 BADGE_LIGHT = {
-    "blue": ("#E8F4FF", "#168DDB"),
+    "blue": ("#E3E7FC", "#0056FF"),
     "green": ("#EAF8EF", "#20A462"),
     "orange": ("#FFF3DF", "#F59E0B"),
     "purple": ("#F0EAFE", "#8B5CF6"),
@@ -127,15 +127,25 @@ FLOATING_ACTION_BOTTOM_PADDING = 24
 IOS_SAFE_TOP_FALLBACK = 44
 IOS_SAFE_BOTTOM_FALLBACK = 8
 
-# Device breakpoints
-MOBILE_MAX_WIDTH = 767
-TABLET_MIN_WIDTH = 768
-TABLET_MAX_WIDTH = 1179
-DESKTOP_MIN_WIDTH = 1180
+# Device breakpoints (based on real CSS pixel widths)
+# Mobile  : width < 900  OR  (900–1099 AND portrait)  — covers iPhones, Galaxy Fold
+# Tablet  : 900–1279 (not mobile) — OnePlus Pad portrait, medium browsers
+# Desktop : >= 1280 — MacBook Air, OnePlus Pad landscape
+MOBILE_MAX_WIDTH = 899
+TABLET_MIN_WIDTH = 900
+TABLET_MAX_WIDTH = 1279
+DESKTOP_MIN_WIDTH = 1280
+
+# Portrait-extension: wide-ish portrait screens (Fold unfolded portrait) → mobile
+PORTRAIT_MOBILE_MAX_WIDTH = 1099
 
 # Sidebar widths
 SIDEBAR_WIDTH_DESKTOP = 268
-SIDEBAR_WIDTH_TABLET = 220
+SIDEBAR_WIDTH_TABLET = 228
+
+# Gradients (placeholder hex — update when user provides exact values)
+GRADIENT_FUTUREWAFE = ["#1A1A2E", "#16213E", "#0F3460"]   # dark navy
+GRADIENT_MIDNIGHT_SURGE = ["#0056FF", "#2277FF", "#7B2FBE"]  # blue → violet
 
 # AI Chat panel
 AI_CHAT_PANEL_WIDTH = 360

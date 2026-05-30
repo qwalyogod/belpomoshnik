@@ -27,7 +27,7 @@ TOP_NAV = [
     ("scenarios", "Сценарии", "/scenarios"),
     ("situations", "Мои ситуации", "/situations"),
     ("documents", "Документы", "/documents"),
-    ("laws", "Законы", "/legal-updates"),
+    ("laws", "Новости", "/legal-updates"),
 ]
 
 

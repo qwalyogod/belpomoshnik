@@ -835,23 +835,109 @@ def _nearest_deadlines_card(tasks: list[dict]) -> ft.Container:
     return app_card(ft.Column(spacing=10, controls=controls), padding=18)
 
 
-def _notes_card(desktop: bool) -> ft.Container:
+def _notes_card(
+    desktop: bool,
+    notes: list[dict] | None = None,
+    on_add_note=None,
+) -> ft.Container:
+    """Real notes card with add form and reminder date."""
+    note_field = ft.TextField(
+        hint_text="Добавить заметку...",
+        expand=True,
+        multiline=True,
+        min_lines=2,
+        max_lines=4,
+        border_radius=14,
+        border_color=APP_COLORS["stroke2"],
+        focused_border_color=APP_COLORS["blue"],
+        cursor_color=APP_COLORS["blue"],
+        text_size=14,
+        color=APP_COLORS["text"],
+    )
+    reminder_field = ft.TextField(
+        hint_text="Дата напоминания (ДД.ММ.ГГГГ)",
+        width=200 if desktop else None,
+        expand=not desktop,
+        border_radius=12,
+        border_color=APP_COLORS["stroke2"],
+        focused_border_color=APP_COLORS["blue"],
+        cursor_color=APP_COLORS["blue"],
+        text_size=13,
+        color=APP_COLORS["text"],
+    )
+
+    def _submit(_=None) -> None:
+        text = (note_field.value or "").strip()
+        reminder = (reminder_field.value or "").strip()
+        if text and on_add_note:
+            on_add_note({"text": text, "reminder_date": reminder})
+            note_field.value = ""
+            reminder_field.value = ""
+            note_field.update()
+            reminder_field.update()
+
+    existing_notes: list[ft.Control] = []
+    for note in (notes or []):
+        reminder_text = f"  ·  напоминание {note['reminder_date']}" if note.get("reminder_date") else ""
+        existing_notes.append(
+            ft.Container(
+                padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+                border_radius=12,
+                bgcolor=APP_COLORS["surface2"],
+                content=ft.Column(
+                    spacing=4,
+                    controls=[
+                        ft.Text(note["text"], size=13, color=APP_COLORS["text"]),
+                        ft.Text(
+                            f"{note.get('date', '')} {reminder_text}",
+                            size=11,
+                            color=APP_COLORS["muted2"],
+                        ),
+                    ],
+                ),
+            )
+        )
+
+    add_form = ft.Column(
+        spacing=8,
+        controls=[
+            note_field,
+            ft.Row(
+                spacing=8,
+                controls=[
+                    reminder_field,
+                    ft.Container(
+                        ink=True,
+                        border_radius=12,
+                        padding=ft.Padding(left=14, top=10, right=14, bottom=10),
+                        bgcolor=APP_COLORS["blue"],
+                        on_click=_submit,
+                        content=ft.Row(
+                            spacing=6,
+                            controls=[
+                                ft.Icon(ft.Icons.ADD, size=16, color=ft.Colors.WHITE),
+                                ft.Text("Добавить", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        ],
+    )
+
     return app_card(
         ft.Column(
-            spacing=10,
+            spacing=14,
             controls=[
                 ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.STICKY_NOTE_2_OUTLINED, size=22, color=APP_COLORS["blue_text"]),
+                        ft.Icon(ft.Icons.STICKY_NOTE_2_OUTLINED, size=20, color=APP_COLORS["blue_text"]),
                         ft.Text("Заметки", size=20 if desktop else 19, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                     ],
                 ),
-                ft.Text(
-                    "Сохраняйте уточнения по своей ситуации в задачах. В следующем этапе здесь появится отдельный журнал заметок.",
-                    size=14,
-                    color=APP_COLORS["muted"],
-                ),
+                *existing_notes,
+                add_form,
             ],
         ),
         padding=18,
@@ -871,6 +957,8 @@ def _desktop_content(
     on_delete_situation=None,
     on_save=None,
     task_filter: str = "all",
+    notes: list[dict] | None = None,
+    on_add_note=None,
     on_task_filter_change=None,
 ) -> ft.Control:
     left_column = ft.Column(
@@ -910,7 +998,7 @@ def _desktop_content(
             ),
             _documents_block(tasks, True),
             _institutions_block(tasks, True),
-            _notes_card(True),
+            _notes_card(True, notes=notes, on_add_note=on_add_note),
             primary_button("Сохранить изменения", icon=ft.Icons.CHECK_CIRCLE, on_click=on_save, width=240),
         ],
     )
@@ -961,6 +1049,8 @@ def _mobile_content(
     on_save=None,
     task_filter: str = "all",
     on_task_filter_change=None,
+    notes: list[dict] | None = None,
+    on_add_note=None,
 ) -> ft.Control:
     status = _status_by_progress(progress, situation.get("status"))
     content = ft.Column(
@@ -1006,7 +1096,7 @@ def _mobile_content(
             secondary_button("Добавить задачу", icon=ft.Icons.ADD, expand=True, on_click=on_add_task),
             _documents_block(tasks, False),
             _institutions_block(tasks, False),
-            _notes_card(False),
+            _notes_card(False, notes=notes, on_add_note=on_add_note),
             primary_button("Сохранить изменения", icon=ft.Icons.CHECK_CIRCLE, expand=True, on_click=on_save),
         ],
     )
@@ -1028,6 +1118,8 @@ def build_situation_detail_page(
     on_save=None,
     task_filter: str = "all",
     on_task_filter_change=None,
+    notes: list[dict] | None = None,
+    on_add_note=None,
 ) -> ft.Control:
     dataset = situations or []
     task_dataset = [
@@ -1061,6 +1153,8 @@ def build_situation_detail_page(
             on_save,
             task_filter,
             on_task_filter_change,
+            notes=notes,
+            on_add_note=on_add_note,
         )
     return _mobile_content(
         situation,
@@ -1076,4 +1170,6 @@ def build_situation_detail_page(
         on_save,
         task_filter,
         on_task_filter_change,
+        notes=notes,
+        on_add_note=on_add_note,
     )

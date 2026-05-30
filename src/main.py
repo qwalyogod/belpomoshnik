@@ -213,6 +213,7 @@ def main(page: ft.Page) -> None:
     current_scenario_template = {"id": SCENARIO_TEMPLATES[0]["id"]}
     email_preview_data: dict = {}
     situation_task_filter = {"value": "all"}
+    user_notes_state: dict[str, list[dict]] = {}  # keyed by situation_id
     problem_filters = {"query": "", "category": "all"}
     search_filters = {"query": "", "pending_query": "", "filter": "all"}
     law_filters = {"query": "", "category": "all", "sort": "new"}
@@ -2396,6 +2397,26 @@ def main(page: ft.Page) -> None:
         situation_task_filter["value"] = value or "all"
         route_change()
 
+    def add_situation_note(note_data: dict) -> None:
+        from datetime import date as _date
+        sid = current_situation["id"]
+        if sid not in user_notes_state:
+            user_notes_state[sid] = []
+        note_data["date"] = _date.today().strftime("%d.%m.%Y")
+        user_notes_state[sid].append(note_data)
+        # Generate reminder notification if date set
+        reminder = (note_data.get("reminder_date") or "").strip()
+        if reminder:
+            notifications_state.append({
+                "id": f"note-reminder-{len(notifications_state)}",
+                "title": "Напоминание по ситуации",
+                "desc": note_data.get("text", "")[:80],
+                "type": "note_reminder",
+                "is_read": False,
+                "date": reminder,
+            })
+        route_change()
+
     def mark_all_notifications_read(_=None) -> None:
         for note in notifications_state:
             note["is_read"] = True
@@ -4444,6 +4465,8 @@ def main(page: ft.Page) -> None:
                 save_situation_changes,
                 situation_task_filter["value"],
                 set_situation_task_filter,
+                notes=user_notes_state.get(current_situation["id"], []),
+                on_add_note=add_situation_note,
             )
         if screen_key == "documents":
             return build_documents_page(
@@ -4706,12 +4729,16 @@ def main(page: ft.Page) -> None:
             admin_state["loaded_once"] = True
 
         page_width = page.width or 390
-        is_mobile = page_width < 768
-        is_tablet = 768 <= page_width < 1180
-        is_desktop = page_width >= 1180
-        chrome_width = min(1320, max(1080, int(page_width) - 64))
+        page_height = page.height or 844
+        is_portrait = page_height > page_width
+        # Mobile:  width<900  OR  (900-1099 wide portrait) — covers iPhones, Galaxy Fold
+        # Tablet:  900-1279 (not mobile) — OnePlus Pad portrait, mid browsers
+        # Desktop: >=1280 — MacBook Air fullscreen, OnePlus Pad landscape
+        is_mobile = page_width < 900 or (page_width < 1100 and is_portrait)
+        is_tablet = not is_mobile and page_width < 1280
+        is_desktop = not is_mobile and page_width >= 1280
+        chrome_width = min(1400, max(1080, int(page_width) - 64))
 
-        # desktop uses wide layout, tablet also uses wide layout, mobile uses narrow
         is_wide = is_desktop or is_tablet
         screen_content = build_content(screen_key, is_wide, is_tablet=is_tablet)
 

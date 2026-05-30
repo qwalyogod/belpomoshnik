@@ -21,6 +21,8 @@ from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, card_sh
 
 LAW_FILTERS = [
     {"id": "all", "name": "Все"},
+    {"id": "law_update", "name": "Закон-апдейты"},
+    {"id": "extremist_registry", "name": "Реестр"},
     {"id": "docs", "name": "Документы"},
     {"id": "home", "name": "ЖКХ"},
     {"id": "taxes", "name": "Налоги"},
@@ -46,6 +48,9 @@ CATEGORY_TONES = {
     "docs": "blue",
     "family": "green",
     "work": "orange",
+    "law_update": "blue",
+    "extremist_registry": "red",
+    "news": "gray",
 }
 
 
@@ -192,13 +197,36 @@ def _stats_row(laws: list[dict], important_laws: list[dict], desktop: bool) -> f
     return ft.Row(spacing=10, run_spacing=10, wrap=True, controls=[ft.Container(width=164, content=control) for control in controls[:3]])
 
 
-def _law_card(law: dict, open_law, desktop: bool) -> ft.Container:
+def _law_card(law: dict, open_law, desktop: bool, user_tags: set | None = None) -> ft.Container:
     is_urgent = law.get("priority") == "high"
     is_new = law.get("processing_status") == "new"
-    meta = f"{law.get('target', 'Кого касается')} · {law.get('date', 'без даты')} · {_source_name(law)}"
+    source_url = law.get("source_url") or ""
+    meta = f"{law.get('date', 'без даты')} · {_source_name(law)}"
     badges: list[ft.Control] = [_category_badge(law), _priority_badge(law)]
     if is_new:
         badges.append(badge("Новое", "new"))
+    law_tags = set(law.get("profile_tags") or [])
+    if user_tags and law_tags & user_tags:
+        badges.append(badge("Для вас", "green"))
+
+    source_btn: list[ft.Control] = []
+    if source_url:
+        source_btn = [
+            ft.Container(
+                content=ft.Row(
+                    spacing=4,
+                    controls=[
+                        ft.Icon(ft.Icons.OPEN_IN_NEW, size=13, color=APP_COLORS["blue_text"]),
+                        ft.Text("Источник", size=12, color=APP_COLORS["blue_text"], weight=ft.FontWeight.W_600),
+                    ],
+                ),
+                on_click=lambda _, url=source_url: open_law(law.get("id")),
+                ink=True,
+                border_radius=8,
+                padding=ft.Padding(left=0, top=2, right=4, bottom=2),
+            )
+        ]
+
     card_content = ft.Row(
         spacing=16,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -221,7 +249,13 @@ def _law_card(law: dict, open_law, desktop: bool) -> ft.Container:
                         color=APP_COLORS["muted"],
                         max_lines=3 if desktop else 2,
                     ),
-                    ft.Text(meta, size=12, color=APP_COLORS["muted2"], max_lines=2),
+                    ft.Row(
+                        spacing=12,
+                        controls=[
+                            ft.Text(meta, size=12, color=APP_COLORS["muted2"], max_lines=1, expand=True),
+                            *source_btn,
+                        ],
+                    ),
                 ],
             ),
             ghost_button("Подробнее", icon=ft.Icons.ARROW_FORWARD, width=132, height=40) if desktop else ft.Icon(ft.Icons.CHEVRON_RIGHT, color=APP_COLORS["muted2"]),
@@ -506,7 +540,7 @@ def _mobile_laws(
         content=ft.Column(
             spacing=16,
             controls=[
-                page_heading("Закон-апдейты", "Новые правила простым языком."),
+                page_heading("Новости", "Законы, реестры и актуальные обновления."),
                 search_box(
                     value=query,
                     hint="Поиск по законам...",
