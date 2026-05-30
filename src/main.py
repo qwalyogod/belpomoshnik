@@ -214,9 +214,14 @@ def main(page: ft.Page) -> None:
     utility_accounts_state: list[dict] = stored_state.get("utility_accounts", copy.deepcopy(UTILITY_ACCOUNTS))
     utility_payments_state: list[dict] = stored_state.get("utility_payments", copy.deepcopy(UTILITY_PAYMENTS))
     tax_obligations_state: list[dict] = stored_state.get("tax_obligations", copy.deepcopy(TAX_OBLIGATIONS))
-    from services.import_loader import load_news as _load_news
+    from services.import_loader import load_news as _load_news, load_problems as _load_problems
     _imported_news = _load_news()
     law_updates_state = _imported_news if _imported_news else stored_state.get("law_updates", copy.deepcopy(LEGAL_UPDATES))
+    # Replace mock PROBLEMS in-place so all `from data.mock_data import PROBLEMS` see imported set
+    _imported_problems = _load_problems()
+    if _imported_problems:
+        import data.mock_data as _mock_data
+        _mock_data.PROBLEMS[:] = _imported_problems
     law_detail_state = stored_state.get("law_detail", copy.deepcopy(LAW_DETAIL))
     saved_problem_ids: set[str] = set(stored_state.get("saved_problem_ids", []))
     saved_law_ids: set[str] = set(stored_state.get("saved_law_ids", []))
