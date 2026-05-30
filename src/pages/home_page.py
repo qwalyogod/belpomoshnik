@@ -697,6 +697,7 @@ def _desktop_home(
     data = dashboard or {}
     profile = user or MOCK_USER
     today = date.today().strftime("%d.%m.%Y")
+    first_name = profile.get("first_name", "пользователь")
     search_field = ft.TextField(
         hint_text="паспорт, ЖКХ, налог...",
         expand=True,
@@ -709,34 +710,83 @@ def _desktop_home(
         on_submit=lambda _: _run_home_search(search_field, run_search, go_to),
     )
 
-    page_header = ft.Row(
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        vertical_alignment=ft.CrossAxisAlignment.START,
-        controls=[
-            ft.Column(
-                spacing=8,
-                expand=True,
-                controls=[
-                    ft.Text("Главная", size=40, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Проблема -> понятный план действий за 1-2 клика", size=16, color=APP_COLORS["muted"]),
-                ],
-            ),
-            ft.Row(
-                spacing=10,
-                controls=[
-                    icon_circle(ft.Icons.HELP_OUTLINE, color=APP_COLORS["muted"], bgcolor=APP_COLORS["surface"], size=44),
-                    icon_circle(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=44),
-                ],
-            ),
-        ],
+    # Hero banner
+    hero_banner = ft.Container(
+        border_radius=APP_RADIUS["hero"],
+        padding=ft.Padding(left=32, top=28, right=32, bottom=28),
+        bgcolor=APP_COLORS["blue"],
+        content=ft.Row(
+            spacing=24,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Column(
+                    spacing=8,
+                    expand=True,
+                    controls=[
+                        ft.Container(
+                            content=ft.Text(
+                                f"Добрый день, {first_name}",
+                                size=13,
+                                weight=ft.FontWeight.W_600,
+                                color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                            ),
+                            padding=ft.Padding(left=14, top=5, right=14, bottom=5),
+                            border_radius=20,
+                            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
+                        ),
+                        ft.Text(
+                            "Личный цифровой\nпомощник гражданина.",
+                            size=34,
+                            weight=ft.FontWeight.W_900,
+                            color=ft.Colors.WHITE,
+                            height=None,
+                        ),
+                        ft.Text(
+                            "Опишите ситуацию — Белпомощник разберёт её по шагам,\nподскажет документы и куда обратиться.",
+                            size=14,
+                            color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                        ),
+                        ft.Container(height=4),
+                        ft.Container(
+                            expand=False,
+                            border_radius=16,
+                            bgcolor=APP_COLORS["search"],
+                            border=border_all(ft.Colors.with_opacity(0.3, ft.Colors.WHITE)),
+                            padding=ft.Padding(left=14, top=2, right=10, bottom=2),
+                            content=ft.Row(
+                                spacing=10,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
+                                    search_field,
+                                    ft.Container(
+                                        ink=True,
+                                        border_radius=12,
+                                        padding=ft.Padding(left=16, top=10, right=16, bottom=10),
+                                        bgcolor=APP_COLORS["blue"],
+                                        on_click=lambda _: _run_home_search(search_field, run_search, go_to),
+                                        content=ft.Row(
+                                            spacing=6,
+                                            controls=[
+                                                ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=16, color=ft.Colors.WHITE),
+                                                ft.Text("Подсказать", size=14, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        ),
     )
 
     left = ft.Column(
         expand=True,
         spacing=24,
         controls=[
-            page_header,
-            _search_hero(search_field, run_search, go_to, True),
+            hero_banner,
             _chips_row(open_category, go_to, True),
             _active_actions_card(data, go_to, True),
             _stats_grid(data, True),
@@ -745,7 +795,7 @@ def _desktop_home(
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     ft.Container(expand=True, content=_situations_section(data, go_to, True)),
-                    ft.Container(width=360, content=_tasks_section(data, go_to, True)),
+                    ft.Container(width=340, content=_tasks_section(data, go_to, True)),
                 ],
             ),
             _category_section(open_category, go_to, True),
@@ -754,18 +804,18 @@ def _desktop_home(
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     ft.Container(expand=True, content=_popular_problems_section(open_problem, go_to, True)),
-                    ft.Container(width=360, content=_documents_panel(data, go_to)),
+                    ft.Container(width=340, content=_documents_panel(data, go_to)),
                 ],
             ),
             _scenario_start_card(go_to, True),
         ],
     )
     right = ft.Container(
-        width=338,
+        width=320,
         content=ft.Column(
             spacing=18,
             controls=[
-                _demo_tip(f"Здравствуйте, {profile.get('first_name', 'пользователь')}. Сегодня {today}."),
+                _demo_tip(f"Сегодня {today}."),
                 _reminders_panel(go_to, True, notifications),
                 _law_updates_panel(go_to, True),
             ],
@@ -773,10 +823,10 @@ def _desktop_home(
     )
 
     return desktop_content(
-        ft.Row(spacing=28, vertical_alignment=ft.CrossAxisAlignment.START, controls=[left, right]),
+        ft.Row(spacing=24, vertical_alignment=ft.CrossAxisAlignment.START, controls=[left, right]),
         width=1180,
-        top=34,
-        bottom=70,
+        top=32,
+        bottom=60,
     )
 
 
@@ -791,6 +841,7 @@ def _mobile_home(
 ) -> ft.Control:
     data = dashboard or {}
     profile = user or MOCK_USER
+    first_name = profile.get("first_name", "Иван")
     search_field = ft.TextField(
         hint_text="паспорт, ЖКХ, налог...",
         expand=True,
@@ -803,17 +854,65 @@ def _mobile_home(
         on_submit=lambda _: _run_home_search(search_field, run_search, go_to),
     )
 
+    # Mobile hero banner
+    mobile_hero = ft.Container(
+        border_radius=APP_RADIUS["hero"],
+        padding=ft.Padding(left=20, top=20, right=20, bottom=20),
+        bgcolor=APP_COLORS["blue"],
+        content=ft.Column(
+            spacing=10,
+            controls=[
+                ft.Container(
+                    content=ft.Text(
+                        f"Привет, {first_name}!",
+                        size=12,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                    ),
+                    padding=ft.Padding(left=12, top=4, right=12, bottom=4),
+                    border_radius=20,
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
+                ),
+                ft.Text(
+                    "Личный цифровой\nпомощник гражданина.",
+                    size=26,
+                    weight=ft.FontWeight.W_900,
+                    color=ft.Colors.WHITE,
+                ),
+                ft.Text(
+                    "Опишите ситуацию — получите пошаговый план действий.",
+                    size=13,
+                    color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                ),
+                ft.Container(
+                    border_radius=14,
+                    bgcolor=APP_COLORS["search"],
+                    padding=ft.Padding(left=12, top=4, right=8, bottom=4),
+                    content=ft.Row(
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Icon(ft.Icons.SEARCH, size=20, color=APP_COLORS["blue"]),
+                            search_field,
+                            ft.Container(
+                                ink=True,
+                                border_radius=10,
+                                padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+                                bgcolor=APP_COLORS["blue"],
+                                on_click=lambda _: _run_home_search(search_field, run_search, go_to),
+                                content=ft.Icon(ft.Icons.ARROW_FORWARD, size=16, color=ft.Colors.WHITE),
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        ),
+    )
+
     content = ft.Column(
-        spacing=22,
+        spacing=20,
         controls=[
-            ft.Column(
-                spacing=6,
-                controls=[
-                    ft.Text(f"Привет, {profile.get('first_name', 'Иван')}!", size=30, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Поможем пройти жизненную ситуацию пошагово.", size=14, color=APP_COLORS["muted"]),
-                ],
-            ),
-            _search_hero(search_field, run_search, go_to, False),
+            mobile_hero,
             _quick_actions_grid(data, go_to),
             _chips_row(open_category, go_to, False),
             _active_actions_card(data, go_to, False),
@@ -829,7 +928,113 @@ def _mobile_home(
             _scenario_start_card(go_to, False),
         ],
     )
-    return ft.Container(width=340, content=content)
+    return content
+
+
+def _tablet_home(
+    open_problem,
+    go_to,
+    run_search=None,
+    open_category=None,
+    user: dict | None = None,
+    dashboard: dict | None = None,
+    notifications: list[dict] | None = None,
+) -> ft.Control:
+    """Single-column wide layout for tablet (sidebar handles left rail)."""
+    data = dashboard or {}
+    profile = user or MOCK_USER
+    first_name = profile.get("first_name", "пользователь")
+    search_field = ft.TextField(
+        hint_text="паспорт, ЖКХ, налог...",
+        expand=True,
+        border_color=ft.Colors.TRANSPARENT,
+        focused_border_color=ft.Colors.TRANSPARENT,
+        cursor_color=APP_COLORS["blue"],
+        color=APP_COLORS["text"],
+        text_size=15,
+        hint_style=ft.TextStyle(color=APP_COLORS["muted2"]),
+        on_submit=lambda _: _run_home_search(search_field, run_search, go_to),
+    )
+
+    hero = ft.Container(
+        border_radius=APP_RADIUS["hero"],
+        padding=ft.Padding(left=28, top=22, right=28, bottom=22),
+        bgcolor=APP_COLORS["blue"],
+        content=ft.Column(
+            spacing=10,
+            controls=[
+                ft.Container(
+                    content=ft.Text(
+                        f"Добрый день, {first_name}",
+                        size=12,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                    ),
+                    padding=ft.Padding(left=12, top=4, right=12, bottom=4),
+                    border_radius=20,
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
+                ),
+                ft.Text("Личный цифровой помощник гражданина.", size=26, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
+                ft.Text(
+                    "Опишите ситуацию — получите пошаговый план действий и список документов.",
+                    size=13,
+                    color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                ),
+                ft.Container(
+                    border_radius=14,
+                    bgcolor=APP_COLORS["search"],
+                    padding=ft.Padding(left=14, top=4, right=8, bottom=4),
+                    content=ft.Row(
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
+                            search_field,
+                            ft.Container(
+                                ink=True,
+                                border_radius=12,
+                                padding=ft.Padding(left=14, top=9, right=14, bottom=9),
+                                bgcolor=APP_COLORS["blue"],
+                                on_click=lambda _: _run_home_search(search_field, run_search, go_to),
+                                content=ft.Row(spacing=6, controls=[
+                                    ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=16, color=ft.Colors.WHITE),
+                                    ft.Text("Подсказать", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                                ]),
+                            ),
+                        ],
+                    ),
+                ),
+            ],
+        ),
+    )
+
+    return ft.Container(
+        expand=True,
+        padding=ft.Padding(left=20, top=20, right=20, bottom=32),
+        content=ft.Column(
+            spacing=20,
+            controls=[
+                hero,
+                _chips_row(open_category, go_to, True),
+                _active_actions_card(data, go_to, True),
+                _stats_grid(data, True),
+                ft.Row(
+                    spacing=20,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Container(expand=True, content=_situations_section(data, go_to, True)),
+                        ft.Container(width=280, content=_tasks_section(data, go_to, True)),
+                    ],
+                ),
+                _category_section(open_category, go_to, True),
+                _popular_problems_section(open_problem, go_to, True),
+                _documents_panel(data, go_to),
+                _reminders_panel(go_to, True, notifications),
+                _law_updates_panel(go_to, True),
+                _scenario_start_card(go_to, True),
+            ],
+        ),
+    )
 
 
 def build_home_page(
@@ -841,7 +1046,10 @@ def build_home_page(
     user: dict | None = None,
     dashboard: dict | None = None,
     notifications: list[dict] | None = None,
+    is_tablet: bool = False,
 ) -> ft.Control:
-    if is_desktop:
+    if is_desktop and not is_tablet:
         return _desktop_home(open_problem, go_to, run_search, open_category, user, dashboard, notifications)
+    if is_tablet:
+        return _tablet_home(open_problem, go_to, run_search, open_category, user, dashboard, notifications)
     return _mobile_home(open_problem, go_to, run_search, open_category, user, dashboard, notifications)

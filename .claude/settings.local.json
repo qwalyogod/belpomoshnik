@@ -23,7 +23,18 @@
       "Bash(find /Users/admin -name \"flet\" -type d 2>/dev/null | head -5; find /usr/local /opt -name \"flet\" -type d 2>/dev/null | head -5; which flet)",
       "Bash(pip3 show *)",
       "Bash(python3 -m flet --version)",
-      "Bash(/Applications/XAMPP/xamppfiles/htdocs/belpomoshnik/.venv/bin/python -c ' *)"
+      "Bash(/Applications/XAMPP/xamppfiles/htdocs/belpomoshnik/.venv/bin/python -c ' *)",
+      "Bash(bash scripts/run_web.sh)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8888)",
+      "Bash(.venv/bin/python -c \"import sys; sys.path.insert\\(0, 'src'\\); from components.sidebar import build_sidebar; print\\('sidebar OK'\\)\")",
+      "Bash(pkill -f \"flet run\\\\|uvicorn\\\\|belpomoshnik\")",
+      "Bash(curl -s -o /dev/null -w \"port 8888: %{http_code}\\\\n\" http://localhost:8888)",
+      "Bash(curl -s -o /dev/null -w \"port 8060: %{http_code}\\\\n\" http://localhost:8060/health)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8550)",
+      "Bash(pkill -f \"flet run.*8550\")",
+      "Bash(curl -s -o /dev/null http://localhost:8550)",
+      "Bash(git add *)"
     ]
   }
 }

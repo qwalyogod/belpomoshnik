@@ -2,6 +2,8 @@ import flet as ft
 
 from data.mock_data import MOCK_USER
 from theme.app_theme import (
+    AI_CHAT_PANEL_WIDTH,
+    ANIM_PAGE,
     APP_COLORS,
     BOTTOM_NAV_SAFE_GAP,
     DEBUG_LAYOUT,

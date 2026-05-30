@@ -7,6 +7,7 @@ import re
 import shutil
 import time
 
+from components.ai_chat import build_ai_chat_fab, build_ai_chat_overlay
 from components.bottom_nav import NAV_ITEMS, build_bottom_nav
 from components.layout import (
     app_safe_area,
@@ -15,6 +16,8 @@ from components.layout import (
     build_desktop_header,
     mobile_page_layout,
 )
+from components.mobile_topbar import build_mobile_topbar
+from components.sidebar import build_sidebar
 from data.mock_data import (
     ADMIN_AUDIT_LOGS,
     ADMIN_ROLES,
@@ -4327,7 +4330,7 @@ def main(page: ft.Page) -> None:
         )
         return ft.Column(spacing=0, controls=[banner, content], expand=True)
 
-    def build_content(screen_key: str, is_desktop: bool) -> ft.Control:
+    def build_content(screen_key: str, is_desktop: bool, is_tablet: bool = False) -> ft.Control:
         if screen_key == "onboarding":
             return build_onboarding_page(complete_onboarding, is_desktop)
         if screen_key == "login":
@@ -4344,6 +4347,7 @@ def main(page: ft.Page) -> None:
                 app_user,
                 build_dashboard_data(situations_state, situation_tasks_state, documents=documents_state, reminder_days=int(app_settings.get("doc_reminder_days", 30))),
                 notifications_state,
+                is_tablet=is_tablet,
             ), "home")
         if screen_key == "search":
             return _with_offline_banner(build_search_page(
@@ -4624,6 +4628,36 @@ def main(page: ft.Page) -> None:
             dashboard=build_dashboard_data(situations_state, situation_tasks_state),
         )
 
+    # ---------------------------------------------------------------------------
+    # AI Chat state
+    # ---------------------------------------------------------------------------
+    ai_chat_messages: list[dict] = [
+        {
+            "role": "assistant",
+            "text": "Здравствуйте! Я ИИ-помощник Белпомощника.\n\nЗадайте вопрос о правах, документах или жизненных ситуациях.",
+        }
+    ]
+    ai_chat_state: dict = {"visible": False, "mode": "mini", "docked": False}
+
+    def open_ai_chat(_e=None) -> None:
+        ai_chat_state["visible"] = True
+        route_change()
+
+    def close_ai_chat(_e=None) -> None:
+        ai_chat_state["visible"] = False
+        ai_chat_state["docked"] = False
+        route_change()
+
+    def toggle_ai_fullscreen(_e=None) -> None:
+        ai_chat_state["mode"] = "mini" if ai_chat_state["mode"] == "fullscreen" else "fullscreen"
+        route_change()
+
+    def toggle_ai_dock(_e=None) -> None:
+        ai_chat_state["docked"] = not ai_chat_state["docked"]
+        if ai_chat_state["docked"]:
+            ai_chat_state["mode"] = "mini"
+        route_change()
+
     def on_nav_change(selected_key) -> None:
         key = selected_key if isinstance(selected_key, str) else None
         if key is None:
@@ -4670,29 +4704,52 @@ def main(page: ft.Page) -> None:
         if screen_key == "admin" and not admin_state["loaded_once"]:
             admin_refresh_data(rerender=False)
             admin_state["loaded_once"] = True
+
         page_width = page.width or 390
+        is_mobile = page_width < 768
+        is_tablet = 768 <= page_width < 1180
         is_desktop = page_width >= 1180
         chrome_width = min(1320, max(1080, int(page_width) - 64))
-        screen_content = build_content(screen_key, is_desktop)
-        desktop_body = ft.Container(
-            content=ft.Column(
-                controls=[screen_content],
-                expand=True,
-                scroll=ft.ScrollMode.AUTO,
-            ),
-            padding=0,
-            expand=True,
-            bgcolor=APP_COLORS["background"],
-        )
+
+        # desktop uses wide layout, tablet also uses wide layout, mobile uses narrow
+        is_wide = is_desktop or is_tablet
+        screen_content = build_content(screen_key, is_wide, is_tablet=is_tablet)
+
+        unread_count = sum(1 for n in notifications_state if not n.get("is_read", False))
 
         page.controls.clear()
+        content_area: ft.Container | None = None
+
         if auth_screen or intro_screen:
+            auth_body = ft.Container(
+                content=ft.Column(
+                    controls=[screen_content],
+                    expand=True,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                expand=True,
+                bgcolor=APP_COLORS["screen"],
+            )
             page.add(
-                app_safe_area(desktop_body, include_bottom=True)
-                if is_desktop
+                app_safe_area(auth_body, include_bottom=True)
+                if is_wide
                 else mobile_page_layout(screen_content, include_bottom_nav=False)
             )
+
         elif is_desktop:
+            # ── Desktop: top header + scrollable body + footer ──────────────
+            desktop_body = ft.Container(
+                content=ft.Column(
+                    controls=[screen_content],
+                    expand=True,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                opacity=0.0,
+                animate_opacity=ft.Animation(220, ft.AnimationCurve.EASE_OUT),
+                expand=True,
+                bgcolor=APP_COLORS["screen"],
+            )
+            content_area = desktop_body
             page.add(
                 ft.Column(
                     expand=True,
@@ -4704,18 +4761,96 @@ def main(page: ft.Page) -> None:
                     ],
                 )
             )
+
+        elif is_tablet:
+            # ── Tablet: left sidebar + content ───────────────────────────────
+            content_area = ft.Container(
+                content=ft.Column(
+                    controls=[screen_content],
+                    expand=True,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                opacity=0.0,
+                animate_opacity=ft.Animation(220, ft.AnimationCurve.EASE_OUT),
+                expand=True,
+                bgcolor=APP_COLORS["screen"],
+            )
+
+            sidebar = build_sidebar(
+                screen_to_nav(screen_key),
+                go_to,
+                toggle_theme,
+                theme_mode_state["value"],
+                app_user,
+                tablet=True,
+                on_open_ai_chat=open_ai_chat,
+                notification_count=unread_count,
+            )
+
+            row_controls: list[ft.Control] = [sidebar, content_area]
+
+            if ai_chat_state["visible"] and ai_chat_state["docked"]:
+                docked_panel = build_ai_chat_overlay(
+                    ai_chat_messages,
+                    on_close=close_ai_chat,
+                    on_toggle_fullscreen=toggle_ai_fullscreen,
+                    on_toggle_dock=toggle_ai_dock,
+                    fullscreen=False,
+                    docked=True,
+                    desktop=False,
+                )
+                row_controls.append(docked_panel)
+
+            page.add(ft.Row(expand=True, spacing=0, controls=row_controls))
+
         else:
+            # ── Mobile: topbar + content + bottom nav ────────────────────────
             page.add(
                 ft.Column(
                     expand=True,
                     spacing=0,
                     controls=[
+                        build_mobile_topbar(
+                            "Белпомощник",
+                            go_to=go_to,
+                            user=app_user,
+                            on_open_ai_chat=open_ai_chat,
+                        ),
                         mobile_page_layout(screen_content, include_bottom_nav=True),
-                        bottom_nav_safe_area(build_bottom_nav(screen_to_nav(screen_key), on_nav_change)),
+                        bottom_nav_safe_area(
+                            build_bottom_nav(
+                                screen_to_nav(screen_key),
+                                on_nav_change,
+                                on_open_ai_chat=open_ai_chat,
+                            )
+                        ),
                     ],
                 )
             )
+
+        # Floating AI chat overlay (mini or fullscreen, non-docked)
+        if ai_chat_state["visible"] and not (ai_chat_state["docked"] and is_desktop):
+            fullscreen_mode = ai_chat_state["mode"] == "fullscreen" or is_mobile or is_tablet
+            chat_overlay = build_ai_chat_overlay(
+                ai_chat_messages,
+                on_close=close_ai_chat,
+                on_toggle_fullscreen=toggle_ai_fullscreen,
+                on_toggle_dock=toggle_ai_dock,
+                fullscreen=fullscreen_mode,
+                docked=False,
+                desktop=is_desktop,
+            )
+            page.overlay.clear()
+            page.overlay.append(chat_overlay)
+        else:
+            page.overlay.clear()
+
         page.update()
+
+        # Fade-in for sidebar layouts
+        if content_area is not None:
+            content_area.opacity = 1.0
+            content_area.update()
 
     page.on_route_change = route_change
     page.on_resize = lambda _: route_change()

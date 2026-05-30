@@ -3,6 +3,7 @@ from __future__ import annotations
 import flet as ft
 
 from theme.app_theme import (
+    ANIM_FAST,
     APP_COLORS,
     APP_RADIUS,
     CENTER,
@@ -78,19 +79,27 @@ def app_card(
     width: int | float | None = None,
     height: int | float | None = None,
     animate: bool = False,
+    hover: bool = False,
 ) -> ft.Container:
-    animation = ft.Animation(220, ft.AnimationCurve.EASE_OUT) if animate else None
-    return ft.Container(
+    animation = ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT)
+    base_bg = bgcolor or APP_COLORS["surface"]
+    card = ft.Container(
         content=content,
         padding=padding,
         width=width,
         height=height,
         border_radius=APP_RADIUS["card"],
-        bgcolor=bgcolor or APP_COLORS["surface"],
+        bgcolor=base_bg,
         border=border_all(border_color or APP_COLORS["stroke2"]),
         shadow=card_shadow(),
         animate=animation,
     )
+    if hover:
+        def _on_hover(e: ft.HoverEvent) -> None:
+            card.bgcolor = APP_COLORS["surface2"] if e.data == "true" else base_bg
+            card.update()
+        card.on_hover = _on_hover
+    return card
 
 
 def soft_card(content: ft.Control, padding: int = SPACING["xl"]) -> ft.Container:
