@@ -187,10 +187,10 @@ def _profile_hero(user: dict, settings: dict, desktop: bool, on_logout=None, on_
     )
 
 
-def _stat_tile(label: str, value: str | int, hint: str, icon, tone: str = "blue", width: int | float | None = None) -> ft.Container:
+def _stat_tile(label: str, value: str | int, hint: str, icon, tone: str = "blue", width: int | float | None = None, route: str | None = None, go_to=None) -> ft.Container:
     palette = get_badge_palette()
     bg, fg = palette.get(tone, palette["blue"])
-    return app_card(
+    card = app_card(
         ft.Row(
             spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -210,20 +210,30 @@ def _stat_tile(label: str, value: str | int, hint: str, icon, tone: str = "blue"
         padding=14,
         width=width,
     )
+    if route and go_to:
+        card.ink = True
+        card.on_click = lambda _: go_to(route)
+
+        def _hover(e: ft.HoverEvent) -> None:
+            card.bgcolor = APP_COLORS["surface2"] if e.data == "true" else APP_COLORS["surface"]
+            card.update()
+
+        card.on_hover = _hover
+    return card
 
 
-def _stats_row(favorite_ids: list[str] | set[str] | None = None, desktop: bool = False) -> ft.Control:
+def _stats_row(favorite_ids: list[str] | set[str] | None = None, desktop: bool = False, go_to=None) -> ft.Control:
     earned = len([item for item in ACHIEVEMENTS if item.get("earned")])
     stats = [
-        ("Ситуации", 3, "активные планы", ft.Icons.TASK_ALT_OUTLINED, "blue"),
-        ("Избранное", len(set(favorite_ids or [])), "сценарии", ft.Icons.STAR_OUTLINE, "orange"),
-        ("Достижения", earned, "получено", ft.Icons.EMOJI_EVENTS_OUTLINED, "purple"),
-        ("Документы", 6, "в сейфе", ft.Icons.FOLDER_OUTLINED, "green"),
+        ("Ситуации", 3, "активные планы", ft.Icons.TASK_ALT_OUTLINED, "blue", "/situations"),
+        ("Избранное", len(set(favorite_ids or [])), "сценарии", ft.Icons.STAR_OUTLINE, "orange", "/scenarios"),
+        ("Достижения", earned, "получено", ft.Icons.EMOJI_EVENTS_OUTLINED, "purple", "/learning"),
+        ("Документы", 6, "в сейфе", ft.Icons.FOLDER_OUTLINED, "green", "/documents"),
     ]
-    tiles = [_stat_tile(label, value, hint, icon, tone) for label, value, hint, icon, tone in stats]
+    tiles = [_stat_tile(label, value, hint, icon, tone, route=route, go_to=go_to) for label, value, hint, icon, tone, route in stats]
     if desktop:
         return ft.Row(spacing=12, controls=[ft.Container(expand=True, content=tile) for tile in tiles])
-    mobile_tiles = [_stat_tile(label, value, hint, icon, tone, width=164) for label, value, hint, icon, tone in stats]
+    mobile_tiles = [_stat_tile(label, value, hint, icon, tone, width=164, route=route, go_to=go_to) for label, value, hint, icon, tone, route in stats]
     return ft.Column(spacing=10, controls=[
         ft.Row(spacing=10, alignment=ft.MainAxisAlignment.CENTER, controls=[mobile_tiles[0], mobile_tiles[1]]),
         ft.Row(spacing=10, alignment=ft.MainAxisAlignment.CENTER, controls=[mobile_tiles[2], mobile_tiles[3]]),
@@ -777,7 +787,7 @@ def _desktop_profile(
         spacing=16,
         controls=[
             _profile_hero(user, settings, True, on_logout, save),
-            _stats_row(favorite_ids, True),
+            _stats_row(favorite_ids, True, go_to),
             data_card,
             _interests_card(user, on_add_interest, on_toggle_tag, True),
             _favorite_scenarios_card(favorite_ids, on_open_scenario, go_to, True),
@@ -862,7 +872,7 @@ def _mobile_profile(
                     ],
                 ),
                 _profile_hero(user, settings, False, on_logout, save),
-                _stats_row(favorite_ids, False),
+                _stats_row(favorite_ids, False, go_to),
                 data_card,
                 _interests_card(user, on_add_interest, on_toggle_tag, False),
                 _settings_card(settings, on_setting_change, False),
