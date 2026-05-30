@@ -4424,10 +4424,12 @@ def main(page: ft.Page) -> None:
     def build_content(screen_key: str, is_desktop: bool, is_tablet: bool = False) -> ft.Control:
         if screen_key == "onboarding":
             return build_onboarding_page(complete_onboarding, is_desktop)
+        # Auth screens use their own threshold: two-column from 820px wide
+        auth_wide = (page.width or 390) >= 820
         if screen_key == "login":
-            return build_login_page(is_desktop, login_user, go_to, on_oauth=oauth_login, page=page)
+            return build_login_page(auth_wide, login_user, go_to, on_oauth=oauth_login, page=page)
         if screen_key == "register":
-            return build_register_page(is_desktop, register_user, go_to, on_oauth=oauth_login, page=page)
+            return build_register_page(auth_wide, register_user, go_to, on_oauth=oauth_login, page=page)
         if screen_key == "home":
             return _with_offline_banner(build_home_page(
                 open_problem,
@@ -4818,20 +4820,18 @@ def main(page: ft.Page) -> None:
         content_area: ft.Container | None = None
 
         if auth_screen or intro_screen:
+            # Auth/onboarding: full-bleed animated background, scrollable, no chrome
             auth_body = ft.Container(
                 content=ft.Column(
                     controls=[screen_content],
                     expand=True,
                     scroll=ft.ScrollMode.AUTO,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 expand=True,
                 bgcolor=APP_COLORS["screen"],
             )
-            page.add(
-                app_safe_area(auth_body, include_bottom=True)
-                if is_wide
-                else mobile_page_layout(screen_content, include_bottom_nav=False)
-            )
+            page.add(app_safe_area(auth_body, include_bottom=True))
 
         elif is_desktop:
             # ── Desktop: top header + scrollable body + footer ──────────────

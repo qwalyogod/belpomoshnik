@@ -347,16 +347,16 @@ def auth_shell(
         ],
     )
     content = ft.Row(
-        spacing=34,
+        spacing=30,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Container(width=430, content=side),
-            ft.Container(width=AUTH_CARD_WIDTH, content=card),
+            ft.Container(width=380, content=side),       # info — left
+            ft.Container(width=AUTH_CARD_WIDTH, content=card),  # input fields — right
         ],
     )
     if page is not None:
         return animated_auth_background(page, content=content)
-    return desktop_content(content, width=960, top=52, bottom=80)
+    return desktop_content(content, width=900, top=52, bottom=80)
 
 
 def _important_row(index: str, title: str, subtitle: str) -> ft.Row:
