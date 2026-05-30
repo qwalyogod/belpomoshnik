@@ -9,6 +9,8 @@ from components.auth_forms import (
     auth_tabs,
     auth_text_field,
     form_footer,
+    oauth_divider,
+    oauth_row,
     set_field_error,
 )
 from components.buttons import primary_button
@@ -16,7 +18,7 @@ from components.cards import app_card, hint_card
 from theme.app_theme import APP_COLORS, SPACING
 
 
-def _login_card(is_desktop: bool, on_login=None, go_to=None) -> ft.Container:
+def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> ft.Container:
     email_field = auth_text_field(
         "Email",
         value="ivan@example.by",
@@ -90,6 +92,8 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None) -> ft.Container:
             ],
         ),
         primary_button("Войти", icon=ft.Icons.LOGIN_ROUNDED, on_click=submit, expand=True),
+        oauth_divider(),
+        oauth_row(on_oauth),
         form_footer("Нет аккаунта?", "Создать аккаунт", "/register", go_to),
         hint_card("Демо-доступ: ivan@example.by / 123456", icon=ft.Icons.INFO_OUTLINE),
     ]
@@ -104,11 +108,12 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None) -> ft.Container:
     )
 
 
-def build_login_page(is_desktop: bool = False, on_login=None, go_to=None) -> ft.Control:
-    card = _login_card(is_desktop, on_login, go_to)
+def build_login_page(is_desktop: bool = False, on_login=None, go_to=None, on_oauth=None, page=None) -> ft.Control:
+    card = _login_card(is_desktop, on_login, go_to, on_oauth)
     return auth_shell(
         card,
         is_desktop=is_desktop,
         title="Входите, чтобы сохранить личные ситуации и сроки",
         subtitle="Личный кабинет хранит планы, задачи, документы и показывает только важные напоминания.",
+        page=page,
     )

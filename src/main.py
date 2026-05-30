@@ -63,6 +63,7 @@ from pages.utility_tracker_page import build_utility_tracker_page
 from services.admin_api import AdminAPIClient, AdminAPIError
 from services.dashboard import build_dashboard_data, parse_due_date, status_from_progress
 from services.institutions import match_institutions
+from services.auth_api import AuthAPIClient, AuthAPIError
 from services.local_store import load_app_state, save_app_state
 from services.public_api import PublicAPIClient, PublicAPIError
 from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_theme_mode
@@ -122,6 +123,8 @@ def main(page: ft.Page) -> None:
             "logged_in": False,
             "email": MOCK_USER["email"],
             "remember": True,
+            "access_token": "",
+            "refresh_token": "",
         },
         "app_user": copy.deepcopy(default_profile),
         "app_settings": copy.deepcopy(default_settings),
@@ -226,6 +229,7 @@ def main(page: ft.Page) -> None:
     problem_overrides: dict[str, dict] = {}
     admin_api = AdminAPIClient()
     public_api = PublicAPIClient()
+    auth_api = AuthAPIClient()
     public_state = {"connected": False, "error": "", "loaded_once": False, "last_sync": ""}
     from pages.admin_page import _DEFAULT_NOTIFICATION_RULES as _NOTIF_RULES_INIT, _DEFAULT_CATEGORIES as _CAT_INIT
     admin_state = {
@@ -1151,23 +1155,84 @@ def main(page: ft.Page) -> None:
             public_state["error"] = str(exc)
             return None
 
-    def login_user(email: str, password: str, remember: bool = True) -> None:
-        normalized_email = (email or "").strip().lower()
-        user = users.get(normalized_email)
-        if not user or user.get("password") != password:
-            _show_message("Неверный email или пароль.", APP_COLORS["danger"])
-            return
+    def _apply_login(normalized_email: str, profile: dict, remember: bool, tokens: dict | None = None) -> None:
         auth_state["logged_in"] = True
         auth_state["email"] = normalized_email
         auth_state["remember"] = bool(remember)
-        app_user.update(user["profile"])
+        if tokens:
+            auth_state["access_token"] = tokens.get("access_token", "")
+            auth_state["refresh_token"] = tokens.get("refresh_token", "")
+        app_user.update(profile)
         app_user["first_name"] = app_user.get("name", "Пользователь").split()[0]
         app_user["interests"] = list(app_user.get("interests", []))
         app_settings["learning_mode"] = bool(app_user.get("learning_mode", app_settings["learning_mode"]))
         learning_state["enabled"] = app_settings["learning_mode"]
         save_current_state()
-        _show_message("Вы вошли в профиль.")
         page.run_task(page.push_route, "/")
+
+    def login_user(email: str, password: str, remember: bool = True) -> None:
+        normalized_email = (email or "").strip().lower()
+        # 1) Try backend JWT auth
+        tokens: dict | None = None
+        try:
+            if auth_api.health():
+                tokens = auth_api.login(normalized_email, password)
+        except AuthAPIError as exc:
+            if exc.status_code in (400, 401):
+                _show_message("Неверный email или пароль.", APP_COLORS["danger"])
+                return
+            tokens = None  # backend error → fall back to local
+
+        local_user = users.get(normalized_email)
+        if tokens:
+            # Backend accepted — reuse local profile if present, else minimal one
+            profile = (local_user or {}).get("profile") or {
+                "name": normalized_email.split("@")[0].title(),
+                "email": normalized_email,
+                "city": "Минск",
+                "region": "Минская область",
+                "avatar_url": MOCK_USER["avatar_url"],
+                "interests": [],
+                "learning_mode": True,
+            }
+            _apply_login(normalized_email, profile, remember, tokens)
+            _show_message("Вход выполнен (API).")
+            return
+
+        # 2) Fallback — local dictionary
+        if not local_user or local_user.get("password") != password:
+            _show_message("Неверный email или пароль.", APP_COLORS["danger"])
+            return
+        _apply_login(normalized_email, local_user["profile"], remember)
+        _show_message("Вы вошли в профиль.")
+
+    def oauth_login(provider: str) -> None:
+        """Demo Google / Yandex OAuth — issues a backend JWT for a demo identity."""
+        demo = {
+            "google": ("ivan.google@gmail.com", "Иван Иванов"),
+            "yandex": ("ivan.yandex@yandex.ru", "Иван Иванов"),
+        }.get(provider, ("ivan@example.by", "Иван Иванов"))
+        email, name = demo
+        tokens: dict | None = None
+        try:
+            if auth_api.health():
+                tokens = auth_api.oauth(provider, email, name)
+        except AuthAPIError:
+            tokens = None
+        profile = {
+            "name": name,
+            "first_name": name.split()[0],
+            "email": email,
+            "region": "Минская область",
+            "city": "Минск",
+            "avatar_url": MOCK_USER["avatar_url"],
+            "interests": [],
+            "learning_mode": True,
+        }
+        users.setdefault(email, {"password": f"{provider}-oauth", "profile": profile})
+        _apply_login(email, profile, True, tokens)
+        label = "Google" if provider == "google" else "Яндекс"
+        _show_message(f"Вход через {label} выполнен.")
 
     def register_user(
         name: str,
@@ -1210,15 +1275,20 @@ def main(page: ft.Page) -> None:
             "learning_mode": True,
         }
         users[normalized_email] = {"password": password, "profile": profile}
-        auth_state["logged_in"] = True
-        auth_state["email"] = normalized_email
-        auth_state["remember"] = True
-        app_user.update(profile)
-        app_settings["learning_mode"] = bool(profile.get("learning_mode", True))
-        learning_state["enabled"] = app_settings["learning_mode"]
-        save_current_state()
-        _show_message("Аккаунт создан.")
-        page.run_task(page.push_route, "/")
+
+        # Try backend registration (JWT). Backend offline → local-only account.
+        tokens: dict | None = None
+        try:
+            if auth_api.health():
+                tokens = auth_api.register(normalized_name, normalized_email, password)
+        except AuthAPIError as exc:
+            if exc.status_code == 400:
+                _show_message("Пользователь с таким email уже есть.", APP_COLORS["warning"])
+                return
+            tokens = None
+
+        _apply_login(normalized_email, profile, True, tokens)
+        _show_message("Аккаунт создан (API)." if tokens else "Аккаунт создан.")
 
     def logout_user(_=None) -> None:
         auth_state["logged_in"] = False
@@ -4355,9 +4425,9 @@ def main(page: ft.Page) -> None:
         if screen_key == "onboarding":
             return build_onboarding_page(complete_onboarding, is_desktop)
         if screen_key == "login":
-            return build_login_page(is_desktop, login_user, go_to)
+            return build_login_page(is_desktop, login_user, go_to, on_oauth=oauth_login, page=page)
         if screen_key == "register":
-            return build_register_page(is_desktop, register_user, go_to)
+            return build_register_page(is_desktop, register_user, go_to, on_oauth=oauth_login, page=page)
         if screen_key == "home":
             return _with_offline_banner(build_home_page(
                 open_problem,

@@ -9,6 +9,8 @@ from components.auth_forms import (
     auth_tabs,
     auth_text_field,
     form_footer,
+    oauth_divider,
+    oauth_row,
     set_field_error,
 )
 from components.buttons import primary_button
@@ -16,7 +18,7 @@ from components.cards import app_card, hint_card
 from theme.app_theme import APP_COLORS, SPACING
 
 
-def _register_card(is_desktop: bool, on_register=None, go_to=None) -> ft.Container:
+def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None) -> ft.Container:
     name_field = auth_text_field("Имя и фамилия", hint="Анна Петрова", prefix_icon=ft.Icons.PERSON_OUTLINE)
     email_field = auth_text_field(
         "Email",
@@ -117,6 +119,8 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None) -> ft.Contain
         confirm_field,
         ft.Column(spacing=0, controls=[terms, terms_error]),
         primary_button("Создать аккаунт", icon=ft.Icons.PERSON_ADD_ALT_1_OUTLINED, on_click=submit, expand=True),
+        oauth_divider(),
+        oauth_row(on_oauth),
         form_footer("Уже есть аккаунт?", "Войти", "/login", go_to),
         hint_card("Данные сохраняются локально в демо-версии. Production потребует серверной защиты.", icon=ft.Icons.SHIELD_OUTLINED),
     ]
@@ -131,11 +135,12 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None) -> ft.Contain
     )
 
 
-def build_register_page(is_desktop: bool = False, on_register=None, go_to=None) -> ft.Control:
-    card = _register_card(is_desktop, on_register, go_to)
+def build_register_page(is_desktop: bool = False, on_register=None, go_to=None, on_oauth=None, page=None) -> ft.Control:
+    card = _register_card(is_desktop, on_register, go_to, on_oauth)
     return auth_shell(
         card,
         is_desktop=is_desktop,
         title="Создайте профиль, чтобы получать персональные подсказки",
         subtitle="Регион и город нужны для учреждений, сроков и релевантных закон-апдейтов.",
+        page=page,
     )
