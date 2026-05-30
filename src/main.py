@@ -16,7 +16,7 @@ from components.layout import (
     build_desktop_header,
     mobile_page_layout,
 )
-from components.mobile_topbar import build_mobile_topbar
+from components.mobile_topbar import build_mobile_topbar, build_notification_button
 from components.sidebar import build_sidebar
 from data.mock_data import (
     ADMIN_AUDIT_LOGS,
@@ -4842,15 +4842,34 @@ def main(page: ft.Page) -> None:
                         user=app_user,
                         on_open_ai_chat=open_ai_chat,
                         minimal=True,
+                        notification_count=unread_count,
                     )
                 ]
+
+            page_body = mobile_page_layout(screen_content, include_bottom_nav=True)
+
+            # Floating notification button on non-home, non-profile, non-notifications pages
+            show_float_bell = screen_key not in {"home", "profile", "notifications"}
+            if show_float_bell:
+                page_body = ft.Stack(
+                    expand=True,
+                    controls=[
+                        page_body,
+                        ft.Container(
+                            content=build_notification_button(go_to, unread_count),
+                            right=14,
+                            top=10,
+                        ),
+                    ],
+                )
+
             page.add(
                 ft.Column(
                     expand=True,
                     spacing=0,
                     controls=[
                         *topbar_controls,
-                        mobile_page_layout(screen_content, include_bottom_nav=True),
+                        page_body,
                         bottom_nav_safe_area(
                             build_bottom_nav(
                                 screen_to_nav(screen_key),
