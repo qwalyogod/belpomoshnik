@@ -8,6 +8,14 @@ from backend.config import DEFAULT_DB_PATH
 
 
 def run() -> None:
+    from backend.config import get_database_url
+
+    if not get_database_url().startswith("sqlite"):
+        raise SystemExit(
+            "migrate.py поддерживает только SQLite (.sql-миграции). "
+            "Для PostgreSQL используйте: python -m backend.bootstrap"
+        )
+
     db_path = Path(DEFAULT_DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 

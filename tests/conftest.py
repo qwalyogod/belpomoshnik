@@ -20,11 +20,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend.app import app  # noqa: E402
 from backend.auth import hash_password  # noqa: E402
+from backend.bootstrap import seed_roles  # noqa: E402
 from backend.database import SessionLocal, engine  # noqa: E402
-from backend.models import Base, Role, User  # noqa: E402
+from backend.models import Base, User  # noqa: E402
 from backend.rate_limit import login_limiter  # noqa: E402
-
-_ROLES = [("citizen", "Гражданин"), ("content_editor", "Редактор"), ("platform_admin", "Администратор")]
 
 
 @pytest.fixture(autouse=True)
@@ -34,9 +33,7 @@ def reset_db():
     Base.metadata.create_all(engine)
     db = SessionLocal()
     try:
-        for rid, title in _ROLES:
-            db.add(Role(id=rid, title=title))
-        db.commit()
+        seed_roles(db)
     finally:
         db.close()
     login_limiter._log.clear()
