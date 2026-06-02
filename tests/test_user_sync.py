@@ -4,7 +4,9 @@ from services.user_sync import (
     document_from_api,
     document_to_api,
     delete_tax,
+    pull_utility,
     push_tax,
+    push_utility_payment,
 )
 
 
@@ -57,6 +59,43 @@ class TestTaxSyncRouting:
         delete_tax(c, {"id": "tax-123"})  # local-only -> no API call
         delete_tax(c, {"id": "e" * 32})
         assert [call[0] for call in c.calls] == ["delete"]
+
+
+class _UtilStub:
+    def list_utility_accounts(self):
+        return [{
+            "id": "a" * 32, "address": "ул. X", "account_number": "ЛС1", "provider": "РСЦ",
+            "payments": [
+                {"id": "b" * 32, "period": "Май", "amount": 10.0},
+                {"id": "c" * 32, "period": "Июнь", "amount": 20.0},
+            ],
+        }]
+
+
+class TestPullUtilitySplit:
+    def test_flattens_nested_payments(self):
+        accounts, payments = pull_utility(_UtilStub())
+        assert len(accounts) == 1 and accounts[0]["id"] == "a" * 32
+        assert "payments" not in accounts[0]
+        assert len(payments) == 2
+        assert all(p["account_id"] == "a" * 32 for p in payments)
+
+
+class TestUtilityPaymentRouting:
+    def test_create_needs_server_account(self):
+        class _C:
+            def __init__(self):
+                self.added = []
+            def add_utility_payment(self, acc_id, payload):
+                self.added.append((acc_id, payload))
+                return {"id": acc_id, "payments": [{**payload, "id": "d" * 32}]}
+        c = _C()
+        # local account id -> cannot create payment yet
+        assert push_utility_payment(c, {"id": "upay-1", "period": "Май"}, "util-1") is None
+        assert c.added == []
+        # server account id -> creates
+        result = push_utility_payment(c, {"id": "upay-1", "period": "Май"}, "a" * 32)
+        assert result is not None and len(c.added) == 1
 
 
 class TestDocumentMapper:

@@ -108,8 +108,77 @@ def delete_tax(api_client, tax: dict[str, Any]) -> None:
         api_client.delete_tax(tax["id"])
 
 
+_ACCOUNT_FIELDS = ("address", "account_number", "provider")
+_PAYMENT_FIELDS = (
+    "period", "readings_date", "payment_date", "status",
+    "readings_deadline", "payment_deadline", "comment",
+)
+
+
+def _account_payload(account: dict[str, Any]) -> dict[str, Any]:
+    return {k: account.get(k, "") for k in _ACCOUNT_FIELDS}
+
+
+def _payment_payload(payment: dict[str, Any]) -> dict[str, Any]:
+    payload = {k: payment.get(k, "") for k in _PAYMENT_FIELDS}
+    try:
+        payload["amount"] = float(payment.get("amount") or 0)
+    except (TypeError, ValueError):
+        payload["amount"] = 0.0
+    return payload
+
+
 def pull_utility_accounts(api_client) -> list[dict[str, Any]]:
     return api_client.list_utility_accounts()
+
+
+def pull_utility(api_client) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Разложить вложенный ответ API в плоские (accounts, payments) для Flet."""
+    accounts: list[dict[str, Any]] = []
+    payments: list[dict[str, Any]] = []
+    for acc in api_client.list_utility_accounts():
+        accounts.append({"id": acc["id"], **{k: acc.get(k, "") for k in _ACCOUNT_FIELDS}})
+        for p in acc.get("payments", []) or []:
+            payments.append({**p, "account_id": acc["id"]})
+    return accounts, payments
+
+
+def push_utility_account(api_client, account: dict[str, Any]) -> dict[str, Any]:
+    """Создать/обновить счёт. Возвращает server-счёт (с payments)."""
+    payload = _account_payload(account)
+    if _is_server_id(account.get("id")):
+        return api_client.update_utility_account(account["id"], payload)
+    return api_client.create_utility_account(payload)
+
+
+def delete_utility_account(api_client, account: dict[str, Any]) -> None:
+    if _is_server_id(account.get("id")):
+        api_client.delete_utility_account(account["id"])
+
+
+def push_utility_payment(api_client, payment: dict[str, Any], account_server_id: str) -> dict[str, Any] | None:
+    """Создать/обновить платёж. Для создания нужен server-id счёта.
+
+    Возвращает server-платёж при создании (id меняется) либо None,
+    если счёт ещё не синхронизирован.
+    """
+    payload = _payment_payload(payment)
+    if _is_server_id(payment.get("id")):
+        return api_client.update_utility_payment(payment["id"], payload)
+    if not _is_server_id(account_server_id):
+        return None
+    account = api_client.add_utility_payment(account_server_id, payload)
+    new_payments = account.get("payments", []) or []
+    # последний добавленный платёж с совпадающим периодом
+    for p in reversed(new_payments):
+        if p.get("period") == payload.get("period"):
+            return {**p, "account_id": account_server_id}
+    return None
+
+
+def delete_utility_payment(api_client, payment: dict[str, Any]) -> None:
+    if _is_server_id(payment.get("id")):
+        api_client.delete_utility_payment(payment["id"])
 
 
 def pull_notifications(api_client) -> list[dict[str, Any]]:

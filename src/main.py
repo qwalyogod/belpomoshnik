@@ -352,6 +352,64 @@ def main(page: ft.Page) -> None:
             user_sync.delete_tax(client, tax)
         except UserAPIError:
             return
+
+    def _sync_pull_utility() -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            accounts, payments = user_sync.pull_utility(client)
+        except UserAPIError:
+            return
+        utility_accounts_state[:] = accounts
+        utility_payments_state[:] = payments
+
+    def _sync_push_utility_account(account: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        old_id = account.get("id")
+        try:
+            synced = user_sync.push_utility_account(client, account)
+        except UserAPIError:
+            return
+        new_id = synced.get("id")
+        if new_id and new_id != old_id:
+            account["id"] = new_id
+            for payment in utility_payments_state:
+                if payment.get("account_id") == old_id:
+                    payment["account_id"] = new_id
+
+    def _sync_delete_utility_account(account: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            user_sync.delete_utility_account(client, account)
+        except UserAPIError:
+            return
+
+    def _sync_push_utility_payment(payment: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        account = _find_item(utility_accounts_state, payment.get("account_id"))
+        account_server_id = account.get("id") if account else payment.get("account_id")
+        try:
+            synced = user_sync.push_utility_payment(client, payment, account_server_id)
+        except UserAPIError:
+            return
+        if synced and synced.get("id"):
+            payment["id"] = synced["id"]
+
+    def _sync_delete_utility_payment(payment: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            user_sync.delete_utility_payment(client, payment)
+        except UserAPIError:
+            return
     public_state = {"connected": False, "error": "", "loaded_once": False, "last_sync": ""}
     from pages.admin_page import _DEFAULT_NOTIFICATION_RULES as _NOTIF_RULES_INIT, _DEFAULT_CATEGORIES as _CAT_INIT
     admin_state = {
@@ -1469,6 +1527,7 @@ def main(page: ft.Page) -> None:
             auth_state["refresh_token"] = tokens.get("refresh_token", "")
             _sync_pull_documents()
             _sync_pull_taxes()
+            _sync_pull_utility()
         app_user.update(profile)
         app_user["first_name"] = app_user.get("name", "Пользователь").split()[0]
         app_user["interests"] = list(app_user.get("interests", []))
@@ -2349,12 +2408,14 @@ def main(page: ft.Page) -> None:
         if not address:
             _show_message("Укажите адрес.", APP_COLORS["warning"])
             return
-        utility_accounts_state.append({
+        new_account = {
             "id": "util-" + str(int(time.time())),
             "address": address,
             "account_number": _text_value(account_number_field),
             "provider": _text_value(provider_field),
-        })
+        }
+        _sync_push_utility_account(new_account)
+        utility_accounts_state.append(new_account)
         _close(dialog)
         save_current_state()
         _show_message("Лицевой счёт добавлен.")
@@ -2387,6 +2448,7 @@ def main(page: ft.Page) -> None:
         account["address"] = address
         account["account_number"] = _text_value(account_number_field)
         account["provider"] = _text_value(provider_field)
+        _sync_push_utility_account(account)
         _close(dialog)
         save_current_state()
         _show_message("Счёт обновлён.")
@@ -2398,6 +2460,7 @@ def main(page: ft.Page) -> None:
             _show_message("Счёт не найден.", APP_COLORS["warning"])
             return
         def delete(dialog) -> None:
+            _sync_delete_utility_account(account)
             utility_accounts_state[:] = [a for a in utility_accounts_state if a.get("id") != account_id]
             utility_payments_state[:] = [p for p in utility_payments_state if p.get("account_id") != account_id]
             save_current_state()
@@ -2434,7 +2497,7 @@ def main(page: ft.Page) -> None:
             amount = float((_text_value(amount_field) or "0").replace(",", "."))
         except ValueError:
             amount = 0.0
-        utility_payments_state.append({
+        new_payment = {
             "id": "upay-" + str(int(time.time())),
             "account_id": account_id,
             "period": period,
@@ -2445,7 +2508,9 @@ def main(page: ft.Page) -> None:
             "readings_deadline": _text_value(readings_deadline_field),
             "payment_deadline": _text_value(payment_deadline_field),
             "comment": "",
-        })
+        }
+        _sync_push_utility_payment(new_payment)
+        utility_payments_state.append(new_payment)
         _close(dialog)
         save_current_state()
         _show_message("Запись добавлена.")
@@ -2486,6 +2551,7 @@ def main(page: ft.Page) -> None:
         payment["readings_deadline"] = _text_value(readings_deadline_field)
         payment["payment_deadline"] = _text_value(payment_deadline_field)
         payment["status"] = status_field.value or "Ожидает"
+        _sync_push_utility_payment(payment)
         _close(dialog)
         save_current_state()
         _show_message("Запись обновлена.")
@@ -2497,6 +2563,7 @@ def main(page: ft.Page) -> None:
             _show_message("Запись не найдена.", APP_COLORS["warning"])
             return
         def delete(dialog) -> None:
+            _sync_delete_utility_payment(payment)
             utility_payments_state[:] = [p for p in utility_payments_state if p.get("id") != payment_id]
             save_current_state()
             _close(dialog)

@@ -126,6 +126,22 @@ def main():
         acc2 = api.add_utility_payment(acc["id"], {"period": "Май 2026", "amount": 78.4})
         check("utility payment added", len(acc2["payments"]) == 1 and acc2["payments"][0]["amount"] == 78.4)
 
+        # user_sync utility: local account -> server, payment under it, pull split
+        local_acc = {"id": "util-1", "address": "пр. Победителей, 7", "provider": "Минскэнерго"}
+        synced_acc = user_sync.push_utility_account(api, local_acc)
+        local_acc["id"] = synced_acc["id"]  # main.py performs this remap
+        check("utility account local -> server id", len(str(local_acc.get("id", ""))) == 32)
+        local_pay = {"id": "upay-1", "account_id": local_acc["id"], "period": "Июнь 2026", "amount": 55.5}
+        synced_pay = user_sync.push_utility_payment(api, local_pay, local_acc["id"])
+        check("utility payment via user_sync", bool(synced_pay) and len(str(synced_pay.get("id", ""))) == 32)
+        accs, pays = user_sync.pull_utility(api)
+        check("pull_utility splits accounts/payments",
+              any(a["id"] == local_acc["id"] for a in accs)
+              and any(p["account_id"] == local_acc["id"] for p in pays))
+        user_sync.delete_utility_account(api, local_acc)
+        accs2, _ = user_sync.pull_utility(api)
+        check("utility account deleted (cascade)", all(a["id"] != local_acc["id"] for a in accs2))
+
         # Taxes
         tax = api.create_tax({"title": "Декларация", "deadline": "2026-03-01"})
         check("tax created", bool(tax.get("id")))
