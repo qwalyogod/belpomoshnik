@@ -66,6 +66,7 @@ class UserDocumentIn(BaseModel):
     expiry_date: str = ""
     is_sensitive: bool = False
     comment: str = ""
+    scan_path: str = ""
 
 
 class UserDocumentUpdate(BaseModel):
@@ -77,6 +78,7 @@ class UserDocumentUpdate(BaseModel):
     expiry_date: str | None = None
     is_sensitive: bool | None = None
     comment: str | None = None
+    scan_path: str | None = None
 
 
 class UserDocumentOut(BaseModel):
@@ -90,6 +92,7 @@ class UserDocumentOut(BaseModel):
     expiry_date: str
     is_sensitive: bool
     comment: str
+    scan_path: str
 
 
 # ---------------------------------------------------------------------------

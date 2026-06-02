@@ -449,6 +449,7 @@ class UserDocument(Base, TimestampMixin):
     expiry_date: Mapped[str] = mapped_column(String(20), default="", nullable=False)
     is_sensitive: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    scan_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
 
     user: Mapped[User] = relationship(back_populates="documents")
 

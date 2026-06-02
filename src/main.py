@@ -67,6 +67,8 @@ from services.institutions import match_institutions
 from services.auth_api import AuthAPIClient, AuthAPIError
 from services.local_store import load_app_state, save_app_state
 from services.public_api import PublicAPIClient, PublicAPIError
+from services.user_api import UserAPIClient, UserAPIError
+from services import user_sync
 from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_large_text, set_theme_mode
 
 
@@ -286,6 +288,40 @@ def main(page: ft.Page) -> None:
     admin_api = AdminAPIClient()
     public_api = PublicAPIClient()
     auth_api = AuthAPIClient()
+    user_api = UserAPIClient()
+
+    def _user_api_ready() -> UserAPIClient | None:
+        """Вернуть авторизованный UserAPIClient, если есть токен и backend жив.
+
+        Local-first: при недоступном backend возвращает None, приложение
+        продолжает работать на локальном состоянии.
+        """
+        token = auth_state.get("access_token")
+        if not token:
+            return None
+        try:
+            if not auth_api.health():
+                return None
+        except Exception:
+            return None
+        user_api.set_token(token)
+        return user_api
+
+    def _sync_pull_documents() -> None:
+        """Best-effort загрузка документов из backend в локальное состояние."""
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            remote = user_sync.pull_documents(client)
+        except UserAPIError:
+            return
+        for doc in remote:
+            doc.setdefault("document_type", "Другое")
+            doc["status"] = _document_status(doc.get("expiry_date", ""), "Активен")
+            doc["icon"] = _document_icon(doc.get("document_type", "Другое"))
+            doc["details"] = _document_details(doc)
+        documents_state[:] = remote
     public_state = {"connected": False, "error": "", "loaded_once": False, "last_sync": ""}
     from pages.admin_page import _DEFAULT_NOTIFICATION_RULES as _NOTIF_RULES_INIT, _DEFAULT_CATEGORIES as _CAT_INIT
     admin_state = {
@@ -1401,6 +1437,7 @@ def main(page: ft.Page) -> None:
         if tokens:
             auth_state["access_token"] = tokens.get("access_token", "")
             auth_state["refresh_token"] = tokens.get("refresh_token", "")
+            _sync_pull_documents()
         app_user.update(profile)
         app_user["first_name"] = app_user.get("name", "Пользователь").split()[0]
         app_user["interests"] = list(app_user.get("interests", []))
@@ -2074,11 +2111,33 @@ def main(page: ft.Page) -> None:
         )
         del user_activity_log_state[200:]
 
+    def _sync_push_document(document: dict) -> None:
+        """Best-effort отправка документа в backend; обновляет id на серверный."""
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            synced = user_sync.push_document(client, document)
+        except UserAPIError:
+            return
+        if synced.get("id") is not None:
+            document["id"] = synced["id"]
+
+    def _sync_delete_document(document: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            user_sync.delete_document(client, document)
+        except UserAPIError:
+            return
+
     def add_document_from_dialog(dialog, fields: dict[str, ft.Control]) -> None:
         payload = _collect_document_payload(fields)
         if payload is None:
             return
         payload["id"] = f"doc-{int(time.time())}"
+        _sync_push_document(payload)
         documents_state.insert(0, payload)
         _log_doc_action("created", payload)
         _log_user_action("doc_added", f"Добавлен документ «{payload.get('title', 'Документ')}»")
@@ -2120,6 +2179,7 @@ def main(page: ft.Page) -> None:
             _close(dialog)
             return
         document.update(payload)
+        _sync_push_document(document)
         _log_doc_action("updated", document)
         save_current_state()
         _close(dialog)
@@ -2221,6 +2281,7 @@ def main(page: ft.Page) -> None:
             return
 
         def delete(dialog) -> None:
+            _sync_delete_document(document)
             _log_doc_action("deleted", document)
             _log_user_action("doc_deleted", f"Удалён документ «{document.get('title', 'Документ')}»")
             documents_state[:] = [item for item in documents_state if item.get("id") != document_id]

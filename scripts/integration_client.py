@@ -94,6 +94,21 @@ def main():
         api.delete_document(doc["id"])
         check("document deleted", all(d["id"] != doc["id"] for d in api.list_documents()))
 
+        # user_sync mapper round-trip (Flet format <-> API) against live server
+        from services import user_sync
+        flet_doc = {
+            "title": "ВУ", "document_type": "license", "document_number": "AB123",
+            "issuer": "ГАИ", "issue_date": "2020-06-01", "expiry_date": "2030-06-01",
+            "comment": "кат. B", "scan_path": "x.enc", "is_sensitive": True,
+        }
+        pushed = user_sync.push_document(api, flet_doc)
+        check("user_sync push returns int id", isinstance(pushed.get("id"), int))
+        pulled = user_sync.pull_documents(api)
+        match = next((d for d in pulled if d["id"] == pushed["id"]), None)
+        check("user_sync field mapping survives", bool(match) and match["document_type"] == "license"
+              and match["issuer"] == "ГАИ" and match["document_number"] == "AB123")
+        user_sync.delete_document(api, pushed)
+
         # Situation + task progress
         sit = api.create_situation({"title": "Рождение ребёнка", "tasks": [{"title": "A"}, {"title": "B"}]})
         check("situation progress 0", sit["progress"] == 0)
