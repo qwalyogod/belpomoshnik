@@ -9,7 +9,11 @@ from pathlib import Path
 
 _tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 _tmp.close()
-os.environ["BELPOMOSHNIK_DATABASE_URL"] = f"sqlite:///{_tmp.name}"
+# Run the suite against an alternate DB (e.g. PostgreSQL) by setting
+# BELPOMOSHNIK_TEST_DATABASE_URL; otherwise an isolated temp SQLite is used.
+os.environ["BELPOMOSHNIK_DATABASE_URL"] = os.environ.get(
+    "BELPOMOSHNIK_TEST_DATABASE_URL", f"sqlite:///{_tmp.name}"
+)
 os.environ["BELPOMOSHNIK_SECRET_KEY"] = "pytest-secret-key-256bit-aaaaaaaaaaaaaaaa"
 
 SRC = Path(__file__).resolve().parents[1] / "src"

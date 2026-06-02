@@ -53,9 +53,14 @@ MAX_EMAILS_PER_USER_PER_DAY: int = int(os.getenv("MAX_EMAILS_PER_USER_PER_DAY", 
 # ---------------------------------------------------------------------------
 
 def _send_smtp(recipient: str, subject: str, body_text: str, body_html: str | None = None) -> None:
-    """Отправить email через SMTP. Raises SMTPException при ошибке."""
-    if not SMTP_USER or not SMTP_PASSWORD:
-        raise RuntimeError("SMTP_USER и SMTP_PASSWORD не заданы в переменных окружения.")
+    """Отправить email через SMTP. Raises SMTPException при ошибке.
+
+    Аутентификация опциональна: если SMTP_USER/SMTP_PASSWORD не заданы,
+    письмо отправляется без login (dev-релеи без auth, напр. MailHog).
+    Для production задайте креды в env.
+    """
+    if not SMTP_HOST:
+        raise RuntimeError("SMTP_HOST не задан в переменных окружения.")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -69,7 +74,8 @@ def _send_smtp(recipient: str, subject: str, body_text: str, body_html: str | No
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         if SMTP_TLS:
             server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
+        if SMTP_USER and SMTP_PASSWORD:
+            server.login(SMTP_USER, SMTP_PASSWORD)
         server.sendmail(SMTP_FROM, recipient, msg.as_string())
 
 

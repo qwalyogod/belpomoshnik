@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,7 +47,10 @@ def main():
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp.close()
     env = dict(os.environ)
-    env["BELPOMOSHNIK_DATABASE_URL"] = f"sqlite:///{tmp.name}"
+    # Honor a pre-set DB URL (e.g. PostgreSQL); otherwise isolated temp SQLite.
+    preset_url = os.environ.get("BELPOMOSHNIK_DATABASE_URL")
+    env["BELPOMOSHNIK_DATABASE_URL"] = preset_url or f"sqlite:///{tmp.name}"
+    print(f"[integration] DB: {env['BELPOMOSHNIK_DATABASE_URL'].split('@')[-1]}")
     env["BELPOMOSHNIK_SECRET_KEY"] = "integration-secret-256bit-aaaaaaaaaaaa"
     env["PYTHONPATH"] = str(SRC)
 
@@ -68,8 +72,9 @@ def main():
         auth = AuthAPIClient(BASE)
         check("server healthy", auth.health())
 
-        tokens = auth.register("Integration User", "int@bel.by", "int-pass-123")
-        check("register returns token", bool(tokens.get("access_token")))
+        email = f"int-{uuid.uuid4().hex[:8]}@bel.by"
+        tokens = auth.register("Integration User", email, "int-pass-123")
+        check("register returns token", bool(tokens.get("access_token")), str(tokens))
 
         api = UserAPIClient(BASE, access_token=tokens["access_token"])
 
