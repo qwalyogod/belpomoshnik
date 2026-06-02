@@ -69,3 +69,79 @@ class UserAPIClient:
 
     def delete_document(self, doc_id: int) -> None:
         self._request("DELETE", f"/api/user/documents/{doc_id}")
+
+    # Situations & tasks
+    def list_situations(self) -> list[dict]:
+        return self._request("GET", "/api/user/situations") or []
+
+    def create_situation(self, payload: dict) -> dict:
+        return self._request("POST", "/api/user/situations", payload=payload)
+
+    def get_situation(self, situation_id: str) -> dict:
+        return self._request("GET", f"/api/user/situations/{situation_id}")
+
+    def update_situation(self, situation_id: str, payload: dict) -> dict:
+        return self._request("PUT", f"/api/user/situations/{situation_id}", payload=payload)
+
+    def delete_situation(self, situation_id: str) -> None:
+        self._request("DELETE", f"/api/user/situations/{situation_id}")
+
+    def add_task(self, situation_id: str, payload: dict) -> dict:
+        return self._request("POST", f"/api/user/situations/{situation_id}/tasks", payload=payload)
+
+    def update_task(self, task_id: str, payload: dict) -> dict:
+        return self._request("PATCH", f"/api/user/tasks/{task_id}", payload=payload)
+
+    def delete_task(self, task_id: str) -> None:
+        self._request("DELETE", f"/api/user/tasks/{task_id}")
+
+    # Notifications
+    def list_notifications(self) -> list[dict]:
+        return self._request("GET", "/api/user/notifications") or []
+
+    def create_notification(self, payload: dict) -> dict:
+        return self._request("POST", "/api/user/notifications", payload=payload)
+
+    def mark_notification_read(self, notification_id: str) -> dict:
+        return self._request("PATCH", f"/api/user/notifications/{notification_id}/read")
+
+    def mark_all_notifications_read(self) -> dict:
+        return self._request("POST", "/api/user/notifications/read-all") or {}
+
+    def delete_notification(self, notification_id: str) -> None:
+        self._request("DELETE", f"/api/user/notifications/{notification_id}")
+
+    # Utility (ЖКХ)
+    def list_utility_accounts(self) -> list[dict]:
+        return self._request("GET", "/api/user/utility/accounts") or []
+
+    def create_utility_account(self, payload: dict) -> dict:
+        return self._request("POST", "/api/user/utility/accounts", payload=payload)
+
+    def update_utility_account(self, account_id: str, payload: dict) -> dict:
+        return self._request("PUT", f"/api/user/utility/accounts/{account_id}", payload=payload)
+
+    def delete_utility_account(self, account_id: str) -> None:
+        self._request("DELETE", f"/api/user/utility/accounts/{account_id}")
+
+    def add_utility_payment(self, account_id: str, payload: dict) -> dict:
+        return self._request("POST", f"/api/user/utility/accounts/{account_id}/payments", payload=payload)
+
+    def update_utility_payment(self, payment_id: str, payload: dict) -> dict:
+        return self._request("PATCH", f"/api/user/utility/payments/{payment_id}", payload=payload)
+
+    def delete_utility_payment(self, payment_id: str) -> None:
+        self._request("DELETE", f"/api/user/utility/payments/{payment_id}")
+
+    # Taxes
+    def list_taxes(self) -> list[dict]:
+        return self._request("GET", "/api/user/taxes") or []
+
+    def create_tax(self, payload: dict) -> dict:
+        return self._request("POST", "/api/user/taxes", payload=payload)
+
+    def update_tax(self, tax_id: str, payload: dict) -> dict:
+        return self._request("PUT", f"/api/user/taxes/{tax_id}", payload=payload)
+
+    def delete_tax(self, tax_id: str) -> None:
+        self._request("DELETE", f"/api/user/taxes/{tax_id}")
