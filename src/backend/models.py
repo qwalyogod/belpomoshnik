@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
     Enum as SQLEnum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -29,16 +30,21 @@ from backend.enums import (
 )
 
 
+def _utcnow() -> datetime:
+    """Timezone-aware UTC now (replaces deprecated datetime.utcnow())."""
+    return datetime.now(timezone.utc)
+
+
 class Base(DeclarativeBase):
     pass
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=_utcnow,
+        onupdate=_utcnow,
         nullable=False,
     )
 
@@ -48,7 +54,7 @@ scenario_step_documents = Table(
     Base.metadata,
     Column("step_id", ForeignKey("scenario_steps.id", ondelete="CASCADE"), primary_key=True),
     Column("document_id", ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True),
-    Column("created_at", DateTime(timezone=True), default=datetime.utcnow, nullable=False),
+    Column("created_at", DateTime(timezone=True), default=_utcnow, nullable=False),
 )
 
 
@@ -372,7 +378,7 @@ class Role(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     users: Mapped[list[User]] = relationship(back_populates="role")
 
@@ -424,7 +430,7 @@ class RefreshToken(Base):
     token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
 
@@ -479,7 +485,7 @@ class UserSituationTask(Base):
     due_date: Mapped[str] = mapped_column(String(20), default="", nullable=False)
     stage_title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     situation: Mapped[UserSituation] = relationship(back_populates="tasks")
 
@@ -499,7 +505,61 @@ class UserNotification(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     source: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     due_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class UtilityAccount(Base, TimestampMixin):
+    """G8 — Лицевой счёт ЖКХ пользователя."""
+    __tablename__ = "utility_accounts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    address: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    account_number: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    provider: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+    payments: Mapped[list[UtilityPayment]] = relationship(
+        back_populates="account",
+        cascade="all, delete-orphan",
+        order_by=lambda: UtilityPayment.id.asc(),
+    )
+
+
+class UtilityPayment(Base):
+    """G8 — Платёж/период ЖКХ по лицевому счёту."""
+    __tablename__ = "utility_payments"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("utility_accounts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    period: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    readings_date: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    payment_date: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="Ожидает", nullable=False)
+    readings_deadline: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    payment_deadline: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    account: Mapped[UtilityAccount] = relationship(back_populates="payments")
+
+
+class TaxObligation(Base, TimestampMixin):
+    """G9 — Налоговое обязательство пользователя."""
+    __tablename__ = "tax_obligations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_type: Mapped[str] = mapped_column(String(32), default="individual", nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    deadline: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    receipt_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="Предстоит", nullable=False)
+    period: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
 
 class EmailNotification(Base):
@@ -524,7 +584,7 @@ class EmailNotification(Base):
     error_message: Mapped[str] = mapped_column(Text, nullable=False, default="")
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
 class AuditLog(Base, TimestampMixin):
@@ -542,5 +602,5 @@ class AuditLog(Base, TimestampMixin):
     event_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
     action: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="demo")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

@@ -6,6 +6,7 @@ from backend.api.admin import router as admin_router
 from backend.api.auth import router as auth_router
 from backend.api.public import router as public_router
 from backend.api.situations import router as situations_router
+from backend.api.trackers import router as trackers_router
 from backend.api.user import router as user_router
 from backend.database import engine
 from backend.models import Base
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(user_router)
     app.include_router(situations_router)
+    app.include_router(trackers_router)
 
     @app.get("/api/health", tags=["system"])
     def health():
