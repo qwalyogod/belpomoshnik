@@ -447,6 +447,61 @@ class UserDocument(Base, TimestampMixin):
     user: Mapped[User] = relationship(back_populates="documents")
 
 
+class UserSituation(Base, TimestampMixin):
+    """G5 — Личная ситуация пользователя (план из шаблона сценария)."""
+    __tablename__ = "user_situations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    template_id: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="В процессе", nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    category: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+
+    tasks: Mapped[list[UserSituationTask]] = relationship(
+        back_populates="situation",
+        cascade="all, delete-orphan",
+        order_by=lambda: (UserSituationTask.order_index.asc(), UserSituationTask.id.asc()),
+    )
+
+
+class UserSituationTask(Base):
+    """G5 — Задача внутри личной ситуации."""
+    __tablename__ = "user_situation_tasks"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    situation_id: Mapped[str] = mapped_column(
+        ForeignKey("user_situations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    due_date: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    stage_title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+    situation: Mapped[UserSituation] = relationship(back_populates="tasks")
+
+
+class UserNotification(Base):
+    """G7 — Уведомление пользователя."""
+    __tablename__ = "user_notifications"
+    __table_args__ = (
+        Index("ix_user_notifications_user_read", "user_id", "is_read"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    notification_type: Mapped[str] = mapped_column(String(64), default="task", nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    due_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+
 class EmailNotification(Base):
     """I2 — Модель email-уведомления (журнал доставки + очередь отправки)."""
     __tablename__ = "email_notifications"
