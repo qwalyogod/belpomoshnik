@@ -70,8 +70,42 @@ def delete_document(api_client, doc: dict[str, Any]) -> None:
 # мапперы — тонкие проходы (оставлены для единообразия и будущих отличий).
 # ---------------------------------------------------------------------------
 
+def _is_server_id(value: Any) -> bool:
+    """Server-сгенерированный id = uuid4().hex (32 hex-символа).
+
+    Локальные Flet-id имеют префикс (tax-…, util-…, upay-…, sit-…) и не
+    проходят эту проверку — значит объект ещё не синхронизирован.
+    """
+    return isinstance(value, str) and len(value) == 32 and all(c in "0123456789abcdef" for c in value)
+
+
+_TAX_FIELDS = ("user_type", "title", "deadline", "receipt_path", "status", "period", "comment")
+
+
+def _tax_payload(tax: dict[str, Any]) -> dict[str, Any]:
+    payload = {k: tax.get(k, "") for k in _TAX_FIELDS}
+    try:
+        payload["amount"] = float(tax.get("amount") or 0)
+    except (TypeError, ValueError):
+        payload["amount"] = 0.0
+    return payload
+
+
 def pull_taxes(api_client) -> list[dict[str, Any]]:
     return api_client.list_taxes()
+
+
+def push_tax(api_client, tax: dict[str, Any]) -> dict[str, Any]:
+    """Создать (локальный id) или обновить (server id) налог. Возвращает server-объект."""
+    payload = _tax_payload(tax)
+    if _is_server_id(tax.get("id")):
+        return api_client.update_tax(tax["id"], payload)
+    return api_client.create_tax(payload)
+
+
+def delete_tax(api_client, tax: dict[str, Any]) -> None:
+    if _is_server_id(tax.get("id")):
+        api_client.delete_tax(tax["id"])
 
 
 def pull_utility_accounts(api_client) -> list[dict[str, Any]]:

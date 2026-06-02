@@ -1,5 +1,62 @@
-"""Pure mapper tests for Flet <-> backend document field translation."""
-from services.user_sync import document_from_api, document_to_api
+"""Pure mapper tests for Flet <-> backend field translation + sync routing."""
+from services.user_sync import (
+    _is_server_id,
+    document_from_api,
+    document_to_api,
+    delete_tax,
+    push_tax,
+)
+
+
+class _StubClient:
+    """Records calls to verify push/delete routing without a real server."""
+    def __init__(self):
+        self.calls = []
+
+    def create_tax(self, payload):
+        self.calls.append(("create", payload))
+        return {"id": "a" * 32, **payload}
+
+    def update_tax(self, tax_id, payload):
+        self.calls.append(("update", tax_id, payload))
+        return {"id": tax_id, **payload}
+
+    def delete_tax(self, tax_id):
+        self.calls.append(("delete", tax_id))
+
+
+class TestServerIdDetection:
+    def test_uuid_hex_is_server_id(self):
+        assert _is_server_id("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6") is True
+
+    def test_local_prefixed_id_is_not(self):
+        assert _is_server_id("tax-1717171717") is False
+        assert _is_server_id("util-1") is False
+
+    def test_non_string_is_not(self):
+        assert _is_server_id(7) is False
+        assert _is_server_id(None) is False
+
+
+class TestTaxSyncRouting:
+    def test_local_id_creates(self):
+        c = _StubClient()
+        result = push_tax(c, {"id": "tax-123", "title": "Декларация"})
+        assert c.calls[0][0] == "create"
+        assert len(result["id"]) == 32
+
+    def test_server_id_updates(self):
+        c = _StubClient()
+        sid = "f" * 32
+        push_tax(c, {"id": sid, "title": "Декларация", "status": "Оплачено"})
+        assert c.calls[0][0] == "update"
+        assert c.calls[0][1] == sid
+
+    def test_delete_only_for_server_id(self):
+        c = _StubClient()
+        delete_tax(c, {"id": "tax-123"})  # local-only -> no API call
+        delete_tax(c, {"id": "e" * 32})
+        assert [call[0] for call in c.calls] == ["delete"]
 
 
 class TestDocumentMapper:

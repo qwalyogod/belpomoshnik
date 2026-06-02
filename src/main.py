@@ -322,6 +322,36 @@ def main(page: ft.Page) -> None:
             doc["icon"] = _document_icon(doc.get("document_type", "Другое"))
             doc["details"] = _document_details(doc)
         documents_state[:] = remote
+
+    def _sync_pull_taxes() -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            remote = user_sync.pull_taxes(client)
+        except UserAPIError:
+            return
+        tax_obligations_state[:] = remote
+
+    def _sync_push_tax(tax: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            synced = user_sync.push_tax(client, tax)
+        except UserAPIError:
+            return
+        if synced.get("id"):
+            tax["id"] = synced["id"]
+
+    def _sync_delete_tax(tax: dict) -> None:
+        client = _user_api_ready()
+        if client is None:
+            return
+        try:
+            user_sync.delete_tax(client, tax)
+        except UserAPIError:
+            return
     public_state = {"connected": False, "error": "", "loaded_once": False, "last_sync": ""}
     from pages.admin_page import _DEFAULT_NOTIFICATION_RULES as _NOTIF_RULES_INIT, _DEFAULT_CATEGORIES as _CAT_INIT
     admin_state = {
@@ -1438,6 +1468,7 @@ def main(page: ft.Page) -> None:
             auth_state["access_token"] = tokens.get("access_token", "")
             auth_state["refresh_token"] = tokens.get("refresh_token", "")
             _sync_pull_documents()
+            _sync_pull_taxes()
         app_user.update(profile)
         app_user["first_name"] = app_user.get("name", "Пользователь").split()[0]
         app_user["interests"] = list(app_user.get("interests", []))
@@ -2501,7 +2532,7 @@ def main(page: ft.Page) -> None:
             amount = float((_text_value(amount_field) or "0").replace(",", "."))
         except ValueError:
             amount = 0.0
-        tax_obligations_state.append({
+        new_tax = {
             "id": "tax-" + str(int(time.time())),
             "user_type": user_type_field.value or "individual",
             "title": title,
@@ -2511,7 +2542,9 @@ def main(page: ft.Page) -> None:
             "status": status_field.value or "Предстоит",
             "period": _text_value(period_field),
             "comment": _text_value(comment_field),
-        })
+        }
+        _sync_push_tax(new_tax)
+        tax_obligations_state.append(new_tax)
         _close(dialog)
         save_current_state()
         _show_message("Обязательство добавлено.")
@@ -2556,6 +2589,7 @@ def main(page: ft.Page) -> None:
         obligation["period"] = _text_value(period_field)
         obligation["status"] = status_field.value or "Предстоит"
         obligation["comment"] = _text_value(comment_field)
+        _sync_push_tax(obligation)
         _close(dialog)
         save_current_state()
         _show_message("Обязательство обновлено.")
@@ -2567,6 +2601,7 @@ def main(page: ft.Page) -> None:
             _show_message("Обязательство не найдено.", APP_COLORS["warning"])
             return
         def delete(dialog) -> None:
+            _sync_delete_tax(obligation)
             tax_obligations_state[:] = [o for o in tax_obligations_state if o.get("id") != obligation_id]
             save_current_state()
             _close(dialog)
@@ -2579,6 +2614,7 @@ def main(page: ft.Page) -> None:
         if not obligation:
             return
         obligation["status"] = "Оплачено"
+        _sync_push_tax(obligation)
         save_current_state()
         _show_message("Отмечено как оплаченное.")
         route_change()

@@ -132,6 +132,17 @@ def main():
         api.update_tax(tax["id"], {"status": "Оплачено"})
         check("tax updated", any(t["status"] == "Оплачено" for t in api.list_taxes()))
 
+        # user_sync tax routing: local id -> create, server id -> update
+        local_tax = {"id": "tax-999", "title": "Квартальная ИП", "user_type": "ip", "status": "Предстоит"}
+        synced_tax = user_sync.push_tax(api, local_tax)
+        check("user_sync tax create -> server id", len(str(synced_tax.get("id", ""))) == 32)
+        synced_tax["status"] = "Оплачено"
+        user_sync.push_tax(api, synced_tax)
+        check("user_sync tax update applied",
+              any(t["id"] == synced_tax["id"] and t["status"] == "Оплачено" for t in api.list_taxes()))
+        user_sync.delete_tax(api, synced_tax)
+        check("user_sync tax deleted", all(t["id"] != synced_tax["id"] for t in api.list_taxes()))
+
         print(f"\n== INTEGRATION: {PASS} passed, {FAIL} failed ==")
         return 1 if FAIL else 0
     finally:
