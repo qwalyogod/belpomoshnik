@@ -1,39 +1,36 @@
 """
-G3/H7 — User profile + personal document endpoints.
+G3/G6/H7 — User profile, settings и личные документы (реальная БД).
 
-MVP: заглушки с auth-зависимостями (JWT уже работает после Этапа H).
-Production: раскомментировать DB-запросы и убрать stub-ответы.
-
-Подключить в app.py:
-    from backend.api.user import router as user_router
-    app.include_router(user_router)
+JWT-зависимость get_current_user_email уже работает (Этап H).
+Все endpoint требуют валидный access-токен.
 """
-import os
+from __future__ import annotations
+
+import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Any
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.auth import get_current_user_email
 from backend.database import get_db
-
-USER_DOCS_DIR: str = os.getenv("BELPOMOSHNIK_DOCS_DIR", "data/user_docs")
-"""H7 — Папка с загружаемыми файлами документов пользователей.
-В production: вынести за webroot или использовать S3/MinIO.
-Доступ только через аутентифицированный endpoint (не через статику nginx).
-"""
+from backend.models import User, UserDocument
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
 
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
 class UserProfileOut(BaseModel):
-    """G3 — Профиль пользователя."""
+    model_config = ConfigDict(from_attributes=True)
     id: int
     email: str
     name: str
+    role: str = "citizen"
     city: str = ""
     region: str = ""
     district: str = ""
@@ -44,11 +41,10 @@ class UserProfileOut(BaseModel):
     has_car: bool = False
     is_renter: bool = False
     interest_tags: list[str] = Field(default_factory=list)
-    created_at: datetime
 
 
 class UserProfileUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=2, max_length=255)
     city: str | None = None
     region: str | None = None
     district: str | None = None
@@ -61,121 +57,184 @@ class UserProfileUpdate(BaseModel):
     interest_tags: list[str] | None = None
 
 
-class UserSettingsUpdate(BaseModel):
-    dark_theme: bool | None = None
-    email_notifications: bool | None = None
-    doc_reminder_days: int | None = None
-    learning_mode: bool | None = None
+class UserDocumentIn(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    doc_type: str = ""
+    number: str = ""
+    issued_by: str = ""
+    issued_date: str = ""
+    expiry_date: str = ""
+    is_sensitive: bool = False
+    comment: str = ""
+
+
+class UserDocumentUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    doc_type: str | None = None
+    number: str | None = None
+    issued_by: str | None = None
+    issued_date: str | None = None
+    expiry_date: str | None = None
+    is_sensitive: bool | None = None
+    comment: str | None = None
+
+
+class UserDocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    doc_type: str
+    number: str
+    issued_by: str
+    issued_date: str
+    expiry_date: str
+    is_sensitive: bool
+    comment: str
 
 
 # ---------------------------------------------------------------------------
-# Заглушки — раскомментировать и подключить к БД после Этапа H (JWT/auth)
+# Helpers
 # ---------------------------------------------------------------------------
 
-# @router.get("/profile", response_model=UserProfileOut)
-# def get_profile(current_user=Depends(get_current_user)):
-#     """G3 — Получить профиль текущего пользователя."""
-#     return UserProfileOut.model_validate(current_user)
+def get_current_user(email: str = Depends(get_current_user_email), db: Session = Depends(get_db)) -> User:
+    user = db.scalars(select(User).where(User.email == email)).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден.")
+    return user
 
 
-# @router.put("/profile", response_model=UserProfileOut)
-# def update_profile(payload: UserProfileUpdate, current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G3 — Обновить профиль пользователя."""
-#     for field, value in payload.model_dump(exclude_none=True).items():
-#         setattr(current_user, field, value)
-#     db.commit()
-#     db.refresh(current_user)
-#     return UserProfileOut.model_validate(current_user)
+def _profile_out(user: User) -> UserProfileOut:
+    try:
+        tags = json.loads(user.interest_tags) if user.interest_tags else []
+        if not isinstance(tags, list):
+            tags = []
+    except (json.JSONDecodeError, TypeError):
+        tags = []
+    return UserProfileOut(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role_id,
+        city=user.city,
+        region=user.region,
+        district=user.district,
+        address=user.address,
+        employment_status=user.employment_status,
+        has_children=user.has_children,
+        owns_property=user.owns_property,
+        has_car=user.has_car,
+        is_renter=user.is_renter,
+        interest_tags=tags,
+    )
 
 
-# @router.patch("/settings")
-# def update_settings(payload: UserSettingsUpdate, current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G3 — Обновить настройки пользователя."""
-#     settings = current_user.settings or {}
-#     settings.update(payload.model_dump(exclude_none=True))
-#     current_user.settings = settings
-#     db.commit()
-#     return {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# G5 — Ситуации и задачи (stub)
-# ---------------------------------------------------------------------------
-
-# @router.get("/situations")
-# def list_situations(current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G5 — Список личных ситуаций пользователя."""
-#     ...
-
-
-# @router.post("/situations", status_code=201)
-# def create_situation(template_id: str, current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G5 — Создать ситуацию из шаблона сценария."""
-#     ...
-
-
-# @router.patch("/tasks/{task_id}/complete")
-# def complete_task(task_id: str, current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G5 — Отметить задачу выполненной."""
-#     ...
+def _owned_document(db: Session, user: User, doc_id: int) -> UserDocument:
+    doc = db.scalars(
+        select(UserDocument).where(UserDocument.id == doc_id, UserDocument.user_id == user.id)
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден.")
+    return doc
 
 
 # ---------------------------------------------------------------------------
-# G6 / H7 — Личные документы
+# G3 — Profile & settings
 # ---------------------------------------------------------------------------
 
-# @router.get("/documents")
-# def list_user_documents(email: str = Depends(get_current_user_email), db: Session = Depends(get_db)):
-#     """G6 — Список личных документов пользователя."""
-#     ...
+@router.get("/profile", response_model=UserProfileOut)
+def get_profile(user: User = Depends(get_current_user)):
+    return _profile_out(user)
 
 
-# @router.post("/documents", status_code=201)
-# def create_user_document(payload: dict, email: str = Depends(get_current_user_email), db: Session = Depends(get_db)):
-#     """G6 — Добавить личный документ."""
-#     ...
-
-
-@router.get("/documents/{doc_id}/file")
-def get_document_file(
-    doc_id: int,
-    email: str = Depends(get_current_user_email),
+@router.put("/profile", response_model=UserProfileOut)
+def update_profile(
+    payload: UserProfileUpdate,
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    H7 — Скачать файл личного документа.
+    data = payload.model_dump(exclude_none=True)
+    tags = data.pop("interest_tags", None)
+    for field, value in data.items():
+        setattr(user, field, value)
+    if tags is not None:
+        user.interest_tags = json.dumps(tags, ensure_ascii=False)
+    db.commit()
+    db.refresh(user)
+    return _profile_out(user)
 
-    Доступ только владельцу: сначала проверяем user_id, потом отдаём файл.
-    MVP: endpoint активен, но возвращает 404 (файлов нет до G6 production).
-    Production: заменить stub на поиск в user_documents + FileResponse.
-    """
-    # Production:
-    # from sqlalchemy import select as _sel
-    # from backend.models import User, UserDocument
-    # user = db.scalars(_sel(User).where(User.email == email)).first()
-    # if not user:
-    #     raise HTTPException(status_code=403, detail="Пользователь не найден.")
-    # doc = db.scalars(_sel(UserDocument).where(UserDocument.id == doc_id, UserDocument.user_id == user.id)).first()
-    # if not doc:
-    #     raise HTTPException(status_code=404, detail="Документ не найден.")
-    # path = os.path.join(USER_DOCS_DIR, str(user.id), f"{doc_id}")
-    # if not os.path.exists(path):
-    #     raise HTTPException(status_code=404, detail="Файл не найден.")
-    # return FileResponse(path, media_type="application/octet-stream")
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файлы документов недоступны в MVP.")
+
+@router.get("/settings")
+def get_settings(user: User = Depends(get_current_user)):
+    try:
+        return json.loads(user.settings) if user.settings else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+@router.patch("/settings")
+def update_settings(
+    payload: dict,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        current = json.loads(user.settings) if user.settings else {}
+        if not isinstance(current, dict):
+            current = {}
+    except (json.JSONDecodeError, TypeError):
+        current = {}
+    current.update(payload or {})
+    user.settings = json.dumps(current, ensure_ascii=False)
+    db.commit()
+    return current
 
 
 # ---------------------------------------------------------------------------
-# G7 — Уведомления (stub)
+# G6 — Личные документы (CRUD, владелец-only)
 # ---------------------------------------------------------------------------
 
-# @router.get("/notifications")
-# def list_notifications(current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G7 — Список уведомлений пользователя."""
-#     ...
+@router.get("/documents", response_model=list[UserDocumentOut])
+def list_documents(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    docs = db.scalars(
+        select(UserDocument).where(UserDocument.user_id == user.id).order_by(UserDocument.id.desc())
+    ).all()
+    return [UserDocumentOut.model_validate(d) for d in docs]
 
 
-# @router.patch("/notifications/{notification_id}/read")
-# def mark_notification_read(notification_id: str, current_user=Depends(get_current_user), db=Depends(get_db)):
-#     """G7 — Отметить уведомление прочитанным."""
-#     ...
+@router.post("/documents", response_model=UserDocumentOut, status_code=status.HTTP_201_CREATED)
+def create_document(
+    payload: UserDocumentIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = UserDocument(user_id=user.id, **payload.model_dump())
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    return UserDocumentOut.model_validate(doc)
+
+
+@router.put("/documents/{doc_id}", response_model=UserDocumentOut)
+def update_document(
+    doc_id: int,
+    payload: UserDocumentUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = _owned_document(db, user, doc_id)
+    for field, value in payload.model_dump(exclude_none=True).items():
+        setattr(doc, field, value)
+    db.commit()
+    db.refresh(doc)
+    return UserDocumentOut.model_validate(doc)
+
+
+@router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = _owned_document(db, user, doc_id)
+    db.delete(doc)
+    db.commit()
