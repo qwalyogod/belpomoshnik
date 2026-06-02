@@ -4,7 +4,7 @@ from components.buttons import primary_button, secondary_button
 from components.cards import app_card, badge, empty_state_card, hint_card, page_heading, section_title
 from components.layout import desktop_content
 from services.dashboard import parse_due_date
-from theme.app_theme import APP_COLORS, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, border_all, padding_symmetric, ts
 
 
 def _payment_status_variant(status: str) -> str:
@@ -48,7 +48,7 @@ def _payment_row(payment: dict, on_edit=None, on_delete=None) -> ft.Container:
                             spacing=8,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             controls=[
-                                ft.Text(payment.get("period", "Период"), size=15, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                                ft.Text(payment.get("period", "Период"), size=ts(15), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
                                 badge(status, _payment_status_variant(status)),
                             ],
                         ),
@@ -66,13 +66,13 @@ def _payment_row(payment: dict, on_edit=None, on_delete=None) -> ft.Container:
                     spacing=16,
                     run_spacing=4,
                     controls=[
-                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.SPEED_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Показания: " + (payment.get("readings_date") or "не переданы"), size=12, color=APP_COLORS["muted"])]),
-                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.PAYMENT_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Оплата: " + (payment.get("payment_date") or "не выполнена"), size=12, color=APP_COLORS["muted"])]),
-                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.MONETIZATION_ON_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Сумма: " + amount_text, size=12, color=APP_COLORS["muted"])]),
+                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.SPEED_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Показания: " + (payment.get("readings_date") or "не переданы"), size=ts(12), color=APP_COLORS["muted"])]),
+                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.PAYMENT_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Оплата: " + (payment.get("payment_date") or "не выполнена"), size=ts(12), color=APP_COLORS["muted"])]),
+                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.MONETIZATION_ON_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Сумма: " + amount_text, size=ts(12), color=APP_COLORS["muted"])]),
                     ],
                 ),
-                *([ft.Text(days_hint, size=12, color=APP_COLORS["warning"], weight=ft.FontWeight.W_600)] if days_hint else []),
-                *([ft.Text(payment.get("comment", ""), size=12, color=APP_COLORS["muted"])] if payment.get("comment") else []),
+                *([ft.Text(days_hint, size=ts(12), color=APP_COLORS["warning"], weight=ft.FontWeight.W_600)] if days_hint else []),
+                *([ft.Text(payment.get("comment", ""), size=ts(12), color=APP_COLORS["muted"])] if payment.get("comment") else []),
             ],
         ),
     )
@@ -111,13 +111,13 @@ def _account_card(
                                     border_radius=12,
                                     bgcolor=APP_COLORS["primary"] + "22",
                                     alignment=ft.Alignment(0, 0),
-                                    content=ft.Icon(ft.Icons.HOME_WORK_OUTLINED, size=20, color=APP_COLORS["primary"]),
+                                    content=ft.Icon(ft.Icons.HOME_WORK_OUTLINED, size=ts(20), color=APP_COLORS["primary"]),
                                 ),
                                 ft.Column(
                                     spacing=2,
                                     controls=[
-                                        ft.Text(account.get("address", "Адрес не указан"), size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
-                                        ft.Text("Лицевой счёт: " + (account.get("account_number") or "—") + "  ·  " + (account.get("provider") or ""), size=12, color=APP_COLORS["muted"]),
+                                        ft.Text(account.get("address", "Адрес не указан"), size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                                        ft.Text("Лицевой счёт: " + (account.get("account_number") or "—") + "  ·  " + (account.get("provider") or ""), size=ts(12), color=APP_COLORS["muted"]),
                                     ],
                                 ),
                             ],
@@ -139,7 +139,7 @@ def _account_card(
                     spacing=8,
                     controls=[_payment_row(p, on_edit_payment, on_delete_payment) for p in account_payments_sorted]
                     if account_payments_sorted
-                    else [ft.Text("Записей пока нет.", size=14, color=APP_COLORS["muted"])],
+                    else [ft.Text("Записей пока нет.", size=ts(14), color=APP_COLORS["muted"])],
                 ),
                 secondary_button(
                     "Добавить запись",

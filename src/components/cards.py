@@ -12,6 +12,7 @@ from theme.app_theme import (
     card_shadow,
     get_badge_palette,
     padding_symmetric,
+    ts,
 )
 
 
@@ -51,16 +52,16 @@ def section_title(title: str, subtitle: str | None = None, centered: bool = Fals
         )
     ]
     if subtitle:
-        controls.append(ft.Text(subtitle, size=14, color=APP_COLORS["muted"], text_align=text_align))
+        controls.append(ft.Text(subtitle, size=ts(14), color=APP_COLORS["muted"], text_align=text_align))
     return ft.Column(spacing=6, horizontal_alignment=align, controls=controls)
 
 
 def page_heading(title: str, subtitle: str | None = None, actions: list[ft.Control] | None = None) -> ft.Control:
     text_controls: list[ft.Control] = [
-        ft.Text(title, size=40, weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
+        ft.Text(title, size=ts(40), weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
     ]
     if subtitle:
-        text_controls.append(ft.Text(subtitle, size=16, color=APP_COLORS["muted"]))
+        text_controls.append(ft.Text(subtitle, size=ts(16), color=APP_COLORS["muted"]))
     title_block = ft.Column(spacing=8, expand=True, controls=text_controls)
     if actions:
         return ft.Row(
@@ -109,7 +110,7 @@ def soft_card(content: ft.Control, padding: int = SPACING["xl"]) -> ft.Container
 def badge(text: str, variant: str = "default") -> ft.Container:
     bgcolor, color = _badge_colors(variant)
     return ft.Container(
-        content=ft.Text(text, size=13, weight=ft.FontWeight.W_800, color=color, max_lines=1, no_wrap=True),
+        content=ft.Text(text, size=ts(13), weight=ft.FontWeight.W_800, color=color, max_lines=1, no_wrap=True),
         padding=padding_symmetric(horizontal=14, vertical=6),
         border_radius=15,
         bgcolor=bgcolor,
@@ -182,8 +183,8 @@ def empty_state_card(
 ) -> ft.Container:
     controls: list[ft.Control] = [
         icon_circle(icon, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=58),
-        ft.Text(title, size=18, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
-        ft.Text(description, size=14, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
+        ft.Text(title, size=ts(18), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
+        ft.Text(description, size=ts(14), color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
     ]
     if action_text:
         controls.append(
@@ -215,8 +216,8 @@ def hint_card(text: str, icon=ft.Icons.LIGHTBULB_OUTLINE) -> ft.Container:
             spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
-                ft.Icon(icon, size=20, color=APP_COLORS["blue"]),
-                ft.Text(text, size=14, color=APP_COLORS["muted"], expand=True),
+                ft.Icon(icon, size=ts(20), color=APP_COLORS["blue"]),
+                ft.Text(text, size=ts(14), color=APP_COLORS["muted"], expand=True),
             ],
         ),
         padding=14,
@@ -235,8 +236,8 @@ def hero_card(
 ) -> ft.Container:
     hero_leading = leading or icon_circle(icon or ft.Icons.INFO_OUTLINE, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=64)
     header_controls: list[ft.Control] = [
-        ft.Text(title, size=28, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-        ft.Text(description, size=15, color=APP_COLORS["muted"]),
+        ft.Text(title, size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+        ft.Text(description, size=ts(15), color=APP_COLORS["muted"]),
     ]
     if badges:
         header_controls.append(ft.Row(spacing=8, run_spacing=8, wrap=True, controls=badges))
@@ -260,11 +261,11 @@ def stat_card(label: str, value: str | int, sublabel: str = "", icon=None, tone:
     badge_bg, badge_fg = _badge_colors(tone)
     controls: list[ft.Control] = [
         icon_circle(icon or ft.Icons.INSIGHTS_OUTLINED, color=badge_fg, bgcolor=badge_bg, size=44),
-        ft.Text(str(value), size=28, weight=ft.FontWeight.W_900, color=badge_fg),
-        ft.Text(label, size=12, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
+        ft.Text(str(value), size=ts(28), weight=ft.FontWeight.W_900, color=badge_fg),
+        ft.Text(label, size=ts(12), weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
     ]
     if sublabel:
-        controls.append(ft.Text(sublabel, size=12, color=APP_COLORS["muted2"]))
+        controls.append(ft.Text(sublabel, size=ts(12), color=APP_COLORS["muted2"]))
     return app_card(ft.Column(spacing=6, controls=controls), padding=18)
 
 
@@ -285,7 +286,7 @@ def search_box(
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
+                ft.Icon(ft.Icons.SEARCH, size=ts(22), color=APP_COLORS["blue"]),
                 ft.TextField(
                     value=value,
                     hint_text=hint,
@@ -319,11 +320,11 @@ def problem_card(problem: dict, on_click=None, compact: bool = False) -> ft.Cont
                         expand=True,
                         controls=[
                             badge(category, "default") if category else ft.Container(),
-                            ft.Text(problem["title"], size=18, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                            ft.Text(description, size=14, color=APP_COLORS["muted"], max_lines=2),
+                            ft.Text(problem["title"], size=ts(18), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                            ft.Text(description, size=ts(14), color=APP_COLORS["muted"], max_lines=2),
                         ],
                     ),
-                    ft.Icon(ft.Icons.CHEVRON_RIGHT, color=APP_COLORS["muted2"], size=22),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, color=APP_COLORS["muted2"], size=ts(22)),
                 ],
             ),
             padding=16,
@@ -358,15 +359,15 @@ def info_card(title: str, body: str | list[str], icon=None, tone: str = "blue") 
                             border_radius=12,
                             bgcolor=badge_bg,
                             alignment=CENTER,
-                            content=ft.Text(str(index), size=12, weight=ft.FontWeight.W_800, color=badge_fg),
+                            content=ft.Text(str(index), size=ts(12), weight=ft.FontWeight.W_800, color=badge_fg),
                         ),
-                        ft.Text(item, size=14, color=APP_COLORS["text"], expand=True),
+                        ft.Text(item, size=ts(14), color=APP_COLORS["text"], expand=True),
                     ],
                 )
             )
         body_control = ft.Column(spacing=10, controls=rows)
     else:
-        body_control = ft.Text(body, size=14, color=APP_COLORS["text"])
+        body_control = ft.Text(body, size=ts(14), color=APP_COLORS["text"])
 
     return app_card(
         ft.Column(
@@ -375,8 +376,8 @@ def info_card(title: str, body: str | list[str], icon=None, tone: str = "blue") 
                 ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(icon or ft.Icons.INFO_OUTLINE, color=badge_fg, size=23),
-                        ft.Text(title, size=18, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True),
+                        ft.Icon(icon or ft.Icons.INFO_OUTLINE, color=badge_fg, size=ts(23)),
+                        ft.Text(title, size=ts(18), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True),
                     ],
                 ),
                 body_control,

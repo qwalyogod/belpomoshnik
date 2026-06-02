@@ -9,15 +9,14 @@ from components.layout import desktop_content
 from data.mock_data import MOCK_USER
 from services.dashboard import parse_due_date
 from theme.app_theme import (
+    ts,
     ANIM_FAST,
     ANIM_NORMAL,
     APP_COLORS,
     APP_RADIUS,
     CENTER,
+    GRADIENT_MIDNIGHT_SURGE,
     border_all,
-    border_bottom,
-    get_badge_palette,
-    padding_symmetric,
 )
 
 
@@ -117,16 +116,16 @@ def _security_banner() -> ft.Container:
                     width=38, height=38, border_radius=19,
                     bgcolor=APP_COLORS["active"],
                     alignment=CENTER,
-                    content=ft.Icon(ft.Icons.SHIELD_OUTLINED, size=20, color=APP_COLORS["blue"]),
+                    content=ft.Icon(ft.Icons.SHIELD_OUTLINED, size=ts(20), color=APP_COLORS["blue"]),
                 ),
                 ft.Column(
                     spacing=2, expand=True,
                     controls=[
-                        ft.Text("Защищено биометрией", size=14, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
-                        ft.Text("Сканы хранятся локально на устройстве и шифруются ключом МСИ.", size=12, color=APP_COLORS["muted"]),
+                        ft.Text("Защищено биометрией", size=ts(14), weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                        ft.Text("Сканы хранятся локально на устройстве и шифруются ключом МСИ.", size=ts(12), color=APP_COLORS["muted"]),
                     ],
                 ),
-                ft.Icon(ft.Icons.FINGERPRINT, size=28, color=APP_COLORS["blue_text"]),
+                ft.Icon(ft.Icons.FINGERPRINT, size=ts(28), color=APP_COLORS["blue_text"]),
             ],
         ),
     )
@@ -139,7 +138,6 @@ def _security_banner() -> ft.Container:
 def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
     """Big gradient passport-style card."""
     status = doc.get("_status", "Активен")
-    days = doc.get("_days")
     user_name = MOCK_USER.get("name", "Климович А.В.")
 
     number = _mask_number(doc.get("document_number") or "") if not show_number else (doc.get("document_number") or "Не указан")
@@ -149,7 +147,7 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
     if status == "Истёк":
         expiry_badge = [
             ft.Container(
-                content=ft.Text("ПРОСРОЧЕН", size=9, weight=ft.FontWeight.W_800, color=APP_COLORS["red"]),
+                content=ft.Text("ПРОСРОЧЕН", size=ts(9), weight=ft.FontWeight.W_800, color=APP_COLORS["red"]),
                 padding=ft.Padding(left=8, top=3, right=8, bottom=3),
                 border_radius=6,
                 bgcolor=ft.Colors.with_opacity(0.18, APP_COLORS["red"]),
@@ -158,10 +156,10 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
     elif status == "Истекает скоро":
         expiry_badge = [
             ft.Container(
-                content=ft.Text("ИСТЕКАЕТ", size=9, weight=ft.FontWeight.W_800, color="#FF9500"),
+                content=ft.Text("ИСТЕКАЕТ", size=ts(9), weight=ft.FontWeight.W_800, color=APP_COLORS["orange"]),
                 padding=ft.Padding(left=8, top=3, right=8, bottom=3),
                 border_radius=6,
-                bgcolor=ft.Colors.with_opacity(0.2, "#FF9500"),
+                bgcolor=ft.Colors.with_opacity(0.18, APP_COLORS["orange"]),
             )
         ]
 
@@ -171,29 +169,19 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
         gradient=ft.LinearGradient(
             begin=ft.Alignment(-1, -0.5),
             end=ft.Alignment(1, 1),
-            colors=["#010F28", "#0038E1"],  # Midnight Surge
+            colors=GRADIENT_MIDNIGHT_SURGE,
         ),
-        shadow=[ft.BoxShadow(blur_radius=32, offset=ft.Offset(0, 16), color="#400056FF")],
+        shadow=[
+            ft.BoxShadow(
+                blur_radius=24,
+                offset=ft.Offset(0, 12),
+                color=ft.Colors.with_opacity(0.18, APP_COLORS["blue"]),
+            )
+        ],
         padding=ft.Padding(left=28, top=24, right=28, bottom=28),
         content=ft.Stack(
             expand=True,
             controls=[
-                # Decorative glow circle (top-right)
-                ft.Container(
-                    width=200, height=200,
-                    border_radius=100,
-                    bgcolor=ft.Colors.with_opacity(0.07, ft.Colors.WHITE),
-                    right=-40,
-                    top=-40,
-                ),
-                # Smaller circle (bottom-left)
-                ft.Container(
-                    width=100, height=100,
-                    border_radius=50,
-                    bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
-                    left=-20,
-                    bottom=-20,
-                ),
                 # Card content
                 ft.Column(
                     spacing=0,
@@ -205,7 +193,7 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                             controls=[
                                 ft.Text(
                                     "РЕСПУБЛИКА БЕЛАРУСЬ",
-                                    size=10,
+                                    size=ts(10),
                                     weight=ft.FontWeight.W_700,
                                     color=ft.Colors.with_opacity(0.65, ft.Colors.WHITE),
                                 ),
@@ -214,14 +202,14 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                                     border_radius=17,
                                     bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
                                     alignment=CENTER,
-                                    content=ft.Icon(ft.Icons.VERIFIED_OUTLINED, size=18, color=ft.Colors.WHITE),
+                                    content=ft.Icon(ft.Icons.VERIFIED_OUTLINED, size=ts(18), color=ft.Colors.WHITE),
                                 ),
                             ],
                         ),
                         ft.Container(height=6),
                         ft.Text(
                             doc.get("title", "Документ"),
-                            size=28,
+                            size=ts(28),
                             weight=ft.FontWeight.W_900,
                             color=ft.Colors.WHITE,
                         ),
@@ -235,8 +223,8 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                                     content=ft.Column(
                                         spacing=3,
                                         controls=[
-                                            ft.Text("ВЛАДЕЛЕЦ", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
-                                            ft.Text(user_name, size=15, weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
+                                            ft.Text("ВЛАДЕЛЕЦ", size=ts(9), color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(user_name, size=ts(15), weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
                                         ],
                                     ),
                                 ),
@@ -245,8 +233,8 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                                     content=ft.Column(
                                         spacing=3,
                                         controls=[
-                                            ft.Text("НОМЕР", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
-                                            ft.Text(number, size=15, weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
+                                            ft.Text("НОМЕР", size=ts(9), color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(number, size=ts(15), weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
                                         ],
                                     ),
                                 ),
@@ -262,8 +250,8 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                                     content=ft.Column(
                                         spacing=3,
                                         controls=[
-                                            ft.Text("ВЫДАН", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
-                                            ft.Text(_fmt_date(doc.get("issue_date") or ""), size=14, color=ft.Colors.WHITE),
+                                            ft.Text("ВЫДАН", size=ts(9), color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text(_fmt_date(doc.get("issue_date") or ""), size=ts(14), color=ft.Colors.WHITE),
                                         ],
                                     ),
                                 ),
@@ -272,11 +260,11 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
                                     content=ft.Column(
                                         spacing=3,
                                         controls=[
-                                            ft.Text("ДО", size=9, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
+                                            ft.Text("ДО", size=ts(9), color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), weight=ft.FontWeight.W_700),
                                             ft.Row(
                                                 spacing=8,
                                                 controls=[
-                                                    ft.Text(_fmt_date(doc.get("expiry_date") or ""), size=14, color=ft.Colors.WHITE),
+                                                    ft.Text(_fmt_date(doc.get("expiry_date") or ""), size=ts(14), color=ft.Colors.WHITE),
                                                     *expiry_badge,
                                                 ],
                                             ),
@@ -361,13 +349,13 @@ def _doc_list_item(
                             width=32, height=32, border_radius=10,
                             bgcolor=APP_COLORS["surface2"],
                             alignment=CENTER,
-                            content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=16, color=APP_COLORS["blue"]),
+                            content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=ts(16), color=APP_COLORS["blue"]),
                         ),
                         ft.Column(
                             spacing=1, expand=True,
                             controls=[
-                                ft.Text(doc.get("title", "Документ"), size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"], max_lines=1, no_wrap=True),
-                                ft.Text(subtitle, size=11, color=APP_COLORS["muted"], max_lines=1),
+                                ft.Text(doc.get("title", "Документ"), size=ts(13), weight=ft.FontWeight.W_700, color=APP_COLORS["text"], max_lines=1, no_wrap=True),
+                                ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
                             ],
                         ),
                     ],
@@ -399,6 +387,8 @@ def _doc_list_item(
 def _action_button(label: str, icon, on_click=None, primary: bool = False) -> ft.Container:
     btn = ft.Container(
         ink=True,
+        height=48,
+        alignment=CENTER,
         border_radius=14,
         padding=ft.Padding(left=16, top=12, right=16, bottom=12),
         bgcolor=APP_COLORS["blue"] if primary else APP_COLORS["surface"],
@@ -406,11 +396,12 @@ def _action_button(label: str, icon, on_click=None, primary: bool = False) -> ft
         animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
         on_click=on_click,
         content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=18, color=ft.Colors.WHITE if primary else APP_COLORS["blue"]),
-                ft.Text(label, size=14, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE if primary else APP_COLORS["text"]),
+                ft.Icon(icon, size=ts(18), color=ft.Colors.WHITE if primary else APP_COLORS["blue"]),
+                ft.Text(label, size=ts(14), weight=ft.FontWeight.W_700, color=ft.Colors.WHITE if primary else APP_COLORS["text"]),
             ],
         ),
     )
@@ -443,8 +434,8 @@ def _scan_button(on_click=None) -> ft.Container:
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=10,
             controls=[
-                ft.Icon(ft.Icons.DOCUMENT_SCANNER_OUTLINED, size=20, color=APP_COLORS["muted"]),
-                ft.Text("Отсканировать новый документ", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
+                ft.Icon(ft.Icons.DOCUMENT_SCANNER_OUTLINED, size=ts(20), color=APP_COLORS["muted"]),
+                ft.Text("Отсканировать новый документ", size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
             ],
         ),
     )
@@ -476,9 +467,9 @@ def _build_layout(
                 spacing=16,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, size=56, color=APP_COLORS["muted2"]),
-                    ft.Text("Нет документов", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Добавьте первый документ чтобы отслеживать сроки.", size=14, color=APP_COLORS["muted"]),
+                    ft.Icon(ft.Icons.FOLDER_OPEN_OUTLINED, size=ts(56), color=APP_COLORS["muted2"]),
+                    ft.Text("Нет документов", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Добавьте первый документ чтобы отслеживать сроки.", size=ts(14), color=APP_COLORS["muted"]),
                     _action_button("Добавить документ", ft.Icons.ADD, on_click=on_add_document, primary=True),
                 ],
             ),
@@ -529,8 +520,8 @@ def _build_layout(
         content=ft.Row(
             spacing=6,
             controls=[
-                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=16, color=APP_COLORS["muted"]),
-                ft.Text("Показать реквизиты", size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
+                ft.Icon(ft.Icons.VISIBILITY_OUTLINED, size=ts(16), color=APP_COLORS["muted"]),
+                ft.Text("Показать реквизиты", size=ts(13), weight=ft.FontWeight.W_600, color=APP_COLORS["muted"]),
             ],
         ),
         on_click=lambda _: on_toggle_sensitive(None) if on_toggle_sensitive else None,
@@ -550,8 +541,8 @@ def _build_layout(
                             ft.Column(
                                 spacing=4,
                                 controls=[
-                                    ft.Text("Мои документы", size=38, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                    ft.Text("Локальное хранилище. Защищено биометрией.", size=15, color=APP_COLORS["muted"]),
+                                    ft.Text("Мои документы", size=ts(38), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                    ft.Text("Локальное хранилище. Защищено биометрией.", size=ts(15), color=APP_COLORS["muted"]),
                                 ],
                             ),
                             reveal_btn,
@@ -612,8 +603,8 @@ def _build_layout(
                     ft.Column(
                         spacing=2,
                         controls=[
-                            ft.Text("Мои документы", size=28, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text("Защищено биометрией.", size=13, color=APP_COLORS["muted"]),
+                            ft.Text("Мои документы", size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Защищено биометрией.", size=ts(13), color=APP_COLORS["muted"]),
                         ],
                     ),
                     reveal_btn,

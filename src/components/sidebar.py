@@ -12,6 +12,7 @@ from theme.app_theme import (
     border_all,
     border_top,
     padding_symmetric,
+    ts,
 )
 
 
@@ -70,7 +71,7 @@ def _sidebar_item(
                 width=18, height=18, border_radius=9,
                 bgcolor=APP_COLORS["blue"],
                 alignment=CENTER,
-                content=ft.Text(str(notification_count), size=10, weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
+                content=ft.Text(str(notification_count), size=ts(10), weight=ft.FontWeight.W_800, color=ft.Colors.WHITE),
             )
         ]
 
@@ -143,13 +144,13 @@ def build_sidebar(
                 width=40, height=40, border_radius=14,
                 bgcolor=APP_COLORS["blue"],
                 alignment=CENTER,
-                content=ft.Text("Б", size=22, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
+                content=ft.Text("Б", size=ts(22), weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
             ),
             ft.Column(
                 spacing=1,
                 controls=[
-                    ft.Text("Белпомощник", size=16 if tablet else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("личный помощник", size=10, color=APP_COLORS["muted"]),
+                    ft.Text("Белпомощник", size=ts(16) if tablet else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("личный помощник", size=ts(10), color=APP_COLORS["muted"]),
                 ],
             ),
         ],
@@ -217,17 +218,17 @@ def build_sidebar(
                     width=32, height=32, border_radius=16,
                     bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
                     alignment=CENTER,
-                    content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=16, color=ft.Colors.WHITE),
+                    content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=ts(16), color=ft.Colors.WHITE),
                 ),
                 ft.Column(
                     spacing=1,
                     expand=True,
                     controls=[
-                        ft.Text("Спросить агента", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
-                        ft.Text("ИИ-помощник, 24/7", size=10, color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
+                        ft.Text("Спросить агента", size=ts(13), weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                        ft.Text("ИИ-помощник, 24/7", size=ts(10), color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
                     ],
                 ),
-                ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE_ROUNDED, size=18, color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
+                ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE_ROUNDED, size=ts(18), color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
             ],
         ),
     ) if on_open_ai_chat else ft.Container(height=0)
@@ -249,7 +250,7 @@ def build_sidebar(
                             size=18,
                             color=APP_COLORS["muted"],
                         ),
-                        ft.Text("Тёмная тема", size=13, color=APP_COLORS["muted"]),
+                        ft.Text("Тёмная тема", size=ts(13), color=APP_COLORS["muted"]),
                     ],
                 ),
                 ft.Switch(
@@ -286,7 +287,7 @@ def build_sidebar(
                 ft.Container(
                     border=border_top(APP_COLORS["stroke2"]),
                     padding=ft.Padding(left=2, top=8, right=2, bottom=0),
-                    content=ft.Text("v0.1 beta", size=11, color=APP_COLORS["muted2"]),
+                    content=ft.Text("v0.1 beta", size=ts(11), color=APP_COLORS["muted2"]),
                 ),
             ],
         ),

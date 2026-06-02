@@ -1,0 +1,2118 @@
+[
+  {
+    "id": "child-birth",
+    "title": "Рождение ребёнка",
+    "short_description": "От регистрации рождения и регистрации ребёнка по месту жительства до оформления основных пособий и отпуска по уходу. citeturn17view1turn17view2turn32view0turn17view3",
+    "description": "Маршрут охватывает базовые обязательные и самые частые сопутствующие действия после рождения ребёнка в Беларуси: подачу заявления в ЗАГС по месту рождения или месту жительства родителей, регистрацию ребёнка по месту жительства, а также оформление единовременного пособия и последующих выплат по месту назначения пособия. Заявление о регистрации рождения должно быть сделано не позднее трёх месяцев со дня рождения, а для регистрации по месту жительства нужно обратиться не позднее одного месяца со дня прибытия на новое место жительства; за единовременными пособиями важно успеть в пределах шестимесячного срока обращения. citeturn17view1turn40search5turn32view0turn17view2turn17view3",
+    "category": "Семья",
+    "estimated_duration": "1-6 месяцев",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "preparation",
+        "title": "Подготовка исходных документов",
+        "description": "После выписки родители проверяют медицинскую справку о рождении, готовят документы, удостоверяющие личность, и заранее определяют сведения, которые будут внесены в запись акта о рождении. Само заявление на регистрацию рождения подаётся в пределах трёх месяцев со дня рождения ребёнка. citeturn17view1turn40search5",
+        "order_index": 1
+      },
+      {
+        "id": "birthregistration",
+        "title": "Регистрация рождения в ЗАГС",
+        "description": "Регистрация рождения производится органом ЗАГС по месту рождения ребёнка либо по месту жительства родителей или одного из них. Для регистрации используются заявление, паспорта родителей и медицинская справка о рождении; в отдельных случаях дополнительно нужны документы для записи сведений об отце. citeturn17view1turn17view0",
+        "order_index": 2
+      },
+      {
+        "id": "residenceregistration",
+        "title": "Регистрация ребёнка по месту жительства",
+        "description": "Для регистрации по месту жительства гражданин обязан обратиться не позднее одного месяца со дня прибытия на новое место жительства; снятие с регистрационного учёта по прежнему месту при этом отдельно не требуется. Орган регистрации в день представления полного пакета документов регистрирует гражданина по месту жительства. Для несовершеннолетних без паспорта сведения вносятся в карточку регистрации законного представителя. citeturn32view0",
+        "order_index": 3
+      },
+      {
+        "id": "birthbenefit",
+        "title": "Оформление единовременных пособий",
+        "description": "Для назначения пособия в связи с рождением ребёнка обычно нужны заявление, паспорт, справка о рождении ребёнка и свидетельство о рождении; общий срок административной процедуры составляет 10 дней, а при межведомственных запросах — до 1 месяца. Государственные пособия назначаются со дня возникновения права, если обращение последовало не позднее шести месяцев; единовременные пособия по истечении этого срока не назначаются. citeturn17view2turn17view3",
+        "order_index": 4
+      },
+      {
+        "id": "carebenefit",
+        "title": "Оформление ухода и ежемесячных выплат",
+        "description": "После рождения ребёнка семья обычно оформляет отпуск по уходу и подаёт документы на ежемесячное пособие по месту назначения пособия. В общем порядке государственные пособия назначаются по месту работы матери, а в отдельных ситуациях — через органы по труду, занятости и социальной защите. citeturn37search1turn37search5",
+        "order_index": 5
+      }
+    ],
+    "tasks": [
+      {
+        "id": "checkmedicalcertificate",
+        "stage_id": "preparation",
+        "title": "Проверить медицинскую справку о рождении ребёнка",
+        "deadline": "сразу после выписки из организации здравоохранения",
+        "due_in_days": 1,
+        "institution_types": [],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Медицинская справка о рождении ребёнка",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "prepareparentids",
+        "stage_id": "preparation",
+        "title": "Подготовить паспорта родителей или иные документы, удостоверяющие личность",
+        "deadline": "до обращения в ЗАГС",
+        "due_in_days": 3,
+        "institution_types": [],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Паспорт матери",
+            "required": true
+          },
+          {
+            "title": "Паспорт отца",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "decidechilddata",
+        "stage_id": "preparation",
+        "title": "Определить имя ребёнка и проверить сведения, которые будут внесены в запись о рождении",
+        "deadline": "до подачи заявления в ЗАГС",
+        "due_in_days": 5,
+        "institution_types": [],
+        "depends_on": [
+          "checkmedicalcertificate",
+          "prepareparentids"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) родителей",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitbirthapplication",
+        "stage_id": "birthregistration",
+        "title": "Подать заявление о регистрации рождения",
+        "deadline": "не позднее 3 месяцев со дня рождения. citeturn40search5turn17view1",
+        "due_in_days": 15,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "checkmedicalcertificate",
+          "prepareparentids",
+          "decidechilddata"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о регистрации рождения",
+            "required": true
+          },
+          {
+            "title": "Медицинская справка о рождении ребёнка",
+            "required": true
+          },
+          {
+            "title": "Паспорт(а) родителей",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "getbirthcertificate",
+        "stage_id": "birthregistration",
+        "title": "Получить свидетельство о рождении ребёнка",
+        "deadline": "после принятия заявления в сроки, установленные органом ЗАГС",
+        "due_in_days": 17,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "submitbirthapplication"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "verifybirthrecord",
+        "stage_id": "birthregistration",
+        "title": "Проверить правильность записи акта и данных в свидетельстве",
+        "deadline": "в день получения свидетельства",
+        "due_in_days": 17,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "getbirthcertificate"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collecthousingbasis",
+        "stage_id": "residenceregistration",
+        "title": "Подготовить основание для регистрации ребёнка по адресу родителя",
+        "deadline": "до обращения за регистрацией по месту жительства",
+        "due_in_days": 20,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "getbirthcertificate"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          },
+          {
+            "title": "Документ, являющийся основанием для регистрации по месту жительства",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "filechildregistration",
+        "stage_id": "residenceregistration",
+        "title": "Подать документы на регистрацию ребёнка по месту жительства",
+        "deadline": "не позднее 1 месяца со дня прибытия на новое место жительства. citeturn32view0",
+        "due_in_days": 30,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "collecthousingbasis"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о регистрации по месту жительства",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          },
+          {
+            "title": "Паспорт родителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receiveregistrationproof",
+        "stage_id": "residenceregistration",
+        "title": "Получить подтверждение регистрации ребёнка по месту жительства",
+        "deadline": "в день представления полного пакета документов. citeturn32view0",
+        "due_in_days": 30,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "filechildregistration"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт родителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectbirthbenefitdocs",
+        "stage_id": "birthbenefit",
+        "title": "Собрать пакет документов для назначения пособия в связи с рождением ребёнка",
+        "deadline": "до подачи заявления на пособие",
+        "due_in_days": 35,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "getbirthcertificate",
+          "receiveregistrationproof"
+        ],
+        "documents": [
+          {
+            "title": "Заявление",
+            "required": true
+          },
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          },
+          {
+            "title": "Справка о рождении ребёнка",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitbirthbenefit",
+        "stage_id": "birthbenefit",
+        "title": "Подать заявление на единовременное пособие в связи с рождением ребёнка",
+        "deadline": "не позднее 6 месяцев со дня возникновения права. citeturn17view3",
+        "due_in_days": 45,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "collectbirthbenefitdocs"
+        ],
+        "documents": [
+          {
+            "title": "Заявление на пособие",
+            "required": true
+          },
+          {
+            "title": "Пакет документов для пособия",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "trackbirthbenefitdecision",
+        "stage_id": "birthbenefit",
+        "title": "Проконтролировать срок назначения пособия и получить результат",
+        "deadline": "10 дней со дня подачи заявления, а при запросах — до 1 месяца. citeturn17view2",
+        "due_in_days": 60,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "submitbirthbenefit"
+        ],
+        "documents": [
+          {
+            "title": "Расписка или регистрационный номер обращения",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparecaredocs",
+        "stage_id": "carebenefit",
+        "title": "Подготовить документы для отпуска по уходу и ежемесячного пособия",
+        "deadline": "сразу после оформления рождения и определения места назначения пособия",
+        "due_in_days": 30,
+        "institution_types": [],
+        "depends_on": [
+          "getbirthcertificate"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          },
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitcareleave",
+        "stage_id": "carebenefit",
+        "title": "Оформить отпуск по уходу за ребёнком по месту работы либо подготовить обращение в орган соцзащиты",
+        "deadline": "после возникновения права на отпуск",
+        "due_in_days": 40,
+        "institution_types": [],
+        "depends_on": [
+          "preparecaredocs"
+        ],
+        "documents": [
+          {
+            "title": "Заявление на отпуск по уходу за ребёнком",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitcarebenefit",
+        "stage_id": "carebenefit",
+        "title": "Подать документы на ежемесячное пособие по уходу за ребёнком до 3 лет",
+        "deadline": "сразу после оформления отпуска и без затягивания, чтобы выплаты шли с даты права по общим правилам обращения за пособиями. citeturn17view3turn37search1",
+        "due_in_days": 45,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "preparecaredocs",
+          "submitcareleave"
+        ],
+        "documents": [
+          {
+            "title": "Заявление на пособие по уходу",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о рождении ребёнка",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "marriage-registration",
+    "title": "Регистрация брака",
+    "short_description": "Совместное заявление, госпошлина, ожидание установленного срока и регистрация брака в ЗАГС. citeturn21view0turn23view0turn23view2",
+    "description": "Брак в Беларуси заключается органами ЗАГС. Общий маршрут включает проверку условий для вступления в брак, подготовку документов, подачу совместного заявления, ожидание согласованной даты и личное прибытие на регистрацию. По общему правилу брак регистрируется не ранее чем через три дня и не позднее чем через три месяца со дня обращения, а государственная пошлина за регистрацию заключения брака составляет 1 базовую величину. citeturn21view0turn23view0turn23view2",
+    "category": "Семья",
+    "estimated_duration": "3 дня-3 месяца",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "eligibility",
+        "title": "Проверка условий и выбор даты",
+        "description": "Для заключения брака нужны взаимное согласие, достижение брачного возраста и отсутствие препятствий, установленных законодательством. ЗАГС выбирается по усмотрению лиц, вступающих в брак; дата регистрации согласовывается в пределах срока от трёх дней до трёх месяцев со дня обращения. citeturn21view0",
+        "order_index": 1
+      },
+      {
+        "id": "documents",
+        "title": "Подготовка документов и оплаты",
+        "description": "Базовый пакет включает совместное заявление, паспорта и документ, подтверждающий внесение платы. В отдельных случаях требуются дополнительные документы, например о прекращении предыдущего брака, снижении брачного возраста или специальных обстоятельствах для сокращения срока. citeturn23view0",
+        "order_index": 2
+      },
+      {
+        "id": "application",
+        "title": "Подача заявления",
+        "description": "Совместное заявление подаётся в орган ЗАГС. В заявлении подтверждаются взаимное согласие, достижение брачного возраста, отсутствие препятствий и указываются фамилии, которые избирают будущие супруги. citeturn21view0",
+        "order_index": 3
+      },
+      {
+        "id": "registration",
+        "title": "Регистрация брака и получение свидетельства",
+        "description": "При регистрации заключения брака обязательно присутствуют лица, вступающие в брак. После регистрации выдается свидетельство, а в документы, удостоверяющие личность, вносится отметка о регистрации брака. citeturn21view0",
+        "order_index": 4
+      }
+    ],
+    "tasks": [
+      {
+        "id": "verifyconditions",
+        "stage_id": "eligibility",
+        "title": "Проверить отсутствие препятствий к заключению брака",
+        "deadline": "в начале подготовки маршрута",
+        "due_in_days": 1,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Паспорт жениха",
+            "required": true
+          },
+          {
+            "title": "Паспорт невесты",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "choosezagsdate",
+        "stage_id": "eligibility",
+        "title": "Выбрать орган ЗАГС и желаемую дату регистрации",
+        "deadline": "до подачи совместного заявления",
+        "due_in_days": 2,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "verifyconditions"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) лиц, вступающих в брак",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparejointapplication",
+        "stage_id": "documents",
+        "title": "Подготовить совместное заявление о регистрации заключения брака",
+        "deadline": "до визита в ЗАГС",
+        "due_in_days": 5,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "choosezagsdate"
+        ],
+        "documents": [
+          {
+            "title": "Совместное заявление лиц, вступающих в брак",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectspecialdocuments",
+        "stage_id": "documents",
+        "title": "Собрать дополнительные документы для особых случаев",
+        "deadline": "до подачи заявления",
+        "due_in_days": 7,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "verifyconditions"
+        ],
+        "documents": [
+          {
+            "title": "Документы о прекращении предыдущего брака либо иные специальные документы",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "paymarriageduty",
+        "stage_id": "documents",
+        "title": "Оплатить государственную пошлину за регистрацию брака",
+        "deadline": "до подачи заявления. citeturn23view0turn23view2",
+        "due_in_days": 7,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "choosezagsdate"
+        ],
+        "documents": [
+          {
+            "title": "Документ, подтверждающий внесение платы",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitjointapplication",
+        "stage_id": "application",
+        "title": "Подать совместное заявление в орган ЗАГС",
+        "deadline": "так, чтобы между обращением и регистрацией было не менее 3 дней и не более 3 месяцев. citeturn21view0",
+        "due_in_days": 10,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "preparejointapplication",
+          "paymarriageduty"
+        ],
+        "documents": [
+          {
+            "title": "Совместное заявление",
+            "required": true
+          },
+          {
+            "title": "Паспорт жениха",
+            "required": true
+          },
+          {
+            "title": "Паспорт невесты",
+            "required": true
+          },
+          {
+            "title": "Документ об оплате госпошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "indicatesurnames",
+        "stage_id": "application",
+        "title": "Указать в заявлении фамилии, которые избирают будущие супруги",
+        "deadline": "в момент подачи совместного заявления",
+        "due_in_days": 10,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "submitjointapplication"
+        ],
+        "documents": [
+          {
+            "title": "Совместное заявление",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "getregistrationdate",
+        "stage_id": "application",
+        "title": "Получить согласованную дату и время регистрации",
+        "deadline": "в день приема заявления",
+        "due_in_days": 10,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "submitjointapplication",
+          "indicatesurnames"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) лиц, вступающих в брак",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "arriveforregistration",
+        "stage_id": "registration",
+        "title": "Лично явиться в ЗАГС в назначенный день",
+        "deadline": "в назначенную дату регистрации",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "getregistrationdate"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт жениха",
+            "required": true
+          },
+          {
+            "title": "Паспорт невесты",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receivemarriagecertificate",
+        "stage_id": "registration",
+        "title": "Получить свидетельство о заключении брака",
+        "deadline": "в день регистрации брака",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "arriveforregistration"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkmarriagerecord",
+        "stage_id": "registration",
+        "title": "Проверить отметки в документах и правильность внесённых данных",
+        "deadline": "сразу после регистрации",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "receivemarriagecertificate"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о заключении брака",
+            "required": true
+          },
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "divorce-by-mutual-consent",
+    "title": "Расторжение брака по взаимному согласию через ЗАГС",
+    "short_description": "Развод без общих несовершеннолетних детей и спора об имуществе: совместное заявление, ожидание установленного срока и получение свидетельства. citeturn39view0turn39view2turn39view3",
+    "description": "Этот маршрут подходит только для случаев, когда оба супруга согласны на развод, у них нет общих несовершеннолетних детей и отсутствует спор об имуществе. В таком случае расторжение брака производится органом ЗАГС по совместному заявлению супругов; регистрация проводится не ранее одного месяца и не позднее двух месяцев со дня подачи заявления, а размер платы составляет 4 базовые величины. Если хотя бы одно из этих условий не соблюдается, нужен судебный порядок. citeturn39view0turn39view1turn39view2turn39view3",
+    "category": "Семья",
+    "estimated_duration": "1-2 месяца",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "eligibility",
+        "title": "Проверка применимости порядка через ЗАГС",
+        "description": "Орган ЗАГС вправе расторгнуть брак только по взаимному согласию супругов, при отсутствии общих несовершеннолетних детей и имущественного спора. При судебном расторжении момент прекращения брака иной, поэтому сначала важно выбрать правильный порядок. citeturn39view2turn39view3",
+        "order_index": 1
+      },
+      {
+        "id": "documents",
+        "title": "Подготовка документов и оплаты",
+        "description": "Базовый пакет включает совместное заявление супругов, паспорта, свидетельство о заключении брака и документ о внесении платы. При невозможности явки одного из супругов на регистрацию требуется отдельное заявление о регистрации расторжения брака в его отсутствие. citeturn39view0turn39view1turn39view3",
+        "order_index": 2
+      },
+      {
+        "id": "application",
+        "title": "Подача совместного заявления",
+        "description": "Совместное заявление подается в орган ЗАГС по месту жительства или месту пребывания супругов либо одного из них. Если супруг желает вернуть добрачную фамилию, это указывается в заявлении о регистрации расторжения брака. citeturn39view3",
+        "order_index": 3
+      },
+      {
+        "id": "waiting",
+        "title": "Ожидание обязательного срока",
+        "description": "После принятия заявления действует обязательный срок ожидания: регистрацию проводят не ранее одного месяца и не позднее двух месяцев со дня подачи заявления. До назначенной даты супругам следует проверить личное присутствие либо подготовить надлежащим образом заявление о регистрации в отсутствие одного из них. citeturn39view0turn39view1turn39view3",
+        "order_index": 4
+      },
+      {
+        "id": "registration",
+        "title": "Регистрация расторжения брака",
+        "description": "В день регистрации ЗАГС оформляет расторжение брака, выдает свидетельство и вносит отметки в документы, удостоверяющие личность. При регистрации в отсутствие одного из супругов отметка вносится в его документ при последующем обращении. citeturn39view3",
+        "order_index": 5
+      }
+    ],
+    "tasks": [
+      {
+        "id": "checkzagseligibility",
+        "stage_id": "eligibility",
+        "title": "Подтвердить, что у супругов нет общих несовершеннолетних детей и спора об имуществе",
+        "deadline": "до подготовки заявления",
+        "due_in_days": 1,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Свидетельство о заключении брака",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "agreepostdivorcedetails",
+        "stage_id": "eligibility",
+        "title": "Согласовать, кто и как будет участвовать в регистрации и нужна ли добрачная фамилия",
+        "deadline": "до подачи совместного заявления",
+        "due_in_days": 2,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "checkzagseligibility"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparedivorcedocuments",
+        "stage_id": "documents",
+        "title": "Подготовить паспорта и свидетельство о заключении брака",
+        "deadline": "до подачи заявления",
+        "due_in_days": 5,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "agreepostdivorcedetails"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт супруга",
+            "required": true
+          },
+          {
+            "title": "Паспорт супруги",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о заключении брака",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "paydivorceduty",
+        "stage_id": "documents",
+        "title": "Оплатить установленную плату за регистрацию расторжения брака",
+        "deadline": "до подачи заявления. citeturn39view0turn39view1",
+        "due_in_days": 5,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "preparedivorcedocuments"
+        ],
+        "documents": [
+          {
+            "title": "Документ, подтверждающий внесение платы",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "prepareabsencepaper",
+        "stage_id": "documents",
+        "title": "При необходимости подготовить заявление одного из супругов о регистрации расторжения брака в его отсутствие",
+        "deadline": "до даты регистрации, если один из супругов не сможет явиться",
+        "due_in_days": 20,
+        "institution_types": [],
+        "depends_on": [
+          "agreepostdivorcedetails"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о регистрации расторжения брака в отсутствие супруга",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "filljointdivorceapplication",
+        "stage_id": "application",
+        "title": "Подготовить совместное заявление о расторжении брака",
+        "deadline": "до посещения ЗАГС",
+        "due_in_days": 7,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "preparedivorcedocuments",
+          "paydivorceduty"
+        ],
+        "documents": [
+          {
+            "title": "Совместное заявление супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitdivorceapplication",
+        "stage_id": "application",
+        "title": "Подать совместное заявление в орган ЗАГС",
+        "deadline": "в согласованный день подачи документов",
+        "due_in_days": 7,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "filljointdivorceapplication"
+        ],
+        "documents": [
+          {
+            "title": "Совместное заявление супругов",
+            "required": true
+          },
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о заключении брака",
+            "required": true
+          },
+          {
+            "title": "Документ об оплате",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "getdivorcedate",
+        "stage_id": "application",
+        "title": "Получить согласованную дату регистрации расторжения брака",
+        "deadline": "в день приема заявления",
+        "due_in_days": 7,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "submitdivorceapplication"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "waitminimummonth",
+        "stage_id": "waiting",
+        "title": "Выдержать обязательный минимальный срок ожидания",
+        "deadline": "не ранее 1 месяца со дня подачи заявления. citeturn39view3turn39view1",
+        "due_in_days": 37,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "getdivorcedate"
+        ],
+        "documents": [
+          {
+            "title": "Расписка или отметка о принятии заявления",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparefinalvisit",
+        "stage_id": "waiting",
+        "title": "Подготовить документы для финального визита в ЗАГС",
+        "deadline": "до назначенной даты регистрации",
+        "due_in_days": 35,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "getdivorcedate"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "confirmattendance",
+        "stage_id": "waiting",
+        "title": "Проверить личную явку обоих супругов либо наличие оформленного заявления об отсутствии",
+        "deadline": "до дня регистрации расторжения брака",
+        "due_in_days": 35,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "prepareabsencepaper",
+          "preparefinalvisit"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о регистрации в отсутствие супруга",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "arrivefordivorceregistration",
+        "stage_id": "registration",
+        "title": "Явиться в ЗАГС для регистрации расторжения брака",
+        "deadline": "в назначенный день, но не позднее 2 месяцев со дня подачи заявления. citeturn39view0turn39view1",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "waitminimummonth",
+          "confirmattendance"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receivedivorcecertificate",
+        "stage_id": "registration",
+        "title": "Получить свидетельство о расторжении брака",
+        "deadline": "в день регистрации расторжения брака",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "arrivefordivorceregistration"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkpassportmark",
+        "stage_id": "registration",
+        "title": "Проверить внесение отметки о расторжении брака в документы, удостоверяющие личность",
+        "deadline": "сразу после регистрации, а при регистрации в отсутствие одного из супругов — при его отдельном обращении. citeturn39view3",
+        "due_in_days": 40,
+        "institution_types": [
+          "ЗАГС"
+        ],
+        "depends_on": [
+          "receivedivorcecertificate"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт(а) супругов",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о расторжении брака",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "passport-replacement-by-age",
+    "title": "Замена паспорта по возрасту",
+    "short_description": "Подготовка документов, оплата пошлины, подача заявления через ОГиМ или паспортную службу и получение нового паспорта. citeturn4view0turn20view0turn20view2",
+    "description": "Маршрут подходит для обмена паспорта при истечении срока его действия, в том числе по возрастному основанию для паспорта старого образца. В стандартном порядке оформление занимает 1 месяц, в ускоренном — 15 дней; базовая госпошлина составляет 0,5 базовой величины, а за ускорение взимается дополнительная пошлина. Для обмена обычно нужны заявление, старый паспорт, 4 фотографии 40×50 мм, свидетельство о рождении, а при наличии соответствующих обстоятельств — документы о браке, разводе, детях и воинском учёте. citeturn4view0turn20view0turn20view2",
+    "category": "Документы",
+    "estimated_duration": "2-6 недель",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "grounds",
+        "title": "Проверка основания и сбор основного пакета",
+        "description": "На первом этапе проверяют, подлежит ли паспорт обмену, и собирают основной комплект документов. В официальном перечне указаны заявление, паспорт, подлежащий обмену, свидетельство о рождении, документы о браке и детях при наличии, а для мужчин в возрасте от 18 до 27 лет — военный билет или документ воинского учета. citeturn4view0",
+        "order_index": 1
+      },
+      {
+        "id": "payment",
+        "title": "Фотографии и оплата пошлины",
+        "description": "Нужно подготовить 4 цветные фотографии формата 40×50 мм, а также оплатить госпошлину. По разъяснениям подразделений по гражданству и миграции, стандартное оформление составляет 1 месяц при пошлине 0,5 базовой величины, а ускоренное — 15 дней с дополнительной оплатой 0,5 базовой величины. citeturn20view2turn20view0",
+        "order_index": 2
+      },
+      {
+        "id": "submission",
+        "title": "Подача заявления",
+        "description": "Заявление и документы подаются через паспортную службу по месту жительства: через РСЦ или непосредственно в подразделение по гражданству и миграции. После приема документов начинается административная процедура изготовления нового паспорта. citeturn20view0turn4view0",
+        "order_index": 3
+      },
+      {
+        "id": "processing",
+        "title": "Ожидание изготовления",
+        "description": "На этапе ожидания заявитель отслеживает выбранный режим изготовления и готовит старый паспорт к сдаче. По общему правилу новый паспорт выдается после завершения установленного срока изготовления. citeturn20view2turn4view0",
+        "order_index": 4
+      },
+      {
+        "id": "issuance",
+        "title": "Получение нового паспорта",
+        "description": "Готовый паспорт выдается владельцу лично в территориальном подразделении по гражданству и миграции; при получении старый паспорт сдается, а заявитель проверяет корректность персональных данных. citeturn20view0",
+        "order_index": 5
+      }
+    ],
+    "tasks": [
+      {
+        "id": "checkexpiryreason",
+        "stage_id": "grounds",
+        "title": "Проверить, что паспорт подлежит обмену по сроку действия",
+        "deadline": "в начале подготовки маршрута",
+        "due_in_days": 1,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Паспорт, подлежащий обмену",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectcoredocs",
+        "stage_id": "grounds",
+        "title": "Собрать основной комплект документов для обмена паспорта",
+        "deadline": "до оплаты пошлины и подачи заявления",
+        "due_in_days": 3,
+        "institution_types": [],
+        "depends_on": [
+          "checkexpiryreason"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт, подлежащий обмену",
+            "required": true
+          },
+          {
+            "title": "Свидетельство о рождении",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkadditionaldocs",
+        "stage_id": "grounds",
+        "title": "Проверить дополнительные документы по семейному положению и воинскому учёту",
+        "deadline": "до подачи заявления",
+        "due_in_days": 5,
+        "institution_types": [],
+        "depends_on": [
+          "collectcoredocs"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о заключении или расторжении брака, свидетельства о рождении детей, документ воинского учета",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "takephotos",
+        "stage_id": "payment",
+        "title": "Сделать 4 фотографии установленного формата",
+        "deadline": "до подачи заявления",
+        "due_in_days": 5,
+        "institution_types": [],
+        "depends_on": [
+          "collectcoredocs"
+        ],
+        "documents": [
+          {
+            "title": "Фотографии 40×50 мм",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "paypassportduty",
+        "stage_id": "payment",
+        "title": "Оплатить госпошлину за обмен паспорта",
+        "deadline": "до подачи заявления. citeturn20view2",
+        "due_in_days": 5,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "collectcoredocs"
+        ],
+        "documents": [
+          {
+            "title": "Документ, подтверждающий оплату госпошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "chooseprocessingspeed",
+        "stage_id": "payment",
+        "title": "Выбрать обычный или ускоренный порядок изготовления",
+        "deadline": "в момент оплаты и до подачи заявления. citeturn20view2",
+        "due_in_days": 5,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "paypassportduty"
+        ],
+        "documents": [
+          {
+            "title": "Документ об оплате пошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "fillapplicationform",
+        "stage_id": "submission",
+        "title": "Заполнить заявление установленной формы",
+        "deadline": "в день подачи документов",
+        "due_in_days": 6,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "takephotos",
+          "paypassportduty"
+        ],
+        "documents": [
+          {
+            "title": "Заявление установленной формы",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitpassportdocuments",
+        "stage_id": "submission",
+        "title": "Подать пакет документов на обмен паспорта",
+        "deadline": "в согласованный день обращения",
+        "due_in_days": 7,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "fillapplicationform",
+          "checkadditionaldocs"
+        ],
+        "documents": [
+          {
+            "title": "Заявление",
+            "required": true
+          },
+          {
+            "title": "Паспорт, подлежащий обмену",
+            "required": true
+          },
+          {
+            "title": "Фотографии 40×50 мм",
+            "required": true
+          },
+          {
+            "title": "Документ об оплате госпошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "savepaymentdetails",
+        "stage_id": "submission",
+        "title": "Сохранить реквизиты оплаты и сведения о поданном заявлении",
+        "deadline": "сразу после подачи документов",
+        "due_in_days": 7,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "submitpassportdocuments"
+        ],
+        "documents": [
+          {
+            "title": "Квитанция или номер платежа ЕРИП",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "waitprocessingperiod",
+        "stage_id": "processing",
+        "title": "Ожидать изготовление паспорта в выбранном режиме",
+        "deadline": "до 1 месяца в обычном порядке или до 15 дней в ускоренном. citeturn20view2",
+        "due_in_days": 30,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "submitpassportdocuments"
+        ],
+        "documents": [
+          {
+            "title": "Сведения о принятом заявлении",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkreadiness",
+        "stage_id": "processing",
+        "title": "Уточнить готовность документа к выдаче",
+        "deadline": "к окончанию выбранного срока изготовления",
+        "due_in_days": 30,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "waitprocessingperiod"
+        ],
+        "documents": [
+          {
+            "title": "Паспортные данные заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "prepareoldpassport",
+        "stage_id": "processing",
+        "title": "Подготовить старый паспорт к сдаче при получении нового",
+        "deadline": "до дня получения нового паспорта",
+        "due_in_days": 30,
+        "institution_types": [],
+        "depends_on": [
+          "checkreadiness"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт, подлежащий обмену",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receivenewpassport",
+        "stage_id": "issuance",
+        "title": "Лично получить новый паспорт в подразделении по гражданству и миграции",
+        "deadline": "после сообщения о готовности документа",
+        "due_in_days": 31,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "prepareoldpassport"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт, подлежащий обмену",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "verifynewdata",
+        "stage_id": "issuance",
+        "title": "Проверить все данные и срок действия в новом паспорте",
+        "deadline": "в день получения паспорта",
+        "due_in_days": 31,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "receivenewpassport"
+        ],
+        "documents": [
+          {
+            "title": "Новый паспорт",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "opening-ip",
+    "title": "Открытие ИП",
+    "short_description": "Проверка разрешённого вида деятельности, государственная регистрация и автоматическая постановка на налоговый учёт. citeturn27view1turn27view3turn5view2",
+    "description": "Для открытия ИП в Беларуси сначала нужно проверить, входит ли планируемый вид деятельности в перечень, разрешённый для ИП с 1 января 2026 года. Затем подаются заявление, фотография, документ, удостоверяющий личность, и документ об уплате госпошлины в регистрирующий орган по месту жительства. Свидетельство о регистрации выдают не позднее рабочего дня, следующего за днём подачи документов, а постановка на учёт в налоговом органе происходит автоматически и занимает до двух рабочих дней с момента поступления информационной карты из регистрирующего органа. citeturn27view1turn27view3turn5view2",
+    "category": "Бизнес/ИП",
+    "estimated_duration": "3-10 дней",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "activitycheck",
+        "title": "Проверка вида деятельности и органа регистрации",
+        "description": "С 2026 года ИП может работать только по видам деятельности, включенным в специальный перечень. Одновременно нужно определить регистрирующий орган по месту жительства, поскольку государственная регистрация ИП осуществляется именно по этому адресу. citeturn27view3turn5view2",
+        "order_index": 1
+      },
+      {
+        "id": "registrationpackage",
+        "title": "Подготовка пакета на регистрацию",
+        "description": "Для регистрации нужны заявление о государственной регистрации, одна фотография любого размера как на документы, паспорт или вид на жительство и документ об уплате госпошлины. На официальных страницах регистрирующих органов указана сумма пошлины 22,50 рубля, что соответствует 0,5 базовой величины на 2026 год. citeturn27view1turn11search18",
+        "order_index": 2
+      },
+      {
+        "id": "stateregistration",
+        "title": "Подача документов и получение свидетельства",
+        "description": "Пакет документов подают в регистрирующий орган лично, через службу одно окно или иным законным способом. При личной подаче заявление подписывается в присутствии уполномоченного сотрудника регистрирующего органа; свидетельство о государственной регистрации выдают не позднее следующего рабочего дня. citeturn27view1",
+        "order_index": 3
+      },
+      {
+        "id": "taxstart",
+        "title": "Постановка на налоговый учёт",
+        "description": "После регистрации ИП отдельно становиться на налоговый учёт не нужно: это происходит автоматически. Налоговый орган ставит ИП на учёт в течение двух рабочих дней и присваивает единый учётный номер плательщика; подтверждающий документ выдаётся регистрирующим органом. citeturn5view2",
+        "order_index": 4
+      }
+    ],
+    "tasks": [
+      {
+        "id": "checkactivityallowed",
+        "stage_id": "activitycheck",
+        "title": "Проверить, входит ли планируемый вид деятельности в разрешённый перечень для ИП",
+        "deadline": "до заполнения заявления на регистрацию. citeturn27view3turn27view1",
+        "due_in_days": 1,
+        "institution_types": [
+          "Служба одно окно",
+          "Исполком"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Описание планируемого вида деятельности",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "identifyregisteringauthority",
+        "stage_id": "activitycheck",
+        "title": "Определить регистрирующий орган по месту жительства",
+        "deadline": "до подачи документов",
+        "due_in_days": 2,
+        "institution_types": [
+          "Служба одно окно",
+          "Исполком"
+        ],
+        "depends_on": [
+          "checkactivityallowed"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт или вид на жительство",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "fillipapplication",
+        "stage_id": "registrationpackage",
+        "title": "Заполнить заявление о государственной регистрации ИП",
+        "deadline": "до визита в регистрирующий орган",
+        "due_in_days": 3,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "identifyregisteringauthority"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о государственной регистрации ИП",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparephotoandpassport",
+        "stage_id": "registrationpackage",
+        "title": "Подготовить фотографию и документ, удостоверяющий личность",
+        "deadline": "до подачи пакета документов",
+        "due_in_days": 3,
+        "institution_types": [],
+        "depends_on": [
+          "identifyregisteringauthority"
+        ],
+        "documents": [
+          {
+            "title": "Фотография для документов",
+            "required": true
+          },
+          {
+            "title": "Паспорт или вид на жительство",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "payregistrationduty",
+        "stage_id": "registrationpackage",
+        "title": "Оплатить государственную пошлину за регистрацию ИП",
+        "deadline": "до подачи заявления. citeturn27view1turn11search18",
+        "due_in_days": 3,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "identifyregisteringauthority"
+        ],
+        "documents": [
+          {
+            "title": "Документ, подтверждающий уплату государственной пошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitregistrationpackage",
+        "stage_id": "stateregistration",
+        "title": "Подать пакет документов на государственную регистрацию ИП",
+        "deadline": "в согласованный день подачи",
+        "due_in_days": 4,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "fillipapplication",
+          "preparephotoandpassport",
+          "payregistrationduty"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о государственной регистрации ИП",
+            "required": true
+          },
+          {
+            "title": "Фотография",
+            "required": true
+          },
+          {
+            "title": "Паспорт или вид на жительство",
+            "required": true
+          },
+          {
+            "title": "Документ об оплате госпошлины",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "signapplicationbeforeofficer",
+        "stage_id": "stateregistration",
+        "title": "Подписать заявление в присутствии уполномоченного сотрудника при личной подаче",
+        "deadline": "в момент подачи документов",
+        "due_in_days": 4,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "submitregistrationpackage"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о государственной регистрации ИП",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receivesubmissionconfirmation",
+        "stage_id": "stateregistration",
+        "title": "Получить подтверждение принятия документов к регистрации",
+        "deadline": "в день подачи пакета",
+        "due_in_days": 4,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "signapplicationbeforeofficer"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receiveregistrationcertificate",
+        "stage_id": "taxstart",
+        "title": "Получить свидетельство о государственной регистрации ИП",
+        "deadline": "не позднее рабочего дня, следующего за днем подачи документов. citeturn27view1",
+        "due_in_days": 5,
+        "institution_types": [
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "receivesubmissionconfirmation"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receiveunpnotice",
+        "stage_id": "taxstart",
+        "title": "Получить извещение о присвоении учётного номера плательщика",
+        "deadline": "после автоматической постановки на налоговый учёт. citeturn5view2",
+        "due_in_days": 7,
+        "institution_types": [
+          "Налоговая инспекция"
+        ],
+        "depends_on": [
+          "receiveregistrationcertificate"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о государственной регистрации ИП",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checktaxregistration",
+        "stage_id": "taxstart",
+        "title": "Проверить завершение автоматической постановки на налоговый учёт",
+        "deadline": "в течение 2 рабочих дней после регистрации ИП. citeturn5view2",
+        "due_in_days": 7,
+        "institution_types": [
+          "Налоговая инспекция"
+        ],
+        "depends_on": [
+          "receiveregistrationcertificate"
+        ],
+        "documents": [
+          {
+            "title": "Извещение о присвоении УНП",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "moving-and-registration",
+    "title": "Переезд и регистрация по новому адресу",
+    "short_description": "Сбор основания на жильё, регистрация по месту жительства, оформление членов семьи и обновление данных по ЖКУ. citeturn32view0turn34search0turn34search4",
+    "description": "При переезде на новое постоянное место жительства в Беларуси гражданин должен зарегистрироваться по новому адресу не позднее одного месяца со дня прибытия. Отдельно сниматься с учёта по прежнему месту жительства не требуется: после новой регистрации орган регистрации сам направляет сообщение по прежнему адресу. Регистрация по новому месту жительства производится в день представления полного пакета документов; далее обычно обновляют сведения в РСЦ и по лицевому счёту, поскольку лицевой счёт привязан к документам, подтверждающим право владения или пользования жилым помещением. citeturn32view0turn34search0",
+    "category": "Жильё и ЖКХ",
+    "estimated_duration": "1-4 недели",
+    "difficulty": "Средняя",
+    "stages": [
+      {
+        "id": "housingbasis",
+        "title": "Подготовка основания для регистрации",
+        "description": "До обращения за регистрацией нужно подтвердить основание проживания в жилом помещении и, если требуется по правилам вселения, получить согласия собственника, нанимателя и иных проживающих. В перечне документов для регистрации прямо названы документ, являющийся основанием для регистрации, и согласия заинтересованных лиц, если они обязательны. citeturn32view0",
+        "order_index": 1
+      },
+      {
+        "id": "residenceregistration",
+        "title": "Регистрация по месту жительства",
+        "description": "Регистрация по месту жительства оформляется не позднее одного месяца со дня прибытия на новое место жительства. Лицо, ответственное за регистрацию, передает документы в орган регистрации в течение трёх рабочих дней, а сам орган регистрирует гражданина в день представления полного пакета документов. citeturn32view0",
+        "order_index": 2
+      },
+      {
+        "id": "familyregistration",
+        "title": "Оформление членов семьи",
+        "description": "Если переезд связан с регистрацией детей или других членов семьи, дополнительно готовят документы о рождении, согласие второго родителя либо судебные документы о месте проживания ребёнка. Для ряда справок и дальнейших действий используется информация о месте жительства и составе семьи. citeturn32view0turn34search4",
+        "order_index": 3
+      },
+      {
+        "id": "utilities",
+        "title": "Обновление данных по ЖКУ и лицевому счёту",
+        "description": "После переезда обычно обновляют плательщика ЖКУ и данные лицевого счёта в РСЦ или иной обслуживающей организации. Министерство ЖКХ разъясняет, что лицевой счёт присваивается на основании документов, подтверждающих право владения либо пользования жилым помещением; на сайтах системы ЖКХ также публикуются формы копии лицевого счёта и справки о месте жительства и составе семьи. citeturn34search0turn34search4",
+        "order_index": 4
+      }
+    ],
+    "tasks": [
+      {
+        "id": "collecttitledocument",
+        "stage_id": "housingbasis",
+        "title": "Подготовить документ, являющийся основанием для регистрации по новому адресу",
+        "deadline": "до подачи заявления о регистрации",
+        "due_in_days": 3,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Документ, являющийся основанием для регистрации по месту жительства",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectconsents",
+        "stage_id": "housingbasis",
+        "title": "Оформить согласия собственника, нанимателя и иных проживающих лиц, если они требуются",
+        "deadline": "до подачи заявления о регистрации",
+        "due_in_days": 5,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "collecttitledocument"
+        ],
+        "documents": [
+          {
+            "title": "Письменные согласия заинтересованных лиц",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "prepareidsandmilitary",
+        "stage_id": "housingbasis",
+        "title": "Подготовить паспорт и документ воинского учёта при наличии обязанности",
+        "deadline": "до обращения за регистрацией",
+        "due_in_days": 5,
+        "institution_types": [],
+        "depends_on": [
+          "collecttitledocument"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          },
+          {
+            "title": "Военный билет или удостоверение призывника",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitresidenceapplication",
+        "stage_id": "residenceregistration",
+        "title": "Подать заявление о регистрации по месту жительства",
+        "deadline": "не позднее 1 месяца со дня прибытия на новое место жительства. citeturn32view0",
+        "due_in_days": 10,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "collectconsents",
+          "prepareidsandmilitary"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о регистрации по месту жительства",
+            "required": true
+          },
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "presentbasisandconsents",
+        "stage_id": "residenceregistration",
+        "title": "Представить основание для регистрации и подтверждённые согласия",
+        "deadline": "в день подачи заявления",
+        "due_in_days": 10,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "submitresidenceapplication"
+        ],
+        "documents": [
+          {
+            "title": "Документ-основание для регистрации",
+            "required": true
+          },
+          {
+            "title": "Согласия заинтересованных лиц",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "getregistrationmark",
+        "stage_id": "residenceregistration",
+        "title": "Получить регистрацию по месту жительства и отметку в документе",
+        "deadline": "в день представления полного пакета документов. citeturn32view0",
+        "due_in_days": 10,
+        "institution_types": [
+          "ОГиМ"
+        ],
+        "depends_on": [
+          "presentbasisandconsents"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparefamilydocs",
+        "stage_id": "familyregistration",
+        "title": "Подготовить документы для регистрации детей и других членов семьи",
+        "deadline": "после оформления регистрации основного заявителя",
+        "due_in_days": 12,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "getregistrationmark"
+        ],
+        "documents": [
+          {
+            "title": "Свидетельство о рождении ребёнка или паспорт члена семьи",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "registerchildrenandfamily",
+        "stage_id": "familyregistration",
+        "title": "Подать документы на регистрацию детей и членов семьи по новому адресу",
+        "deadline": "сразу после подготовки семейного пакета документов",
+        "due_in_days": 15,
+        "institution_types": [
+          "ОГиМ",
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "preparefamilydocs"
+        ],
+        "documents": [
+          {
+            "title": "Документы членов семьи",
+            "required": true
+          },
+          {
+            "title": "Согласие второго родителя или судебный документ о проживании ребёнка",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "obtainresidencecertificate",
+        "stage_id": "familyregistration",
+        "title": "Получить справку о месте жительства и составе семьи либо копию лицевого счёта при необходимости",
+        "deadline": "после завершения регистрации семьи",
+        "due_in_days": 16,
+        "institution_types": [
+          "ЖКХ / РСЦ",
+          "Служба одно окно"
+        ],
+        "depends_on": [
+          "registerchildrenandfamily"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "applytochangeutilitypayer",
+        "stage_id": "utilities",
+        "title": "Обратиться в РСЦ для изменения плательщика ЖКУ по новому адресу",
+        "deadline": "после завершения регистрации по новому месту жительства",
+        "due_in_days": 20,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "getregistrationmark"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт заявителя",
+            "required": true
+          },
+          {
+            "title": "Документ, подтверждающий право владения или пользования жилым помещением",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "updatepersonalaccount",
+        "stage_id": "utilities",
+        "title": "Переоформить или актуализировать лицевой счёт по жилому помещению",
+        "deadline": "после изменения плательщика ЖКУ",
+        "due_in_days": 20,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "applytochangeutilitypayer"
+        ],
+        "documents": [
+          {
+            "title": "Документ на жилое помещение",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkutilitycharges",
+        "stage_id": "utilities",
+        "title": "Проверить начисления по ЖКУ и корректность данных в извещениях",
+        "deadline": "в первый расчётный период после переоформления",
+        "due_in_days": 30,
+        "institution_types": [
+          "ЖКХ / РСЦ"
+        ],
+        "depends_on": [
+          "updatepersonalaccount"
+        ],
+        "documents": [
+          {
+            "title": "Извещение о начислениях по ЖКУ или данные лицевого счёта",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "age-pension",
+    "title": "Оформление пенсии по возрасту",
+    "short_description": "Проверка права, сбор документов о стаже и заработке, подача заявления и получение пенсионного удостоверения. citeturn13search3turn5view1turn35search0turn36search0",
+    "description": "Маршрут охватывает стандартное оформление трудовой пенсии по возрасту: проверку даты возникновения права, сбор документов о стаже и заработке, выбор канала подачи заявления и получение решения органа пенсионного обеспечения. С 2025 года обратиться за назначением пенсии по возрасту можно за месяц до возникновения права и в течение месяца после него; если этот месячный срок соблюден, пенсия назначается со дня возникновения права. Работающие граждане подают заявление через работодателя по месту последней работы, а заявление о назначении пенсии рассматривается органом пенсионного обеспечения не позднее 10 дней после поступления полного пакета документов. citeturn13search3turn14search6turn35search0turn36search1turn36search0",
+    "category": "Работа",
+    "estimated_duration": "1-2 месяца",
+    "difficulty": "Сложная",
+    "stages": [
+      {
+        "id": "rightcheck",
+        "title": "Проверка даты права и базовых условий",
+        "description": "На первом этапе нужно определить дату возникновения права на пенсию и спланировать окно подачи заявления. Закон и разъяснения Минтруда позволяют обратиться за пенсией по возрасту за месяц до возникновения права и в течение месяца после него. citeturn13search3turn14search6",
+        "order_index": 1
+      },
+      {
+        "id": "documents",
+        "title": "Сбор документов о стаже и заработке",
+        "description": "Для назначения пенсии обычно нужны заявление, документ, удостоверяющий личность, трудовая книжка, иные документы, подтверждающие стаж, а также справки о заработке за периоды работы до 1 января 2003 года. Также могут потребоваться документы о смене фамилии, переименовании организации и других обстоятельствах. citeturn5view1",
+        "order_index": 2
+      },
+      {
+        "id": "submission",
+        "title": "Выбор канала подачи и подача заявления",
+        "description": "Работающие граждане подают заявление о назначении пенсии через работодателя по месту последней работы; неработающие граждане обращаются непосредственно в орган по труду, занятости и социальной защите по месту жительства. Работодатель обязан оформить необходимые документы и направить их в орган пенсионного обеспечения в 10-дневный срок со дня поступления заявления. citeturn35search0turn36search1turn36search8",
+        "order_index": 3
+      },
+      {
+        "id": "additionaldocs",
+        "title": "Донесение недостающих документов",
+        "description": "Если при приеме заявления не хватает отдельных документов, орган пенсионного обеспечения выдает расписку-уведомление с перечнем недостающих документов и сроком их представления. Этот этап важен, потому что срок вынесения решения считается от поступления полного пакета документов либо недостающих документов. citeturn14search3turn36search0",
+        "order_index": 4
+      },
+      {
+        "id": "decision",
+        "title": "Получение решения и удостоверения",
+        "description": "После рассмотрения материалов орган пенсионного обеспечения принимает решение о назначении пенсии, а пенсионеру выдается пенсионное удостоверение. Само заявление о назначении пенсии рассматривается не позднее 10 дней. citeturn36search0turn36search19",
+        "order_index": 5
+      }
+    ],
+    "tasks": [
+      {
+        "id": "checkpensiondate",
+        "stage_id": "rightcheck",
+        "title": "Определить дату возникновения права на пенсию и окно подачи заявления",
+        "deadline": "за 1 месяц до возникновения права или в течение 1 месяца после него. citeturn13search3turn14search6",
+        "due_in_days": 0,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [],
+        "documents": [
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectworkrecorddocs",
+        "stage_id": "rightcheck",
+        "title": "Собрать документы, подтверждающие стаж работы и иные засчитываемые периоды",
+        "deadline": "до подачи заявления о назначении пенсии",
+        "due_in_days": 7,
+        "institution_types": [],
+        "depends_on": [
+          "checkpensiondate"
+        ],
+        "documents": [
+          {
+            "title": "Трудовая книжка",
+            "required": true
+          },
+          {
+            "title": "Иные документы, подтверждающие стаж",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "collectearningscertificates",
+        "stage_id": "rightcheck",
+        "title": "Запросить справки о заработке за периоды работы до 1 января 2003 года",
+        "deadline": "до подачи полного пакета документов",
+        "due_in_days": 14,
+        "institution_types": [],
+        "depends_on": [
+          "collectworkrecorddocs"
+        ],
+        "documents": [
+          {
+            "title": "Справка о заработке за периоды работы до 1 января 2003 года",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "prepareemployersubmission",
+        "stage_id": "documents",
+        "title": "Если заявитель работает, подать работодателю заявление для оформления представления",
+        "deadline": "работодатель оформляет пакет в 10-дневный срок со дня поступления заявления. citeturn36search1turn35search0",
+        "due_in_days": 20,
+        "institution_types": [],
+        "depends_on": [
+          "collectworkrecorddocs",
+          "collectearningscertificates"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о назначении пенсии",
+            "required": true
+          },
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "preparepersonalapplication",
+        "stage_id": "documents",
+        "title": "Если заявитель не работает, подготовить личное обращение в орган по труду, занятости и социальной защите",
+        "deadline": "в пределах выбранного окна обращения за пенсией",
+        "due_in_days": 20,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "collectworkrecorddocs",
+          "collectearningscertificates"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о назначении пенсии",
+            "required": true
+          },
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "submitpensionpackage",
+        "stage_id": "submission",
+        "title": "Передать полный пакет документов в орган пенсионного обеспечения",
+        "deadline": "в дату обращения, выбранную в окне назначения пенсии",
+        "due_in_days": 30,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "prepareemployersubmission",
+          "preparepersonalapplication"
+        ],
+        "documents": [
+          {
+            "title": "Заявление о назначении пенсии",
+            "required": true
+          },
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          },
+          {
+            "title": "Трудовая книжка",
+            "required": true
+          },
+          {
+            "title": "Справки о заработке и другие подтверждающие документы",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "getreceiptlist",
+        "stage_id": "submission",
+        "title": "Получить расписку и перечень недостающих документов, если пакет оказался неполным",
+        "deadline": "не позднее 2 рабочих дней со дня принятия заявления и документов. citeturn14search3",
+        "due_in_days": 31,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "submitpensionpackage"
+        ],
+        "documents": [
+          {
+            "title": "Расписка-уведомление о приеме документов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "providemissingdocs",
+        "stage_id": "additionaldocs",
+        "title": "Донести документы, которых не хватило для назначения пенсии",
+        "deadline": "в срок, указанный в расписке-уведомлении",
+        "due_in_days": 45,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "getreceiptlist"
+        ],
+        "documents": [
+          {
+            "title": "Недостающие документы по перечню органа пенсионного обеспечения",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "trackdecisionterm",
+        "stage_id": "additionaldocs",
+        "title": "Контролировать срок принятия решения по назначению пенсии",
+        "deadline": "не позднее 10 дней после поступления полного пакета документов либо недостающих документов. citeturn36search0",
+        "due_in_days": 55,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "providemissingdocs"
+        ],
+        "documents": [
+          {
+            "title": "Расписка о приеме документов",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "receivepensioncertificate",
+        "stage_id": "decision",
+        "title": "Получить пенсионное удостоверение после назначения пенсии",
+        "deadline": "после принятия решения о назначении пенсии. citeturn36search19",
+        "due_in_days": 60,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "trackdecisionterm"
+        ],
+        "documents": [
+          {
+            "title": "Паспорт гражданина",
+            "required": true
+          }
+        ]
+      },
+      {
+        "id": "checkpaymentstart",
+        "stage_id": "decision",
+        "title": "Проверить дату, с которой назначена пенсия, и порядок её выплаты",
+        "deadline": "сразу после получения решения и удостоверения",
+        "due_in_days": 60,
+        "institution_types": [
+          "Орган социальной защиты"
+        ],
+        "depends_on": [
+          "receivepensioncertificate"
+        ],
+        "documents": [
+          {
+            "title": "Решение о назначении пенсии или пенсионное удостоверение",
+            "required": true
+          }
+        ]
+      }
+    ]
+  }
+]

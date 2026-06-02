@@ -56,6 +56,10 @@ def build_dashboard_data(
     today: date | None = None,
     documents: list[dict[str, Any]] | None = None,
     reminder_days: int = 30,
+    utility_payments: list[dict[str, Any]] | None = None,
+    tax_obligations: list[dict[str, Any]] | None = None,
+    utility_reminder_days: int = 7,
+    tax_reminder_days: int = 14,
 ) -> dict[str, Any]:
     current_date = today or date.today()
     sync_situation_progress(situations, tasks)
@@ -172,6 +176,67 @@ def build_dashboard_data(
     expiring_documents.sort(key=lambda d: d["days_left"])
     overdue_documents.sort(key=lambda d: d["days_left"])
 
+    utility_events: list[dict[str, Any]] = []
+    for payment in utility_payments or []:
+        if payment.get("status") == "Оплачено":
+            continue
+        for field, event_title in [
+            ("readings_deadline", "Передать показания ЖКХ"),
+            ("payment_deadline", "Оплатить ЖКХ"),
+        ]:
+            due = parse_due_date(payment.get(field))
+            if not due:
+                continue
+            days_left = (due - current_date).days
+            if days_left > utility_reminder_days:
+                continue
+            utility_events.append(
+                {
+                    "id": f"{payment.get('id', '')}-{field}",
+                    "title": event_title,
+                    "subtitle": payment.get("period", "Период ЖКХ"),
+                    "due_date": due,
+                    "due_date_display": format_due_date(due),
+                    "days_left": days_left,
+                    "amount": payment.get("amount", 0),
+                    "status": "Просрочено" if days_left < 0 else "Предстоит",
+                    "route": "/utility",
+                    "kind": "utility",
+                }
+            )
+
+    tax_events: list[dict[str, Any]] = []
+    for obligation in tax_obligations or []:
+        if obligation.get("status") == "Оплачено":
+            continue
+        due = parse_due_date(obligation.get("deadline"))
+        if not due:
+            continue
+        days_left = (due - current_date).days
+        if days_left > tax_reminder_days:
+            continue
+        tax_events.append(
+            {
+                "id": obligation.get("id", ""),
+                "title": obligation.get("title", "Налоговое обязательство"),
+                "subtitle": obligation.get("period", "Налоги"),
+                "due_date": due,
+                "due_date_display": format_due_date(due),
+                "days_left": days_left,
+                "amount": obligation.get("amount", 0),
+                "status": "Просрочено" if days_left < 0 or obligation.get("status") == "Просрочено" else "Предстоит",
+                "route": "/taxes",
+                "kind": "tax",
+            }
+        )
+
+    obligation_events = sorted(
+        utility_events + tax_events,
+        key=lambda item: (item["due_date"], 0 if item["status"] == "Просрочено" else 1, item["title"]),
+    )
+    overdue_obligations = [item for item in obligation_events if item["status"] == "Просрочено"][:5]
+    upcoming_obligations = [item for item in obligation_events if item["status"] != "Просрочено"][:5]
+
     return {
         "active_count": len(active_situations),
         "completed_count": len(completed_situations),
@@ -182,4 +247,9 @@ def build_dashboard_data(
         "documents_to_prepare": documents_to_prepare,
         "expiring_documents": expiring_documents,
         "overdue_documents": overdue_documents,
+        "utility_events": utility_events,
+        "tax_events": tax_events,
+        "overdue_obligations": overdue_obligations,
+        "upcoming_obligations": upcoming_obligations,
+        "obligations_count": len(obligation_events),
     }

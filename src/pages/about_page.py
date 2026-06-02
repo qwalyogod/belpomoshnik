@@ -4,7 +4,7 @@ from components.buttons import secondary_button
 from components.cards import app_card, badge, hint_card, page_heading
 from components.layout import desktop_content
 from data.mock_data import CONTENT_DISCLAIMER
-from theme.app_theme import APP_COLORS
+from theme.app_theme import APP_COLORS, ts
 
 
 IMPLEMENTED_FEATURES = [
@@ -36,8 +36,8 @@ def _bullet_list(items: list[str]) -> ft.Column:
                 spacing=9,
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
-                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=18, color=APP_COLORS["primary"]),
-                    ft.Text(item, size=14, color=APP_COLORS["text"], expand=True),
+                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=ts(18), color=APP_COLORS["primary"]),
+                    ft.Text(item, size=ts(14), color=APP_COLORS["text"], expand=True),
                 ],
             )
             for item in items
@@ -69,13 +69,13 @@ def _content(go_back=None, is_desktop: bool = False) -> ft.Column:
                         ),
                         ft.Text(
                             "Белпомощник",
-                            size=30 if is_desktop else 26,
+                            size=ts(30) if is_desktop else 26,
                             weight=ft.FontWeight.BOLD,
                             color=APP_COLORS["text"],
                         ),
                         ft.Text(
                             "Мобильное приложение для жителей Республики Беларусь, которое помогает пройти жизненную ситуацию пошагово: от выбора сценария до задач, документов, сроков и прогресса.",
-                            size=15,
+                            size=ts(15),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -86,10 +86,10 @@ def _content(go_back=None, is_desktop: bool = False) -> ft.Column:
                 ft.Column(
                     spacing=12,
                     controls=[
-                        ft.Text("Для кого", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Для кого", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         ft.Text(
                             "Для граждан, которым нужно быстро понять порядок действий в бытовых и административных ситуациях: документы, семья, работа, жильё, налоги и социальная поддержка.",
-                            size=14,
+                            size=ts(14),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -100,7 +100,7 @@ def _content(go_back=None, is_desktop: bool = False) -> ft.Column:
                 ft.Column(
                     spacing=12,
                     controls=[
-                        ft.Text("Что уже реализовано", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Что уже реализовано", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         _bullet_list(IMPLEMENTED_FEATURES),
                     ],
                 ),
@@ -110,7 +110,7 @@ def _content(go_back=None, is_desktop: bool = False) -> ft.Column:
                 ft.Column(
                     spacing=12,
                     controls=[
-                        ft.Text("Что будет добавлено позже", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Что будет добавлено позже", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         _bullet_list(PLANNED_FEATURES),
                     ],
                 ),

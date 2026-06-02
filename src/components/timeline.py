@@ -3,7 +3,7 @@ from __future__ import annotations
 import flet as ft
 
 from components.cards import app_card, badge, icon_circle
-from theme.app_theme import APP_COLORS, SPACING, border_all
+from theme.app_theme import APP_COLORS, SPACING, border_all, ts
 
 
 def stage_step_card(
@@ -28,8 +28,8 @@ def stage_step_card(
                     expand=True,
                     controls=[
                         ft.Row(spacing=8, wrap=True, controls=[stage_badge]),
-                        ft.Text(title, size=18, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                        ft.Text(description, size=14, color=APP_COLORS["muted"]) if description else ft.Container(),
+                        ft.Text(title, size=ts(18), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                        ft.Text(description, size=ts(14), color=APP_COLORS["muted"]) if description else ft.Container(),
                     ],
                 ),
             ],
@@ -69,8 +69,8 @@ def step_row(title: str, completed: bool = False, locked: bool = False, on_chang
             spacing=8,
             controls=[
                 checkbox,
-                ft.Icon(ft.Icons.LOCK_OUTLINE, size=18, color=APP_COLORS["muted2"]) if locked else ft.Container(width=0),
-                ft.Text(title, size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["muted"] if locked else APP_COLORS["text"], expand=True),
+                ft.Icon(ft.Icons.LOCK_OUTLINE, size=ts(18), color=APP_COLORS["muted2"]) if locked else ft.Container(width=0),
+                ft.Text(title, size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["muted"] if locked else APP_COLORS["text"], expand=True),
             ],
         ),
     )

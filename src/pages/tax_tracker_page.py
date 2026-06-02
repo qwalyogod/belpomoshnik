@@ -4,7 +4,7 @@ from components.buttons import primary_button, secondary_button
 from components.cards import app_card, badge, empty_state_card, hint_card, info_card, page_heading
 from components.layout import desktop_content
 from services.dashboard import parse_due_date
-from theme.app_theme import APP_COLORS, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, border_all, padding_symmetric, ts
 
 
 _STATUS_VARIANT = {
@@ -82,7 +82,7 @@ def _obligation_card(
                                         badge(obligation.get("period", ""), "default") if obligation.get("period") else ft.Container(),
                                     ],
                                 ),
-                                ft.Text(obligation.get("title", "Налоговое обязательство"), size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                                ft.Text(obligation.get("title", "Налоговое обязательство"), size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                             ],
                         ),
                         ft.Row(
@@ -99,13 +99,13 @@ def _obligation_card(
                     spacing=16,
                     run_spacing=4,
                     controls=[
-                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.CALENDAR_TODAY_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Срок: " + (obligation.get("deadline") or "—"), size=12, color=APP_COLORS["muted"])]),
-                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.MONETIZATION_ON_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Сумма: " + amount_text, size=12, color=APP_COLORS["muted"])]),
-                        *([ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.ATTACH_FILE_OUTLINED, size=14, color=APP_COLORS["muted"]), ft.Text("Квитанция прикреплена", size=12, color=APP_COLORS["muted"])])] if obligation.get("receipt_path") else []),
+                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.CALENDAR_TODAY_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Срок: " + (obligation.get("deadline") or "—"), size=ts(12), color=APP_COLORS["muted"])]),
+                        ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.MONETIZATION_ON_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Сумма: " + amount_text, size=ts(12), color=APP_COLORS["muted"])]),
+                        *([ft.Row(spacing=4, controls=[ft.Icon(ft.Icons.ATTACH_FILE_OUTLINED, size=ts(14), color=APP_COLORS["muted"]), ft.Text("Квитанция прикреплена", size=ts(12), color=APP_COLORS["muted"])])] if obligation.get("receipt_path") else []),
                     ],
                 ),
-                *([ft.Text(days_text, size=13, color=days_color, weight=ft.FontWeight.W_600)] if days_text else []),
-                *([ft.Text(obligation.get("comment", ""), size=12, color=APP_COLORS["muted"])] if obligation.get("comment") else []),
+                *([ft.Text(days_text, size=ts(13), color=days_color, weight=ft.FontWeight.W_600)] if days_text else []),
+                *([ft.Text(obligation.get("comment", ""), size=ts(12), color=APP_COLORS["muted"])] if obligation.get("comment") else []),
                 ft.Row(
                     spacing=8,
                     controls=[
@@ -184,17 +184,17 @@ def _build_content(
         )
     else:
         if overdue:
-            controls.append(ft.Text("Просроченные", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["danger"]))
+            controls.append(ft.Text("Просроченные", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["danger"]))
             for o in _sort_by_deadline(overdue):
                 controls.append(_obligation_card(o, on_edit, on_delete, on_mark_paid))
 
         if upcoming:
-            controls.append(ft.Text("Предстоят", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]))
+            controls.append(ft.Text("Предстоят", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]))
             for o in _sort_by_deadline(upcoming):
                 controls.append(_obligation_card(o, on_edit, on_delete, on_mark_paid))
 
         if paid:
-            controls.append(ft.Text("Оплачено", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["success"]))
+            controls.append(ft.Text("Оплачено", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["success"]))
             for o in paid:
                 controls.append(_obligation_card(o, on_edit, on_delete, on_mark_paid))
 

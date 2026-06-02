@@ -102,6 +102,9 @@ class Scenario(Base, TimestampMixin):
         index=True,
     )
     priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    content_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    verified_by: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    verification_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
     problem: Mapped[Problem] = relationship(back_populates="scenarios")
     stages: Mapped[list[ScenarioStage]] = relationship(

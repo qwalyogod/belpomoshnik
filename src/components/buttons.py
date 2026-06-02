@@ -1,6 +1,6 @@
 import flet as ft
 
-from theme.app_theme import APP_COLORS, APP_RADIUS, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, padding_symmetric, ts
 
 
 def primary_button(text: str, on_click=None, icon=None, expand: bool = False, width: int | None = None, height: int = 50) -> ft.Button:

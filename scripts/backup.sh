@@ -22,6 +22,7 @@ BACKUP_DIR="${BELPOMOSHNIK_BACKUP_DIR:-$PROJECT_DIR/backups}"
 DB_PATH="${BELPOMOSHNIK_DB_PATH:-$PROJECT_DIR/data/belpomoshnik.db}"
 STATE_PATH="$PROJECT_DIR/data/app_state.json"
 DOCS_DIR="${BELPOMOSHNIK_DOCS_DIR:-$PROJECT_DIR/data/user_docs}"
+PRIVATE_UPLOADS_DIR="$PROJECT_DIR/data/private_uploads"
 KEEP_DAYS="${BELPOMOSHNIK_BACKUP_KEEP_DAYS:-14}"
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
@@ -30,10 +31,11 @@ DEST="$BACKUP_DIR/$TIMESTAMP"
 echo "[backup] Начало: $TIMESTAMP"
 mkdir -p "$DEST"
 
-# 1. SQLite snapshot (hot backup через .dump)
+# 1. SQLite backup — binary copy (online-safe) + SQL dump
 if [ -f "$DB_PATH" ]; then
+    sqlite3 "$DB_PATH" ".backup '$DEST/belpomoshnik.db'"
     sqlite3 "$DB_PATH" ".dump" > "$DEST/belpomoshnik.sql"
-    echo "[backup] БД сохранена: $DEST/belpomoshnik.sql"
+    echo "[backup] БД сохранена: $DEST/belpomoshnik.db + .sql"
 else
     echo "[backup] WARN: БД не найдена по пути $DB_PATH, пропускаем."
 fi
@@ -50,6 +52,12 @@ if [ -d "$DOCS_DIR" ]; then
     echo "[backup] user_docs архивирован: $DEST/user_docs.tar.gz"
 else
     echo "[backup] INFO: $DOCS_DIR не существует, файлы документов пропущены."
+fi
+
+# 3a. Зашифрованные сканы документов (private_uploads)
+if [ -d "$PRIVATE_UPLOADS_DIR" ]; then
+    tar -czf "$DEST/private_uploads.tar.gz" -C "$(dirname "$PRIVATE_UPLOADS_DIR")" "$(basename "$PRIVATE_UPLOADS_DIR")"
+    echo "[backup] private_uploads архивирован: $DEST/private_uploads.tar.gz"
 fi
 
 # 4. Архивировать всё в один .tar.gz и удалить поддиректорию

@@ -15,7 +15,7 @@ from components.cards import (
 )
 from components.layout import desktop_content
 from data.mock_data import PROBLEMS
-from theme.app_theme import APP_COLORS, APP_RADIUS, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 FILTER_CATEGORIES = [
@@ -138,7 +138,7 @@ def _category_initial(category_id: str, size: int = 46) -> ft.Container:
         border_radius=size // 2,
         bgcolor=bgcolor,
         alignment=ft.Alignment(0, 0),
-        content=ft.Text(meta["initial"], size=14, weight=ft.FontWeight.W_900, color=color),
+        content=ft.Text(meta["initial"], size=ts(14), weight=ft.FontWeight.W_900, color=color),
     )
 
 
@@ -148,8 +148,8 @@ def _small_meta(icon: str, text: str) -> ft.Row:
         tight=True,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Icon(icon, size=14, color=APP_COLORS["muted2"]),
-            ft.Text(text, size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+            ft.Icon(icon, size=ts(14), color=APP_COLORS["muted2"]),
+            ft.Text(text, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
         ],
     )
 
@@ -183,7 +183,7 @@ def _quick_category_tile(category_id: str, on_category_change, *, width: int, he
                     _category_icon(category_id, 50),
                     ft.Text(
                         _category_name(category_id),
-                        size=16,
+                        size=ts(16),
                         weight=ft.FontWeight.W_900,
                         color=APP_COLORS["text"],
                         text_align=ft.TextAlign.CENTER,
@@ -191,7 +191,7 @@ def _quick_category_tile(category_id: str, on_category_change, *, width: int, he
                     ),
                     ft.Text(
                         f"{count} проблем",
-                        size=12,
+                        size=ts(12),
                         weight=ft.FontWeight.W_800,
                         color=APP_COLORS["muted"],
                         text_align=ft.TextAlign.CENTER,
@@ -268,7 +268,7 @@ def _problem_card(problem: dict, open_problem, *, width: int | None, index: int,
                     ),
                 ],
             ),
-            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22, color=APP_COLORS["muted2"]),
+            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(22), color=APP_COLORS["muted2"]),
         ],
     )
 
@@ -338,11 +338,11 @@ def _filter_hint_card(selected_category: str, total_count: int) -> ft.Container:
                 ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.TUNE_OUTLINED, size=20, color=APP_COLORS["blue"]),
-                        ft.Text("Фильтры каталога", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                        ft.Icon(ft.Icons.TUNE_OUTLINED, size=ts(20), color=APP_COLORS["blue"]),
+                        ft.Text("Фильтры каталога", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     ],
                 ),
-                ft.Text(f"Найдено: {total_count}", size=13, color=APP_COLORS["muted"]),
+                ft.Text(f"Найдено: {total_count}", size=ts(13), color=APP_COLORS["muted"]),
                 ft.Column(
                     spacing=9,
                     controls=[
@@ -354,8 +354,8 @@ def _filter_hint_card(selected_category: str, total_count: int) -> ft.Container:
                             content=ft.Row(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
-                                    ft.Text(label, size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
-                                    ft.Text(value, size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
+                                    ft.Text(label, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                                    ft.Text(value, size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
                                 ],
                             ),
                         )
@@ -380,15 +380,15 @@ def _problem_contents_card() -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Что есть в карточке", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Что есть в карточке", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=10,
                     controls=[
                         ft.Row(
                             spacing=10,
                             controls=[
-                                ft.Icon(ft.Icons.CHECK, size=16, color=APP_COLORS["blue"]),
-                                ft.Text(item, size=14, color=APP_COLORS["muted"], expand=True),
+                                ft.Icon(ft.Icons.CHECK, size=ts(16), color=APP_COLORS["blue"]),
+                                ft.Text(item, size=ts(14), color=APP_COLORS["muted"], expand=True),
                             ],
                         )
                         for item in items
@@ -408,8 +408,8 @@ def _side_problem_list(title: str, problems: list[dict], open_problem, icon: str
                 ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(icon, size=20, color=APP_COLORS["blue"]),
-                        ft.Text(title, size=19, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                        ft.Icon(icon, size=ts(20), color=APP_COLORS["blue"]),
+                        ft.Text(title, size=ts(19), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     ],
                 ),
                 ft.Column(
@@ -430,8 +430,8 @@ def _side_problem_list(title: str, problems: list[dict], open_problem, icon: str
                                         spacing=2,
                                         expand=True,
                                         controls=[
-                                            ft.Text(problem.get("title", ""), size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                                            ft.Text(problem.get("category_name", ""), size=11, color=APP_COLORS["muted"], max_lines=1),
+                                            ft.Text(problem.get("title", ""), size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                                            ft.Text(problem.get("category_name", ""), size=ts(11), color=APP_COLORS["muted"], max_lines=1),
                                         ],
                                     ),
                                 ],
@@ -501,7 +501,7 @@ def _desktop_problems(open_problem, query: str, selected_category: str, on_query
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
                             section_title("Быстрые категории"),
-                            ft.Text("По самым частым обращениям", size=13, color=APP_COLORS["muted"]),
+                            ft.Text("По самым частым обращениям", size=ts(13), color=APP_COLORS["muted"]),
                         ],
                     ),
                     _quick_categories(on_category_change, desktop=True),
@@ -515,8 +515,8 @@ def _desktop_problems(open_problem, query: str, selected_category: str, on_query
                         spacing=8,
                         vertical_alignment=ft.CrossAxisAlignment.END,
                         controls=[
-                            ft.Text("Все проблемы", size=25, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text(total_label, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                            ft.Text("Все проблемы", size=ts(25), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text(total_label, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.Row(spacing=8, controls=[badge("Новые", "gray"), badge("Важные", "blue")]),
@@ -557,8 +557,8 @@ def _mobile_filter_row(selected_category: str, count: int) -> ft.Row:
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Row(spacing=8, controls=[badge("Важные", "blue"), badge("До месяца", "gray")]),
-            ft.Text(str(count), size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
-            ft.Text(category_text, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], max_lines=1),
+            ft.Text(str(count), size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
+            ft.Text(category_text, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], max_lines=1),
         ],
     )
 
@@ -567,10 +567,10 @@ def _mobile_page_header() -> ft.Column:
     return ft.Column(
         spacing=7,
         controls=[
-            ft.Text("Каталог проблем", size=30, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ft.Text("Каталог проблем", size=ts(30), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
             ft.Text(
                 "Выберите тему, чтобы открыть пошаговую карточку.",
-                size=14,
+                size=ts(14),
                 color=APP_COLORS["muted"],
                 max_lines=2,
             ),
@@ -605,8 +605,8 @@ def _mobile_problems(open_problem, query: str, selected_category: str, on_query_
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text("Быстрые категории", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text("Все", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                                ft.Text("Быстрые категории", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text("Все", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
                             ],
                         ),
                         _quick_categories(on_category_change, desktop=False),
@@ -619,8 +619,8 @@ def _mobile_problems(open_problem, query: str, selected_category: str, on_query_
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text("Все проблемы", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text(f"{len(problems)}", size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
+                                ft.Text("Все проблемы", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text(f"{len(problems)}", size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
                             ],
                         ),
                         ft.Column(spacing=12, controls=problem_controls),

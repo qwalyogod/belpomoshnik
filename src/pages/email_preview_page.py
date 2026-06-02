@@ -11,15 +11,15 @@ import flet as ft
 from components.buttons import ghost_button, primary_button
 from components.cards import app_card, icon_circle
 from components.layout import desktop_content
-from theme.app_theme import APP_COLORS, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, border_all, padding_symmetric, ts
 
 
 def _email_header_row(label: str, value: str) -> ft.Row:
     return ft.Row(
         spacing=8,
         controls=[
-            ft.Text(label, size=13, color=APP_COLORS["muted"], width=70),
-            ft.Text(value, size=13, color=APP_COLORS["text"], expand=True, selectable=True),
+            ft.Text(label, size=ts(13), color=APP_COLORS["muted"], width=70),
+            ft.Text(value, size=ts(13), color=APP_COLORS["text"], expand=True, selectable=True),
         ],
     )
 
@@ -48,7 +48,7 @@ def _email_preview_card(email_data: dict, desktop: bool) -> ft.Control:
             body_controls.append(
                 ft.Text(
                     line[2:].strip(),
-                    size=17 if desktop else 15,
+                    size=ts(17) if desktop else 15,
                     weight=ft.FontWeight.BOLD,
                     color=APP_COLORS["text"],
                 )
@@ -59,7 +59,7 @@ def _email_preview_card(email_data: dict, desktop: bool) -> ft.Control:
             body_controls.append(ft.Container(height=8))
         else:
             body_controls.append(
-                ft.Text(line, size=14 if desktop else 13, color=APP_COLORS["text"])
+                ft.Text(line, size=ts(14) if desktop else 13, color=APP_COLORS["text"])
             )
 
     footer_text = (
@@ -67,7 +67,7 @@ def _email_preview_card(email_data: dict, desktop: bool) -> ft.Control:
         "Для отписки откройте Профиль → Настройки → Email-уведомления."
     )
     footer = ft.Container(
-        content=ft.Text(footer_text, size=12, color=APP_COLORS["muted"]),
+        content=ft.Text(footer_text, size=ts(12), color=APP_COLORS["muted"]),
         padding=padding_symmetric(horizontal=20, vertical=12),
         border=ft.Border(top=ft.BorderSide(1, APP_COLORS["border_soft"])),
     )
@@ -93,10 +93,10 @@ def _mvp_badge() -> ft.Container:
         content=ft.Row(
             spacing=8,
             controls=[
-                ft.Icon(ft.Icons.INFO_OUTLINE, size=16, color=APP_COLORS["warning"]),
+                ft.Icon(ft.Icons.INFO_OUTLINE, size=ts(16), color=APP_COLORS["warning"]),
                 ft.Text(
                     "MVP: письмо не отправляется. В production — SMTP через backend.",
-                    size=13,
+                    size=ts(13),
                     color=APP_COLORS["warning"],
                     expand=True,
                 ),
@@ -121,13 +121,13 @@ def _build_content(email_data: dict, desktop: bool, on_close=None, on_send_demo=
                 controls=[
                     ft.Text(
                         "Предпросмотр email-уведомления",
-                        size=26 if desktop else 22,
+                        size=ts(26) if desktop else 22,
                         weight=ft.FontWeight.BOLD,
                         color=APP_COLORS["text"],
                     ),
                     ft.Text(
                         "Так выглядит письмо, которое будет отправлено пользователю.",
-                        size=14 if desktop else 13,
+                        size=ts(14) if desktop else 13,
                         color=APP_COLORS["muted"],
                     ),
                 ],

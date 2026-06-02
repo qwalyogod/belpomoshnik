@@ -7,6 +7,7 @@ from theme.app_theme import (
     BOTTOM_NAV_SAFE_GAP,
     CENTER,
     border_top,
+    ts,
 )
 
 
@@ -73,7 +74,7 @@ def _ai_center_button(on_open_ai_chat) -> ft.Container:
         tooltip="ИИ-помощник",
         shadow=[ft.BoxShadow(blur_radius=12, offset=ft.Offset(0, 4), color="#3319A3E8")],
         animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
-        content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=22, color=ft.Colors.WHITE),
+        content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=ts(22), color=ft.Colors.WHITE),
     )
 
     def _hover(e: ft.HoverEvent) -> None:

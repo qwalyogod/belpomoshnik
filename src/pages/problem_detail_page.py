@@ -7,7 +7,7 @@ from components.cards import app_card, badge, hero_card, hint_card, icon_circle,
 from components.layout import desktop_content
 from components.placeholders import photo_placeholder
 from data.mock_data import CONTENT_DISCLAIMER, LEARNING_QUESTIONS, OFFICIAL_SOURCES, PROBLEM_DETAIL, PROBLEMS
-from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 CATEGORY_TONES = {
@@ -157,8 +157,8 @@ def _breadcrumb(go_back, desktop: bool) -> ft.Container:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.ARROW_BACK, size=19, color=APP_COLORS["blue_text"]),
-                ft.Text("Каталог проблем", size=14 if desktop else 13, weight=ft.FontWeight.W_800, color=APP_COLORS["blue_text"]),
+                ft.Icon(ft.Icons.ARROW_BACK, size=ts(19), color=APP_COLORS["blue_text"]),
+                ft.Text("Каталог проблем", size=ts(14) if desktop else 13, weight=ft.FontWeight.W_800, color=APP_COLORS["blue_text"]),
             ],
         ),
         padding=padding_symmetric(horizontal=14, vertical=9),
@@ -188,8 +188,8 @@ def _hero_action(text: str, icon: str, on_click, primary: bool, width: int) -> f
             alignment=ft.MainAxisAlignment.CENTER,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=18, color=text_color),
-                ft.Text(text, size=14, weight=ft.FontWeight.W_900, color=text_color),
+                ft.Icon(icon, size=ts(18), color=text_color),
+                ft.Text(text, size=ts(14), weight=ft.FontWeight.W_900, color=text_color),
             ],
         ),
     )
@@ -207,9 +207,9 @@ def _numbered_item(text: str, index: int, tone: str = "orange") -> ft.Row:
                 border_radius=14,
                 bgcolor=badge_bg,
                 alignment=CENTER,
-                content=ft.Text(str(index), size=13, weight=ft.FontWeight.W_900, color=badge_fg),
+                content=ft.Text(str(index), size=ts(13), weight=ft.FontWeight.W_900, color=badge_fg),
             ),
-            ft.Text(text, size=15, color=APP_COLORS["text"], expand=True),
+            ft.Text(text, size=ts(15), color=APP_COLORS["text"], expand=True),
         ],
     )
 
@@ -223,10 +223,10 @@ def _hero(problem: dict, save_problem, create_plan, desktop: bool) -> ft.Contain
                 spacing=14,
                 controls=[
                     icon_circle(ft.Icons.ROUTE_OUTLINED, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=56),
-                    ft.Text("Личный маршрут решения", size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Личный маршрут решения", size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                     ft.Text(
                         "Соберите план, отметьте шаги и держите под рукой документы, сроки и официальные источники.",
-                        size=14,
+                        size=ts(14),
                         color=APP_COLORS["muted"],
                     ),
                     _mobile_badges(problem),
@@ -268,14 +268,14 @@ def _summary_row(label: str, value: str, icon: str, tone: str = "blue") -> ft.Ro
                 border_radius=19,
                 bgcolor=badge_bg,
                 alignment=CENTER,
-                content=ft.Icon(icon, size=20, color=badge_fg),
+                content=ft.Icon(icon, size=ts(20), color=badge_fg),
             ),
             ft.Column(
                 spacing=1,
                 expand=True,
                 controls=[
-                    ft.Text(label, size=12, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
-                    ft.Text(value, size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                    ft.Text(label, size=ts(12), weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
+                    ft.Text(value, size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
                 ],
             ),
         ],
@@ -295,7 +295,7 @@ def _summary_card(problem: dict, values: list[bool], save_problem, create_plan) 
         ft.Column(
             spacing=16,
             controls=[
-                ft.Text("Кратко по плану", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Кратко по плану", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(spacing=12, controls=rows),
                 primary_button("Создать ситуацию", icon=ft.Icons.ADD_TASK_OUTLINED, on_click=create_plan, expand=True),
                 secondary_button("Сохранить себе", icon=ft.Icons.BOOKMARK_BORDER, on_click=save_problem, expand=True),
@@ -319,7 +319,7 @@ def _immediate_card(problem: dict, desktop: bool) -> ft.Container:
                         icon_circle(ft.Icons.PRIORITY_HIGH_OUTLINED, color=badge_fg, bgcolor=badge_bg, size=46),
                         ft.Text(
                             "Что делать прямо сейчас",
-                            size=24 if desktop else 21,
+                            size=ts(24) if desktop else 21,
                             weight=ft.FontWeight.W_900,
                             color=APP_COLORS["text"],
                             expand=True,
@@ -353,8 +353,8 @@ def _progress_card(values: list[bool]) -> ft.Container:
                         ft.Column(
                             spacing=2,
                             controls=[
-                                ft.Text("Прогресс выполнения", size=15, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                                ft.Text(f"Готово {done} из {total} шагов", size=13, color=APP_COLORS["muted"]),
+                                ft.Text("Прогресс выполнения", size=ts(15), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                ft.Text(f"Готово {done} из {total} шагов", size=ts(13), color=APP_COLORS["muted"]),
                             ],
                         ),
                         badge(f"{progress}%", "green" if progress == 100 else "blue"),
@@ -387,7 +387,7 @@ def _step_card(step: str, index: int, completed: bool, on_toggle_step, desktop: 
                     border_radius=19,
                     bgcolor=badge_bg,
                     alignment=CENTER,
-                    content=ft.Text(str(index + 1), size=15, weight=ft.FontWeight.W_900, color=badge_fg),
+                    content=ft.Text(str(index + 1), size=ts(15), weight=ft.FontWeight.W_900, color=badge_fg),
                 ),
                 ft.Column(
                     spacing=9,
@@ -404,13 +404,13 @@ def _step_card(step: str, index: int, completed: bool, on_toggle_step, desktop: 
                         ),
                         ft.Text(
                             step,
-                            size=17 if desktop else 16,
+                            size=ts(17) if desktop else 16,
                             weight=ft.FontWeight.W_900,
                             color=APP_COLORS["muted2"] if completed else APP_COLORS["text"],
                         ),
                         ft.Text(
                             "Отметьте шаг после выполнения. Прогресс обновится сразу в текущей сессии.",
-                            size=13,
+                            size=ts(13),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -461,8 +461,8 @@ def _documents_card(problem: dict, compact: bool = False) -> ft.Container:
                         spacing=5,
                         expand=True,
                         controls=[
-                            ft.Text(item, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                            ft.Text("Обычно требуется оригинал или копия. Уточните перед подачей.", size=12, color=APP_COLORS["muted"]),
+                            ft.Text(item, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                            ft.Text("Обычно требуется оригинал или копия. Уточните перед подачей.", size=ts(12), color=APP_COLORS["muted"]),
                         ],
                     ),
                 ],
@@ -535,9 +535,9 @@ def _sources_card(problem: dict) -> ft.Container:
                         spacing=5,
                         expand=True,
                         controls=[
-                            ft.Text(source["title"], size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text(source["url"], size=12, color=APP_COLORS["blue_text"]),
-                            ft.Text(source.get("description", ""), size=12, color=APP_COLORS["muted"]),
+                            ft.Text(source["title"], size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text(source["url"], size=ts(12), color=APP_COLORS["blue_text"]),
+                            ft.Text(source.get("description", ""), size=ts(12), color=APP_COLORS["muted"]),
                             badge(f"Проверено: {checked}" if source.get("last_checked_at") else "требует проверки", "success" if source.get("last_checked_at") else "warning"),
                         ],
                     ),
@@ -551,7 +551,7 @@ def _sources_card(problem: dict) -> ft.Container:
                 _section_heading("Официальные источники", ft.Icons.BALANCE_OUTLINED, "blue", 21),
                 ft.Text(
                     "Информация используется в справочных целях и должна сверяться с официальными ресурсами.",
-                    size=13,
+                    size=ts(13),
                     color=APP_COLORS["muted"],
                 ),
                 ft.Column(spacing=14, controls=source_controls),
@@ -574,8 +574,8 @@ def _related_card(problem: dict) -> ft.Container:
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(item["title"], size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                            ft.Text(item.get("category_name", ""), size=12, color=APP_COLORS["muted"]),
+                            ft.Text(item["title"], size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                            ft.Text(item.get("category_name", ""), size=ts(12), color=APP_COLORS["muted"]),
                         ],
                     ),
                 ],
@@ -585,7 +585,7 @@ def _related_card(problem: dict) -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Связанные проблемы", size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Связанные проблемы", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(spacing=12, controls=rows),
             ],
         ),
@@ -599,15 +599,15 @@ def _contents_card() -> ft.Container:
         ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Содержание", size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Содержание", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=7,
                     controls=[
                         ft.Row(
                             spacing=8,
                             controls=[
-                                ft.Icon(ft.Icons.CIRCLE, size=7, color=APP_COLORS["blue"] if index == 0 else APP_COLORS["muted2"]),
-                                ft.Text(item, size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"] if index == 0 else APP_COLORS["muted"]),
+                                ft.Icon(ft.Icons.CIRCLE, size=ts(7), color=APP_COLORS["blue"] if index == 0 else APP_COLORS["muted2"]),
+                                ft.Text(item, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"] if index == 0 else APP_COLORS["muted"]),
                             ],
                         )
                         for index, item in enumerate(items)
@@ -661,7 +661,7 @@ def _quiz_block(problem: dict, quiz_state: dict, on_quiz_answer, on_submit_quiz,
                             vertical_alignment=ft.CrossAxisAlignment.START,
                             controls=[
                                 badge(f"Вопрос {index}", "blue"),
-                                ft.Text(question["question"], size=15, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                                ft.Text(question["question"], size=ts(15), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                             ]
                             + ([feedback] if feedback else []),
                         ),
@@ -690,8 +690,8 @@ def _quiz_block(problem: dict, quiz_state: dict, on_quiz_answer, on_submit_quiz,
             ft.Column(
                 spacing=10,
                 controls=[
-                    ft.Text(f"Ваш результат: {score} из {len(questions)}", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text(_quiz_level(score), size=15, color=APP_COLORS["blue_text"], weight=ft.FontWeight.W_800),
+                    ft.Text(f"Ваш результат: {score} из {len(questions)}", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text(_quiz_level(score), size=ts(15), color=APP_COLORS["blue_text"], weight=ft.FontWeight.W_800),
                     primary_button("Пройти ещё раз", icon=ft.Icons.REPLAY, on_click=on_reset_quiz, expand=True),
                 ],
             ),
@@ -705,7 +705,7 @@ def _quiz_block(problem: dict, quiz_state: dict, on_quiz_answer, on_submit_quiz,
         spacing=14,
         controls=[
             _section_heading("Проверьте себя", ft.Icons.QUIZ_OUTLINED, "purple", 22),
-            ft.Text("Короткий тест помогает закрепить главное после чтения карточки.", size=14, color=APP_COLORS["muted"]),
+            ft.Text("Короткий тест помогает закрепить главное после чтения карточки.", size=ts(14), color=APP_COLORS["muted"]),
             ft.Column(spacing=12, controls=question_cards),
             result_control,
         ],
@@ -795,8 +795,8 @@ def _desktop_problem_detail(
                                 ft.Column(
                                     spacing=12,
                                     controls=[
-                                        ft.Text(problem["title"], size=46, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                        ft.Text(problem["description"], size=17, color=APP_COLORS["muted"]),
+                                        ft.Text(problem["title"], size=ts(46), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                        ft.Text(problem["description"], size=ts(17), color=APP_COLORS["muted"]),
                                     ],
                                 ),
                                 _hero(problem, save_problem, create_plan, True),
@@ -857,7 +857,7 @@ def _mobile_problem_detail(
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.IconButton(icon=ft.Icons.ARROW_BACK, icon_color=APP_COLORS["muted"], on_click=go_back, tooltip="Назад"),
-                    ft.Text("Карточка проблемы", size=17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True, max_lines=1),
+                    ft.Text("Карточка проблемы", size=ts(17), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True, max_lines=1),
                     ft.IconButton(icon=ft.Icons.BOOKMARK_BORDER, icon_color=APP_COLORS["muted"], on_click=save_problem, tooltip="Сохранить"),
                 ],
             ),
@@ -865,8 +865,8 @@ def _mobile_problem_detail(
             ft.Column(
                 spacing=10,
                 controls=[
-                    ft.Text(problem["title"], size=34, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text(problem["description"], size=15, color=APP_COLORS["muted"]),
+                    ft.Text(problem["title"], size=ts(34), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text(problem["description"], size=ts(15), color=APP_COLORS["muted"]),
                 ],
             ),
             _hero(problem, save_problem, create_plan, False),

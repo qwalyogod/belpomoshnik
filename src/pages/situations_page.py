@@ -7,7 +7,7 @@ import flet as ft
 from components.buttons import ghost_button, primary_button, secondary_button
 from components.cards import app_card, badge, category_chip, empty_state_card, icon_circle, page_heading, stat_card
 from components.layout import desktop_content
-from theme.app_theme import APP_COLORS, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 FILTERS = ["Все", "Активные", "Завершённые", "Просрочено"]
@@ -306,17 +306,17 @@ def _situation_card(
 
     right_controls: list[ft.Control] = [badge(status_text, status_variant)]
     right_controls.extend(action_buttons)
-    right_controls.append(ft.Icon(ft.Icons.ARROW_FORWARD_IOS, size=18, color=APP_COLORS["muted2"]))
+    right_controls.append(ft.Icon(ft.Icons.ARROW_FORWARD_IOS, size=ts(18), color=APP_COLORS["muted2"]))
 
     meta_controls: list[ft.Control] = [
         ft.Row(
             spacing=5,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.LIST_ALT_OUTLINED, size=15, color=APP_COLORS["muted2"]),
+                ft.Icon(ft.Icons.LIST_ALT_OUTLINED, size=ts(15), color=APP_COLORS["muted2"]),
                 ft.Text(
                     f"{completed_tasks}/{total_tasks} задач" if total_tasks else "задачи не добавлены",
-                    size=12,
+                    size=ts(12),
                     weight=ft.FontWeight.W_700,
                     color=APP_COLORS["muted"],
                 ),
@@ -326,8 +326,8 @@ def _situation_card(
             spacing=5,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.EVENT_OUTLINED, size=15, color=APP_COLORS["muted2"]),
-                ft.Text(deadline_text, size=12, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
+                ft.Icon(ft.Icons.EVENT_OUTLINED, size=ts(15), color=APP_COLORS["muted2"]),
+                ft.Text(deadline_text, size=ts(12), weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
             ],
         ),
     ]
@@ -353,7 +353,7 @@ def _situation_card(
                                     ft.Row(spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=right_controls),
                                 ],
                             ),
-                            ft.Text(description, size=13, color=APP_COLORS["muted"], max_lines=2),
+                            ft.Text(description, size=ts(13), color=APP_COLORS["muted"], max_lines=2),
                         ],
                     ),
                 ],
@@ -372,8 +372,8 @@ def _situation_card(
                     ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
-                            ft.Text("Прогресс", size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
-                            ft.Text(f"{progress}%", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Прогресс", size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                            ft.Text(f"{progress}%", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ],
                     ),
                     _progress_bar(progress, tone),
@@ -432,8 +432,8 @@ def _side_task_card(task: dict) -> ft.Container:
                     spacing=4,
                     expand=True,
                     controls=[
-                        ft.Text(task.get("title", "Задача"), size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
-                        ft.Text(task.get("situation_title", "Ситуация"), size=12, color=APP_COLORS["muted"], max_lines=1),
+                        ft.Text(task.get("title", "Задача"), size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
+                        ft.Text(task.get("situation_title", "Ситуация"), size=ts(12), color=APP_COLORS["muted"], max_lines=1),
                     ],
                 ),
                 badge(due_text, "red" if overdue else "blue"),
@@ -451,8 +451,8 @@ def _documents_panel(tasks: list[dict], situations: list[dict]) -> ft.Container:
             ft.Column(
                 spacing=8,
                 controls=[
-                    ft.Text("Документы к подготовке", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Пока нет документов из активных задач.", size=13, color=APP_COLORS["muted"]),
+                    ft.Text("Документы к подготовке", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Пока нет документов из активных задач.", size=ts(13), color=APP_COLORS["muted"]),
                 ],
             ),
             padding=18,
@@ -474,11 +474,11 @@ def _documents_panel(tasks: list[dict], situations: list[dict]) -> ft.Container:
                                 spacing=6,
                                 wrap=True,
                                 controls=[
-                                    ft.Text(document["title"], size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                    ft.Text(document["title"], size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
                                     badge("обязательно" if document["required"] else "по ситуации", "green" if document["required"] else "orange"),
                                 ],
                             ),
-                            ft.Text(document["situation"], size=12, color=APP_COLORS["muted"], max_lines=1),
+                            ft.Text(document["situation"], size=ts(12), color=APP_COLORS["muted"], max_lines=1),
                         ],
                     ),
                 ],
@@ -489,7 +489,7 @@ def _documents_panel(tasks: list[dict], situations: list[dict]) -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Документы к подготовке", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Документы к подготовке", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 *rows,
             ],
         ),
@@ -500,12 +500,12 @@ def _documents_panel(tasks: list[dict], situations: list[dict]) -> ft.Container:
 def _desktop_sidebar(situations: list[dict], tasks: list[dict]) -> ft.Column:
     upcoming = _upcoming_tasks(tasks, situations)
     task_controls: list[ft.Control] = [
-        ft.Text("Ближайшие задачи", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
+        ft.Text("Ближайшие задачи", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
     ]
     if upcoming:
         task_controls.extend([_side_task_card(task) for task in upcoming])
     else:
-        task_controls.append(ft.Text("Ближайших задач нет.", size=13, color=APP_COLORS["muted"]))
+        task_controls.append(ft.Text("Ближайших задач нет.", size=ts(13), color=APP_COLORS["muted"]))
 
     return ft.Column(
         spacing=18,
@@ -519,13 +519,13 @@ def _desktop_sidebar(situations: list[dict], tasks: list[dict]) -> ft.Column:
                         ft.Row(
                             spacing=8,
                             controls=[
-                                ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=20, color=APP_COLORS["blue"]),
-                                ft.Text("Подсказка", size=17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=ts(20), color=APP_COLORS["blue"]),
+                                ft.Text("Подсказка", size=ts(17), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                             ],
                         ),
                         ft.Text(
                             "Ситуации работают как личные проекты: следите за задачами, документами и сроками.",
-                            size=13,
+                            size=ts(13),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -574,8 +574,8 @@ def _desktop_situations(
                         spacing=12,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
-                            ft.Text("Поиск по ситуациям, задачам и документам...", size=15, color=APP_COLORS["muted"]),
+                            ft.Icon(ft.Icons.SEARCH, size=ts(22), color=APP_COLORS["blue"]),
+                            ft.Text("Поиск по ситуациям, задачам и документам...", size=ts(15), color=APP_COLORS["muted"]),
                         ],
                     ),
                     height=58,
@@ -594,7 +594,7 @@ def _desktop_situations(
                             spacing=16,
                             expand=True,
                             controls=[
-                                ft.Text("Активные ситуации", size=26, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text("Активные ситуации", size=ts(26), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                                 *situation_cards,
                                 app_card(
                                     ft.Row(
@@ -606,10 +606,10 @@ def _desktop_situations(
                                                 spacing=4,
                                                 expand=True,
                                                 controls=[
-                                                    ft.Text("Напоминания", size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                                    ft.Text("Напоминания", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                                                     ft.Text(
                                                         "Сроки задач и документы обновляются из локального состояния.",
-                                                        size=13,
+                                                        size=ts(13),
                                                         color=APP_COLORS["muted"],
                                                     ),
                                                 ],
@@ -658,7 +658,7 @@ def _mobile_situations(
     else:
         upcoming_controls = [
             app_card(
-                ft.Text("Ближайших задач нет. Все сроки под контролем.", size=13, color=APP_COLORS["muted"]),
+                ft.Text("Ближайших задач нет. Все сроки под контролем.", size=ts(13), color=APP_COLORS["muted"]),
                 padding=16,
                 bgcolor=APP_COLORS["surface2"],
             )
@@ -675,8 +675,8 @@ def _mobile_situations(
                         spacing=4,
                         expand=True,
                         controls=[
-                            ft.Text("Мои ситуации", size=30, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text("Планы, задачи и сроки.", size=14, color=APP_COLORS["muted"]),
+                            ft.Text("Мои ситуации", size=ts(30), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Планы, задачи и сроки.", size=ts(14), color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.IconButton(
@@ -694,8 +694,8 @@ def _mobile_situations(
                 content=ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.SEARCH, size=21, color=APP_COLORS["blue"]),
-                        ft.Text("Поиск по ситуациям...", size=14, color=APP_COLORS["muted"]),
+                        ft.Icon(ft.Icons.SEARCH, size=ts(21), color=APP_COLORS["blue"]),
+                        ft.Text("Поиск по ситуациям...", size=ts(14), color=APP_COLORS["muted"]),
                     ],
                 ),
                 height=54,
@@ -709,12 +709,12 @@ def _mobile_situations(
             ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text("Активные ситуации", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Все", size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["blue_text"]),
+                    ft.Text("Активные ситуации", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Все", size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["blue_text"]),
                 ],
             ),
             ft.Column(spacing=12, controls=situation_cards),
-            ft.Text("Ближайшие задачи", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ft.Text("Ближайшие задачи", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
             ft.Column(spacing=10, controls=upcoming_controls),
             _documents_panel(task_dataset, situations),
             ft.Container(height=SPACING["section"]),

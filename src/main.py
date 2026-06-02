@@ -62,11 +62,12 @@ from pages.tax_tracker_page import build_tax_tracker_page
 from pages.utility_tracker_page import build_utility_tracker_page
 from services.admin_api import AdminAPIClient, AdminAPIError
 from services.dashboard import build_dashboard_data, parse_due_date, status_from_progress
+from services.file_crypto import ENCRYPTED_SUFFIX, decrypt_bytes, encrypt_bytes, is_encrypted_path
 from services.institutions import match_institutions
 from services.auth_api import AuthAPIClient, AuthAPIError
 from services.local_store import load_app_state, save_app_state
 from services.public_api import PublicAPIClient, PublicAPIError
-from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_theme_mode
+from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_large_text, set_theme_mode
 
 
 NAV_ROUTES = {
@@ -88,6 +89,8 @@ NAV_ROUTES = {
 def main(page: ft.Page) -> None:
     private_uploads_dir = Path(__file__).resolve().parents[1] / "data" / "private_uploads"
     private_uploads_dir.mkdir(parents=True, exist_ok=True)
+    exports_dir = Path(__file__).resolve().parents[1] / "data" / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
 
     page.title = "Белпомощник"
     page.theme = build_theme()
@@ -112,7 +115,15 @@ def main(page: ft.Page) -> None:
         "email_notifications": True,
         "onboarding_completed": False,
         "dark_theme": False,
+        "task_reminders_enabled": True,
+        "task_reminder_days": 7,
+        "document_reminders_enabled": True,
         "doc_reminder_days": 30,
+        "utility_reminders_enabled": True,
+        "utility_reminder_days": 7,
+        "tax_reminders_enabled": True,
+        "tax_reminder_days": 14,
+        "law_update_notifications_enabled": True,
     }
     default_privacy_settings = {
         "hide_sensitive_documents": True,
@@ -159,7 +170,11 @@ def main(page: ft.Page) -> None:
     if app_settings_from_store.get("dark_theme"):
         theme_mode_state["value"] = "dark"
     set_theme_mode(theme_mode_state["value"])
-    page.theme = build_theme(theme_mode_state["value"])
+    page.theme = build_theme(
+        theme_mode_state["value"],
+        large_text=bool(app_settings_from_store.get("large_text", False)),
+        high_contrast=bool(app_settings_from_store.get("high_contrast", False)),
+    )
     page.theme_mode = ft.ThemeMode.DARK if theme_mode_state["value"] == "dark" else ft.ThemeMode.LIGHT
     page.bgcolor = APP_COLORS["screen"]
     session = getattr(page, "session", None)
@@ -195,6 +210,21 @@ def main(page: ft.Page) -> None:
         }]
     app_settings = stored_state["app_settings"]
     app_settings["dark_theme"] = theme_mode_state["value"] == "dark"
+
+    def apply_page_theme() -> None:
+        large = bool(app_settings.get("large_text", False))
+        set_theme_mode(theme_mode_state["value"])
+        set_large_text(large)
+        page.theme_mode = ft.ThemeMode.DARK if theme_mode_state["value"] == "dark" else ft.ThemeMode.LIGHT
+        page.theme = build_theme(
+            theme_mode_state["value"],
+            large_text=large,
+            high_contrast=bool(app_settings.get("high_contrast", False)),
+        )
+        page.bgcolor = APP_COLORS["screen"]
+
+    apply_page_theme()
+
     documents_state = stored_state.get("personal_documents") or stored_state["documents"]
     privacy_settings = stored_state["privacy_settings"]
     uploaded_files_state = stored_state["uploaded_files"]
@@ -214,20 +244,28 @@ def main(page: ft.Page) -> None:
     utility_accounts_state: list[dict] = stored_state.get("utility_accounts", copy.deepcopy(UTILITY_ACCOUNTS))
     utility_payments_state: list[dict] = stored_state.get("utility_payments", copy.deepcopy(UTILITY_PAYMENTS))
     tax_obligations_state: list[dict] = stored_state.get("tax_obligations", copy.deepcopy(TAX_OBLIGATIONS))
-    from services.import_loader import load_news as _load_news, load_problems as _load_problems
+    from services.import_loader import (
+        load_news as _load_news,
+        load_problems as _load_problems,
+        load_scenarios as _load_scenarios,
+    )
     _imported_news = _load_news()
     law_updates_state = _imported_news if _imported_news else stored_state.get("law_updates", copy.deepcopy(LEGAL_UPDATES))
-    # Replace mock PROBLEMS in-place so all `from data.mock_data import PROBLEMS` see imported set
+    # Replace mock lists in-place so all `from data.mock_data import X` see imported sets
+    import data.mock_data as _mock_data
     _imported_problems = _load_problems()
     if _imported_problems:
-        import data.mock_data as _mock_data
         _mock_data.PROBLEMS[:] = _imported_problems
+    _imported_scenarios = _load_scenarios()
+    if _imported_scenarios:
+        _mock_data.SCENARIO_TEMPLATES[:] = _imported_scenarios
     law_detail_state = stored_state.get("law_detail", copy.deepcopy(LAW_DETAIL))
     saved_problem_ids: set[str] = set(stored_state.get("saved_problem_ids", []))
     saved_law_ids: set[str] = set(stored_state.get("saved_law_ids", []))
     favorite_scenario_ids: set[str] = set(stored_state.get("favorite_scenario_ids", []))
     visible_document_ids: set[str] = set()
     active_document_scan_field: dict[str, ft.TextField | None] = {"field": None}
+    active_file_import: dict[str, str] = {"mode": ""}
     current_problem = {"id": "lost-passport"}
     current_situation = {"id": "childbirth"}
     current_law = {"id": "law1"}
@@ -346,6 +384,21 @@ def main(page: ft.Page) -> None:
                 result.append(title)
         return result
 
+    def _split_law_problem_ids(value) -> list[str]:
+        if isinstance(value, list):
+            raw_items = value
+        else:
+            raw_items = re.split(r"[,;\n]+", str(value or ""))
+        seen: set[str] = set()
+        result: list[str] = []
+        for item in raw_items:
+            problem_id = str(item or "").strip()
+            normalized = problem_id.lower()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                result.append(problem_id)
+        return result
+
     def _normalize_law_update(law: dict) -> dict:
         category = law.get("category") or "family"
         law.setdefault("category", category)
@@ -376,165 +429,183 @@ def main(page: ft.Page) -> None:
         static_notifications = [note for note in notifications_state if note.get("source") not in _auto_sources]
         generated_notifications: list[dict] = []
 
-        for task in situation_tasks_state:
-            if task.get("completed"):
-                continue
-            due_date = parse_due_date(task.get("due_date")) or parse_due_date(task.get("deadline"))
-            if not due_date:
-                continue
-            days_left = (due_date - today).days
-            if days_left > 7:
-                continue
+        def _setting_bool(key: str, default: bool = True) -> bool:
+            return bool(app_settings.get(key, default))
 
-            task_id = str(task.get("id", ""))
-            if not task_id:
-                continue
-            notification_id = f"task-due-{task_id}"
-            existing = existing_by_id.get(notification_id, {})
-            situation_title = situation_titles.get(task.get("situation_id"), "Ситуация")
-            if days_left < 0:
-                title = "Просрочена задача"
-                date_label = "Просрочено"
-            elif days_left == 0:
-                title = "Задача на сегодня"
-                date_label = "Сегодня"
-            elif days_left == 1:
-                title = "Задача на завтра"
-                date_label = "Завтра"
-            else:
-                title = "Скоро срок задачи"
-                date_label = f"Через {days_left} дн."
+        def _setting_days(key: str, default: int) -> int:
+            try:
+                value = int(app_settings.get(key, default))
+            except (TypeError, ValueError):
+                value = default
+            return max(0, value)
 
-            generated_notifications.append(
-                {
-                    "id": notification_id,
-                    "title": title,
-                    "desc": f"{task.get('title', 'Задача')} · {situation_title} · срок {due_date.strftime('%d.%m.%Y')}",
-                    "type": "task",
-                    "is_read": bool(existing.get("is_read", False)),
-                    "date": date_label,
-                    "source": "task_due",
-                    "task_id": task_id,
-                    "situation_id": task.get("situation_id"),
-                    "due_date": due_date.isoformat(),
-                }
-            )
+        task_reminder_days = _setting_days("task_reminder_days", 7)
+        doc_reminder_days = _setting_days("doc_reminder_days", 30)
+        utility_reminder_days = _setting_days("utility_reminder_days", 7)
+        tax_reminder_days = _setting_days("tax_reminder_days", 14)
 
-        reminder_days = int(app_settings.get("doc_reminder_days", 30))
+        if _setting_bool("task_reminders_enabled", True):
+            for task in situation_tasks_state:
+                if task.get("completed"):
+                    continue
+                due_date = parse_due_date(task.get("due_date")) or parse_due_date(task.get("deadline"))
+                if not due_date:
+                    continue
+                days_left = (due_date - today).days
+                if days_left > task_reminder_days:
+                    continue
+
+                task_id = str(task.get("id", ""))
+                if not task_id:
+                    continue
+                notification_id = f"task-due-{task_id}"
+                existing = existing_by_id.get(notification_id, {})
+                situation_title = situation_titles.get(task.get("situation_id"), "Ситуация")
+                if days_left < 0:
+                    title = "Просрочена задача"
+                    date_label = "Просрочено"
+                elif days_left == 0:
+                    title = "Задача на сегодня"
+                    date_label = "Сегодня"
+                elif days_left == 1:
+                    title = "Задача на завтра"
+                    date_label = "Завтра"
+                else:
+                    title = "Скоро срок задачи"
+                    date_label = f"Через {days_left} дн."
+
+                generated_notifications.append(
+                    {
+                        "id": notification_id,
+                        "title": title,
+                        "desc": f"{task.get('title', 'Задача')} · {situation_title} · срок {due_date.strftime('%d.%m.%Y')}",
+                        "type": "task",
+                        "is_read": bool(existing.get("is_read", False)),
+                        "date": date_label,
+                        "source": "task_due",
+                        "task_id": task_id,
+                        "situation_id": task.get("situation_id"),
+                        "due_date": due_date.isoformat(),
+                    }
+                )
+
         soon_expiring_doc_titles: list[str] = []
-        for doc in documents_state:
-            expiry_raw = (doc.get("expiry_date") or "").strip()
-            if not expiry_raw:
-                continue
-            expiry = parse_due_date(expiry_raw)
-            if not expiry:
-                continue
-            days_left = (expiry - today).days
-            if days_left > reminder_days:
-                continue
-            doc_id = str(doc.get("id", ""))
-            notification_id = "doc-expiry-" + doc_id
-            existing = existing_by_id.get(notification_id, {})
-            if days_left < 0:
-                note_title = "Документ просрочен"
-                note_desc = doc.get("title", "Документ") + " · истёк " + str(-days_left) + " дн. назад"
-                date_label = "Просрочен"
-            elif days_left == 0:
-                note_title = "Документ истекает сегодня"
-                note_desc = doc.get("title", "Документ") + " · действие заканчивается сегодня"
-                date_label = "Сегодня"
-            else:
-                note_title = "Документ истекает скоро"
-                note_desc = doc.get("title", "Документ") + " · осталось " + str(days_left) + " дн."
-                date_label = "Через " + str(days_left) + " дн."
-            generated_notifications.append(
-                {
-                    "id": notification_id,
-                    "title": note_title,
-                    "desc": note_desc,
-                    "type": "document",
-                    "is_read": bool(existing.get("is_read", False)),
-                    "date": date_label,
-                    "source": "doc_expiry",
-                    "doc_id": doc_id,
-                    "expiry_date": expiry.isoformat(),
-                    "days_left": days_left,
-                }
-            )
-            if 0 <= days_left <= 7:
-                soon_expiring_doc_titles.append(doc.get("title", "Документ"))
+        if _setting_bool("document_reminders_enabled", True):
+            for doc in documents_state:
+                expiry_raw = (doc.get("expiry_date") or "").strip()
+                if not expiry_raw:
+                    continue
+                expiry = parse_due_date(expiry_raw)
+                if not expiry:
+                    continue
+                days_left = (expiry - today).days
+                if days_left > doc_reminder_days:
+                    continue
+                doc_id = str(doc.get("id", ""))
+                notification_id = "doc-expiry-" + doc_id
+                existing = existing_by_id.get(notification_id, {})
+                if days_left < 0:
+                    note_title = "Документ просрочен"
+                    note_desc = doc.get("title", "Документ") + " · истёк " + str(-days_left) + " дн. назад"
+                    date_label = "Просрочен"
+                elif days_left == 0:
+                    note_title = "Документ истекает сегодня"
+                    note_desc = doc.get("title", "Документ") + " · действие заканчивается сегодня"
+                    date_label = "Сегодня"
+                else:
+                    note_title = "Документ истекает скоро"
+                    note_desc = doc.get("title", "Документ") + " · осталось " + str(days_left) + " дн."
+                    date_label = "Через " + str(days_left) + " дн."
+                generated_notifications.append(
+                    {
+                        "id": notification_id,
+                        "title": note_title,
+                        "desc": note_desc,
+                        "type": "document",
+                        "is_read": bool(existing.get("is_read", False)),
+                        "date": date_label,
+                        "source": "doc_expiry",
+                        "doc_id": doc_id,
+                        "expiry_date": expiry.isoformat(),
+                        "days_left": days_left,
+                    }
+                )
+                if 0 <= days_left <= 7:
+                    soon_expiring_doc_titles.append(doc.get("title", "Документ"))
 
-        for payment in utility_payments_state:
-            if payment.get("status") == "Оплачено":
-                continue
-            for field, label, source_key in [
-                ("readings_deadline", "Передача показаний ЖКХ", "util-readings"),
-                ("payment_deadline", "Оплата ЖКХ", "util-payment"),
-            ]:
-                deadline = parse_due_date(payment.get(field))
+        if _setting_bool("utility_reminders_enabled", True):
+            for payment in utility_payments_state:
+                if payment.get("status") == "Оплачено":
+                    continue
+                for field, label, source_key in [
+                    ("readings_deadline", "Передача показаний ЖКХ", "util-readings"),
+                    ("payment_deadline", "Оплата ЖКХ", "util-payment"),
+                ]:
+                    deadline = parse_due_date(payment.get(field))
+                    if not deadline:
+                        continue
+                    days_left = (deadline - today).days
+                    if days_left > utility_reminder_days:
+                        continue
+                    pid = str(payment.get("id", ""))
+                    note_id = source_key + "-" + pid
+                    existing = existing_by_id.get(note_id, {})
+                    if days_left < 0:
+                        note_title = label + " — просрочено"
+                        date_label = "Просрочено"
+                    elif days_left == 0:
+                        note_title = label + " — сегодня"
+                        date_label = "Сегодня"
+                    else:
+                        note_title = label + " — через " + str(days_left) + " дн."
+                        date_label = "Через " + str(days_left) + " дн."
+                    generated_notifications.append(
+                        {
+                            "id": note_id,
+                            "title": note_title,
+                            "desc": payment.get("period", "Период") + " · " + label,
+                            "type": "task",
+                            "is_read": bool(existing.get("is_read", False)),
+                            "date": date_label,
+                            "source": source_key,
+                            "due_date": deadline.isoformat(),
+                        }
+                    )
+
+        if _setting_bool("tax_reminders_enabled", True):
+            for obligation in tax_obligations_state:
+                if obligation.get("status") == "Оплачено":
+                    continue
+                deadline = parse_due_date(obligation.get("deadline"))
                 if not deadline:
                     continue
                 days_left = (deadline - today).days
-                if days_left > reminder_days:
+                if days_left > tax_reminder_days:
                     continue
-                pid = str(payment.get("id", ""))
-                note_id = source_key + "-" + pid
+                oid = str(obligation.get("id", ""))
+                note_id = "tax-deadline-" + oid
                 existing = existing_by_id.get(note_id, {})
                 if days_left < 0:
-                    note_title = label + " — просрочено"
+                    note_title = "Налог просрочен"
                     date_label = "Просрочено"
                 elif days_left == 0:
-                    note_title = label + " — сегодня"
+                    note_title = "Налоговый срок — сегодня"
                     date_label = "Сегодня"
                 else:
-                    note_title = label + " — через " + str(days_left) + " дн."
+                    note_title = "Налоговый срок — через " + str(days_left) + " дн."
                     date_label = "Через " + str(days_left) + " дн."
                 generated_notifications.append(
                     {
                         "id": note_id,
                         "title": note_title,
-                        "desc": payment.get("period", "Период") + " · " + label,
-                        "type": "task",
+                        "desc": obligation.get("title", "Обязательство") + " · " + (obligation.get("period") or ""),
+                        "type": "law",
                         "is_read": bool(existing.get("is_read", False)),
                         "date": date_label,
-                        "source": source_key,
+                        "source": "tax_deadline",
                         "due_date": deadline.isoformat(),
                     }
                 )
-
-        for obligation in tax_obligations_state:
-            if obligation.get("status") == "Оплачено":
-                continue
-            deadline = parse_due_date(obligation.get("deadline"))
-            if not deadline:
-                continue
-            days_left = (deadline - today).days
-            if days_left > reminder_days:
-                continue
-            oid = str(obligation.get("id", ""))
-            note_id = "tax-deadline-" + oid
-            existing = existing_by_id.get(note_id, {})
-            if days_left < 0:
-                note_title = "Налог просрочен"
-                date_label = "Просрочено"
-            elif days_left == 0:
-                note_title = "Налоговый срок — сегодня"
-                date_label = "Сегодня"
-            else:
-                note_title = "Налоговый срок — через " + str(days_left) + " дн."
-                date_label = "Через " + str(days_left) + " дн."
-            generated_notifications.append(
-                {
-                    "id": note_id,
-                    "title": note_title,
-                    "desc": obligation.get("title", "Обязательство") + " · " + (obligation.get("period") or ""),
-                    "type": "law",
-                    "is_read": bool(existing.get("is_read", False)),
-                    "date": date_label,
-                    "source": "tax_deadline",
-                    "due_date": deadline.isoformat(),
-                }
-            )
 
         if soon_expiring_doc_titles and app_settings.get("email_notifications", True):
             demo_id = "email-demo-notice"
@@ -560,36 +631,38 @@ def main(page: ft.Page) -> None:
             user_profile_tags_notif.update({"has_children", "family"})
         if app_user.get("owns_property"):
             user_profile_tags_notif.update({"housing_owner", "utility"})
-        for law_item in law_updates_state:
-            _normalize_law_update(law_item)
-            if law_item.get("status") != "published":
-                continue
-            if law_item.get("priority") not in ("high", "medium"):
-                continue
-            law_item_id = str(law_item.get("id", ""))
-            note_id = "law-important-" + law_item_id
-            if note_id in seen_law_ids:
-                continue
-            tag_match = bool(user_profile_tags_notif & set(law_item.get("profile_tags") or []))
-            high_priority = law_item.get("priority") == "high"
-            if not (high_priority or tag_match):
-                continue
-            existing = existing_by_id.get(note_id, {})
-            generated_notifications.append(
-                {
-                    "id": note_id,
-                    "title": "Важное изменение законодательства",
-                    "desc": law_item.get("title", "Закон-апдейт") + " · " + law_item.get("category_name", ""),
-                    "type": "law",
-                    "is_read": bool(existing.get("is_read", False)),
-                    "date": law_item.get("date", ""),
-                    "source": "law_important",
-                    "law_id": law_item_id,
-                }
-            )
+        if _setting_bool("law_update_notifications_enabled", True):
+            for law_item in law_updates_state:
+                _normalize_law_update(law_item)
+                if law_item.get("status") != "published":
+                    continue
+                if law_item.get("priority") not in ("high", "medium"):
+                    continue
+                law_item_id = str(law_item.get("id", ""))
+                note_id = "law-important-" + law_item_id
+                if note_id in seen_law_ids:
+                    continue
+                tag_match = bool(user_profile_tags_notif & set(law_item.get("profile_tags") or []))
+                high_priority = law_item.get("priority") == "high"
+                if not (high_priority or tag_match):
+                    continue
+                existing = existing_by_id.get(note_id, {})
+                generated_notifications.append(
+                    {
+                        "id": note_id,
+                        "title": "Важное изменение законодательства",
+                        "desc": law_item.get("title", "Закон-апдейт") + " · " + law_item.get("category_name", ""),
+                        "type": "law",
+                        "is_read": bool(existing.get("is_read", False)),
+                        "date": law_item.get("date", ""),
+                        "source": "law_important",
+                        "law_id": law_item_id,
+                    }
+                )
 
         generated_notifications.sort(key=lambda note: (parse_due_date(note.get("due_date")) or today, note.get("title", "")))
         notifications_state[:] = generated_notifications + static_notifications
+
 
     def _smtp_notification_stub(doc: dict) -> None:
         """
@@ -668,6 +741,55 @@ def main(page: ft.Page) -> None:
     def _show_message(text: str, color: str = APP_COLORS["primary"]) -> None:
         _open_control(ft.SnackBar(content=ft.Text(text), bgcolor=color))
 
+    _pdf_translit = str.maketrans(
+        {
+            "А": "A", "Б": "B", "В": "V", "Г": "G", "Д": "D", "Е": "E", "Ё": "E", "Ж": "Zh", "З": "Z",
+            "И": "I", "Й": "Y", "К": "K", "Л": "L", "М": "M", "Н": "N", "О": "O", "П": "P", "Р": "R",
+            "С": "S", "Т": "T", "У": "U", "Ф": "F", "Х": "Kh", "Ц": "Ts", "Ч": "Ch", "Ш": "Sh",
+            "Щ": "Sch", "Ъ": "", "Ы": "Y", "Ь": "", "Э": "E", "Ю": "Yu", "Я": "Ya",
+            "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e", "ж": "zh", "з": "z",
+            "и": "i", "й": "y", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r",
+            "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh",
+            "щ": "sch", "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+        }
+    )
+
+    def _pdf_text(value: str) -> str:
+        cleaned = str(value or "").translate(_pdf_translit)
+        cleaned = cleaned.encode("ascii", "replace").decode("ascii")
+        return cleaned.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+    def _write_simple_pdf(path: Path, title: str, lines: list[str]) -> None:
+        visible_lines = [title, "", *lines][:38]
+        text_ops = ["BT", "/F1 16 Tf", "50 792 Td", f"({_pdf_text(visible_lines[0])}) Tj"]
+        text_ops.extend(["/F1 11 Tf"])
+        for line in visible_lines[1:]:
+            text_ops.append("0 -18 Td")
+            text_ops.append(f"({_pdf_text(line)}) Tj")
+        text_ops.append("ET")
+        stream = "\n".join(text_ops).encode("ascii")
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
+        ]
+        chunks = [b"%PDF-1.4\n"]
+        offsets = [0]
+        for index, obj in enumerate(objects, start=1):
+            offsets.append(sum(len(chunk) for chunk in chunks))
+            chunks.append(f"{index} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+        xref_at = sum(len(chunk) for chunk in chunks)
+        chunks.append(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+        chunks.append(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            chunks.append(f"{offset:010d} 00000 n \n".encode("ascii"))
+        chunks.append(
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n".encode("ascii")
+        )
+        path.write_bytes(b"".join(chunks))
+
     def _safe_upload_name(filename: str) -> str:
         source_name = Path(filename or "document").name
         stem = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "-", Path(source_name).stem, flags=re.UNICODE).strip(".-")
@@ -694,11 +816,12 @@ def main(page: ft.Page) -> None:
         selected_path = getattr(selected_file, "path", None)
         selected_bytes = getattr(selected_file, "bytes", None)
         safe_name = _safe_upload_name(selected_name)
-        destination = private_uploads_dir / f"{int(time.time())}-{safe_name}"
+        destination = private_uploads_dir / f"{int(time.time())}-{safe_name}{ENCRYPTED_SUFFIX}"
 
         try:
+            raw: bytes | None = None
             if selected_bytes:
-                destination.write_bytes(selected_bytes)
+                raw = selected_bytes
             elif selected_path:
                 source_path = Path(selected_path)
                 if not source_path.exists():
@@ -706,7 +829,7 @@ def main(page: ft.Page) -> None:
                     target_field.update()
                     _show_message("Файл выбран, но локальный путь недоступен.", APP_COLORS["warning"])
                     return
-                shutil.copy2(source_path, destination)
+                raw = source_path.read_bytes()
             else:
                 target_field.value = selected_name
                 target_field.update()
@@ -715,6 +838,10 @@ def main(page: ft.Page) -> None:
                     APP_COLORS["warning"],
                 )
                 return
+            try:
+                destination.write_bytes(encrypt_bytes(raw))
+            except RuntimeError:
+                destination.write_bytes(raw)
         except OSError:
             _show_message("Не удалось скопировать файл в локальное хранилище.", APP_COLORS["danger"])
             return
@@ -735,6 +862,8 @@ def main(page: ft.Page) -> None:
 
     document_file_picker = ft.FilePicker()
     page.services.append(document_file_picker)
+    document_import_file_picker = ft.FilePicker()
+    page.services.append(document_import_file_picker)
 
     def _pick_document_scan(target_field: ft.TextField) -> None:
         active_document_scan_field["field"] = target_field
@@ -746,6 +875,85 @@ def main(page: ft.Page) -> None:
                 _show_message("Выбор файла недоступен на этой платформе. Укажите путь вручную.", APP_COLORS["warning"])
                 return
             _handle_document_files(files or [])
+
+        page.run_task(pick_file)
+
+    def _handle_document_import_files(files: list) -> None:
+        if not files:
+            _show_message("Файл для импорта не выбран.", APP_COLORS["warning"])
+            return
+
+        selected_file = files[0]
+        selected_name = getattr(selected_file, "name", "") or "document.pdf"
+        selected_path = getattr(selected_file, "path", None)
+        selected_bytes = getattr(selected_file, "bytes", None)
+        safe_name = _safe_upload_name(selected_name)
+        destination = private_uploads_dir / f"{int(time.time())}-{safe_name}{ENCRYPTED_SUFFIX}"
+        relative_path = selected_name
+
+        try:
+            raw: bytes | None = None
+            if selected_bytes:
+                raw = selected_bytes
+            elif selected_path:
+                source_path = Path(selected_path)
+                if source_path.exists():
+                    raw = source_path.read_bytes()
+            if raw is not None:
+                try:
+                    destination.write_bytes(encrypt_bytes(raw))
+                except RuntimeError:
+                    destination.write_bytes(raw)
+                relative_path = _private_upload_relative_path(destination)
+            uploaded_files_state.append(
+                {
+                    "id": f"upload-{int(time.time())}",
+                    "original_name": selected_name,
+                    "stored_path": relative_path,
+                    "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+                    "encrypted": True,
+                }
+            )
+        except OSError:
+            _show_message("Не удалось импортировать PDF-файл.", APP_COLORS["danger"])
+            return
+
+        title = Path(selected_name).stem.replace("_", " ").replace("-", " ").strip() or "Импортированный документ"
+        payload = {
+            "id": f"doc-import-{int(time.time())}",
+            "title": title,
+            "document_type": "Другое",
+            "document_number": "",
+            "issue_date": "",
+            "expiry_date": "",
+            "issuer": "",
+            "comment": "Документ импортирован из PDF-файла.",
+            "scan_path": relative_path,
+            "status": "Активен",
+            "icon": _document_icon("Другое"),
+        }
+        payload["details"] = _document_details(payload)
+        documents_state.insert(0, payload)
+        _log_doc_action("imported", payload)
+        _log_user_action("doc_imported", f"Импортирован документ «{payload.get('title')}»")
+        save_current_state()
+        _show_message("PDF импортирован как личный документ.")
+        route_change()
+
+    def import_documents_pdf(_=None) -> None:
+        active_file_import["mode"] = "document_pdf"
+
+        async def pick_file() -> None:
+            try:
+                files = await document_import_file_picker.pick_files(
+                    allow_multiple=False,
+                    allowed_extensions=["pdf"],
+                    with_data=True,
+                )
+            except Exception:
+                _show_message("Импорт PDF недоступен на этой платформе.", APP_COLORS["warning"])
+                return
+            _handle_document_import_files(files or [])
 
         page.run_task(pick_file)
 
@@ -890,11 +1098,11 @@ def main(page: ft.Page) -> None:
         page_width = page.width or 393
         page_height = page.height or 760
         if page_width >= 720:
-            safe_width = min(max(preferred_width, 420), 520)
+            safe_width = min(max(preferred_width, 420), 640)
         else:
             safe_width = max(300, min(preferred_width, int(page_width) - 40))
         max_height = max(260, int(page_height) - 220)
-        needs_scroll = len(controls) >= 6
+        needs_scroll = len(controls) >= 4 or page_height < 780
         return ft.Container(
             width=safe_width,
             height=max_height if needs_scroll else None,
@@ -907,11 +1115,26 @@ def main(page: ft.Page) -> None:
         )
 
     def _dialog_button(label: str, on_click, primary: bool = False, danger: bool = False) -> ft.Control:
-        return ft.TextButton(
-            label,
+        background = APP_COLORS["surface2"]
+        foreground = APP_COLORS["muted"]
+        side_color = APP_COLORS["stroke2"]
+        if primary:
+            background = APP_COLORS["blue"]
+            foreground = ft.Colors.WHITE
+            side_color = APP_COLORS["blue"]
+        if danger:
+            background = ft.Colors.with_opacity(0.12, APP_COLORS["danger"])
+            foreground = APP_COLORS["danger"]
+            side_color = ft.Colors.with_opacity(0.22, APP_COLORS["danger"])
+        return ft.Button(
+            content=ft.Text(label, size=14, weight=ft.FontWeight.W_700),
+            height=44,
             style=ft.ButtonStyle(
-                color=APP_COLORS["danger"] if danger else APP_COLORS["primary"] if primary else APP_COLORS["muted"],
-                padding=ft.Padding(left=14, top=10, right=14, bottom=10),
+                bgcolor=background,
+                color=foreground,
+                side=ft.BorderSide(1, side_color),
+                padding=ft.Padding(left=18, top=10, right=18, bottom=10),
+                shape=ft.RoundedRectangleBorder(radius=14),
             ),
             on_click=on_click,
         )
@@ -1059,9 +1282,7 @@ def main(page: ft.Page) -> None:
             theme_mode_state["value"] = initial["theme_mode"]
             app_settings["dark_theme"] = False
             set_theme_mode(theme_mode_state["value"])
-            page.theme_mode = ft.ThemeMode.LIGHT
-            page.theme = build_theme(theme_mode_state["value"])
-            page.bgcolor = APP_COLORS["screen"]
+            apply_page_theme()
             session = getattr(page, "session", None)
             if session is not None:
                 try:
@@ -1618,59 +1839,69 @@ def main(page: ft.Page) -> None:
 
     def _document_form_fields(document: dict | None = None) -> dict[str, ft.Control]:
         data = document or {}
+        field_padding = ft.Padding(left=14, top=10, right=14, bottom=10)
+
+        def text_field(
+            label: str,
+            value: str = "",
+            hint_text: str = "",
+            multiline: bool = False,
+            min_lines: int | None = None,
+            max_lines: int | None = None,
+            helper: str | None = None,
+        ) -> ft.TextField:
+            return ft.TextField(
+                label=label,
+                value=value,
+                hint_text=hint_text,
+                multiline=multiline,
+                min_lines=min_lines,
+                max_lines=max_lines,
+                helper=helper,
+                helper_max_lines=2 if helper else None,
+                border_radius=14,
+                filled=True,
+                bgcolor=APP_COLORS["surface"],
+                border_color=APP_COLORS["stroke2"],
+                focused_border_color=APP_COLORS["blue"],
+                text_size=14,
+                content_padding=field_padding,
+            )
+
+        def dropdown(label: str, value: str, options: list[str]) -> ft.Dropdown:
+            return ft.Dropdown(
+                label=label,
+                value=value,
+                border_radius=14,
+                filled=True,
+                bgcolor=APP_COLORS["surface"],
+                border_color=APP_COLORS["stroke2"],
+                focused_border_color=APP_COLORS["blue"],
+                text_size=14,
+                content_padding=field_padding,
+                options=[ft.dropdown.Option(item) for item in options],
+            )
+
         fields: dict[str, ft.Control] = {
-            "title": ft.TextField(
-                label="Название документа",
-                value=data.get("title", ""),
-                hint_text="Например: Паспорт",
-                border_radius=12,
+            "title": text_field("Название документа", data.get("title", ""), "Например: Паспорт"),
+            "document_type": dropdown("Тип документа", data.get("document_type", DOCUMENT_TYPES[0]), DOCUMENT_TYPES),
+            "document_number": text_field("Серия / номер", data.get("document_number", ""), "Например: MP1234567"),
+            "issue_date": text_field("Дата выдачи", data.get("issue_date", ""), "Например: 2024-05-20 или 20.05.2024"),
+            "expiry_date": text_field("Срок действия", data.get("expiry_date", ""), "Например: 2030-05-20 или 20.05.2030"),
+            "issuer": text_field("Организация выдачи", data.get("issuer", ""), "Например: ОГиМ"),
+            "scan_path": text_field(
+                "Файл / скан",
+                data.get("scan_path", ""),
+                "Например: data/private_uploads/passport.pdf",
+                helper="Файл хранится локально. В production потребуется шифрование.",
             ),
-            "document_type": ft.Dropdown(
-                label="Тип документа",
-                value=data.get("document_type", DOCUMENT_TYPES[0]),
-                border_radius=12,
-                options=[ft.dropdown.Option(item) for item in DOCUMENT_TYPES],
-            ),
-            "document_number": ft.TextField(
-                label="Серия / номер",
-                value=data.get("document_number", ""),
-                hint_text="Например: MP1234567",
-                border_radius=12,
-            ),
-            "issue_date": ft.TextField(
-                label="Дата выдачи",
-                value=data.get("issue_date", ""),
-                hint_text="Например: 2024-05-20 или 20.05.2024",
-                border_radius=12,
-            ),
-            "expiry_date": ft.TextField(
-                label="Срок действия",
-                value=data.get("expiry_date", ""),
-                hint_text="Например: 2030-05-20 или 20.05.2030",
-                border_radius=12,
-            ),
-            "issuer": ft.TextField(
-                label="Организация выдачи",
-                value=data.get("issuer", ""),
-                hint_text="Например: ОГиМ",
-                border_radius=12,
-            ),
-            "scan_path": ft.TextField(
-                label="Файл / скан",
-                value=data.get("scan_path", ""),
-                hint_text="Например: data/private_uploads/passport.pdf",
-                border_radius=12,
-                helper="Выберите файл или укажите путь вручную. Файлы не отправляются на сервер.",
-                helper_max_lines=2,
-            ),
-            "comment": ft.TextField(
-                label="Комментарий",
-                value=data.get("comment", ""),
-                hint_text="Заметки по документу",
+            "comment": text_field(
+                "Комментарий",
+                data.get("comment", ""),
+                "Заметки по документу",
                 multiline=True,
                 min_lines=2,
                 max_lines=4,
-                border_radius=12,
             ),
         }
         fields["scan_pick"] = ft.OutlinedButton(
@@ -1685,6 +1916,98 @@ def main(page: ft.Page) -> None:
             on_click=lambda _: _pick_document_scan(fields["scan_path"]),
         )
         return fields
+
+    def _dialog_section(title: str, icon, controls: list[ft.Control]) -> ft.Container:
+        return ft.Container(
+            padding=ft.Padding(left=14, top=14, right=14, bottom=14),
+            border_radius=18,
+            bgcolor=APP_COLORS["surface2"],
+            border=border_all(APP_COLORS["stroke2"]),
+            content=ft.Column(
+                spacing=12,
+                controls=[
+                    ft.Row(
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Container(
+                                width=34,
+                                height=34,
+                                border_radius=12,
+                                alignment=ft.Alignment(0, 0),
+                                bgcolor=APP_COLORS["active"],
+                                content=ft.Icon(icon, size=18, color=APP_COLORS["blue"]),
+                            ),
+                            ft.Text(title, size=15, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                        ],
+                    ),
+                    *controls,
+                ],
+            ),
+        )
+
+    def _responsive_fields(*controls: ft.Control) -> ft.ResponsiveRow:
+        return ft.ResponsiveRow(
+            columns=12,
+            spacing=10,
+            run_spacing=10,
+            controls=[
+                ft.Container(col={"xs": 12, "sm": 6}, content=control)
+                for control in controls
+            ],
+        )
+
+    def _document_form_controls(fields: dict[str, ft.Control]) -> list[ft.Control]:
+        return [
+            ft.Container(
+                padding=ft.Padding(left=14, top=12, right=14, bottom=12),
+                border_radius=18,
+                bgcolor=ft.Colors.with_opacity(0.55, APP_COLORS["active"]),
+                border=border_all(ft.Colors.with_opacity(0.45, APP_COLORS["blue"])),
+                content=ft.Row(
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Icon(ft.Icons.PRIVACY_TIP_OUTLINED, size=20, color=APP_COLORS["blue"]),
+                        ft.Text(
+                            "Документ хранится локально. Номер по умолчанию скрывается в интерфейсе.",
+                            size=13,
+                            color=APP_COLORS["muted"],
+                            expand=True,
+                        ),
+                    ],
+                ),
+            ),
+            _dialog_section(
+                "Документ",
+                ft.Icons.BADGE_OUTLINED,
+                [
+                    _responsive_fields(fields["title"], fields["document_type"]),
+                    fields["document_number"],
+                ],
+            ),
+            _dialog_section(
+                "Сроки и выдача",
+                ft.Icons.EVENT_AVAILABLE_OUTLINED,
+                [
+                    _responsive_fields(fields["issue_date"], fields["expiry_date"]),
+                    fields["issuer"],
+                ],
+            ),
+            _dialog_section(
+                "Скан или файл",
+                ft.Icons.FOLDER_OUTLINED,
+                [
+                    fields["scan_path"],
+                    fields["scan_pick"],
+                ],
+            ),
+            _dialog_section(
+                "Комментарий",
+                ft.Icons.NOTES_OUTLINED,
+                [fields["comment"]],
+            ),
+        ]
 
     def _collect_document_payload(fields: dict[str, ft.Control], fallback_status: str = "Активен") -> dict | None:
         title = _text_value(fields["title"])
@@ -1717,22 +2040,12 @@ def main(page: ft.Page) -> None:
 
         dialog = _form_dialog(
             "Добавить личный документ",
-            [
-                fields["title"],
-                fields["document_type"],
-                fields["document_number"],
-                fields["issue_date"],
-                fields["expiry_date"],
-                fields["issuer"],
-                fields["scan_path"],
-                fields["scan_pick"],
-                fields["comment"],
-            ],
+            _document_form_controls(fields),
             [
                 _dialog_button("Отмена", lambda _: _close(dialog)),
                 _dialog_button("Добавить", lambda _: add_document_from_dialog(dialog, fields), primary=True),
             ],
-            preferred_width=500,
+            preferred_width=620,
         )
         _open_control(dialog)
 
@@ -1784,17 +2097,7 @@ def main(page: ft.Page) -> None:
 
         dialog = _form_dialog(
             "Редактировать личный документ",
-            [
-                fields["title"],
-                fields["document_type"],
-                fields["document_number"],
-                fields["issue_date"],
-                fields["expiry_date"],
-                fields["issuer"],
-                fields["scan_path"],
-                fields["scan_pick"],
-                fields["comment"],
-            ],
+            _document_form_controls(fields),
             [
                 _dialog_button("Отмена", lambda _: _close(dialog)),
                 _dialog_button(
@@ -1803,7 +2106,7 @@ def main(page: ft.Page) -> None:
                     primary=True,
                 ),
             ],
-            preferred_width=500,
+            preferred_width=620,
         )
         _open_control(dialog)
 
@@ -1822,6 +2125,45 @@ def main(page: ft.Page) -> None:
         _close(dialog)
         _show_message("Личный документ обновлён.")
         route_change()
+
+    def export_documents_pdf(_=None) -> None:
+        if not documents_state:
+            _show_message("Нет документов для экспорта.", APP_COLORS["warning"])
+            return
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        export_path = exports_dir / f"documents-{timestamp}.pdf"
+        lines = [
+            f"Date: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+            f"User: {app_user.get('name', MOCK_USER.get('name', 'Demo user'))}",
+            "",
+            "Documents:",
+        ]
+        for index, document in enumerate(documents_state[:24], start=1):
+            _normalize_document(document)
+            raw_number = (document.get("document_number") or "").strip()
+            masked_number = "not specified"
+            if raw_number:
+                masked_number = f"****{raw_number[-4:]}" if len(raw_number) > 4 else "****"
+            lines.extend(
+                [
+                    f"{index}. {document.get('title', 'Document')}",
+                    f"   Type: {document.get('document_type', 'Other')}",
+                    f"   Number: {masked_number}",
+                    f"   Valid until: {document.get('expiry_date') or 'not specified'}",
+                    f"   Status: {document.get('status', 'Active')}",
+                ]
+            )
+        try:
+            _write_simple_pdf(export_path, "Belpomoshnik documents export", lines)
+        except OSError:
+            _show_message("Не удалось создать PDF-экспорт.", APP_COLORS["danger"])
+            return
+
+        relative_path = _private_upload_relative_path(export_path)
+        _log_user_action("doc_exported", "Создан PDF-экспорт документов", relative_path)
+        save_current_state()
+        _show_message(f"PDF-экспорт создан: {relative_path}")
 
     def toggle_document_sensitive(document_id) -> None:
         document_key = str(document_id)
@@ -1850,6 +2192,19 @@ def main(page: ft.Page) -> None:
 
         def show_scan_notice(dialog) -> None:
             _close(dialog)
+            full_path = project_root / scan_path if not Path(scan_path).is_absolute() else Path(scan_path)
+            if is_encrypted_path(str(full_path)) and full_path.exists():
+                try:
+                    raw = decrypt_bytes(full_path.read_bytes())
+                    import tempfile
+                    suffix = Path(full_path.stem).suffix or ".pdf"
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                        tmp.write(raw)
+                        tmp_path = tmp.name
+                    _show_message(f"Файл расшифрован: {tmp_path}")
+                    return
+                except Exception:
+                    pass
             _show_message(f"Демо: файл хранится локально: {scan_path}")
 
         _confirm_action(
@@ -2560,20 +2915,19 @@ def main(page: ft.Page) -> None:
         else:
             _show_message("Для этого обновления пока не указан официальный источник.", APP_COLORS["warning"])
 
-    def update_profile_setting(key: str, value: bool) -> None:
+    def update_profile_setting(key: str, value) -> None:
         app_settings[key] = value
         if key == "dark_theme":
             theme_mode_state["value"] = "dark" if value else "light"
-            set_theme_mode(theme_mode_state["value"])
-            page.theme_mode = ft.ThemeMode.DARK if value else ft.ThemeMode.LIGHT
-            page.theme = build_theme(theme_mode_state["value"])
-            page.bgcolor = APP_COLORS["screen"]
+            apply_page_theme()
             session = getattr(page, "session", None)
             if session is not None:
                 try:
                     session.set("theme_mode", theme_mode_state["value"])
                 except Exception:
                     pass
+        if key in ("large_text", "high_contrast"):
+            apply_page_theme()
         if key == "learning_mode":
             learning_state["enabled"] = value
             app_user["learning_mode"] = value
@@ -3008,6 +3362,7 @@ def main(page: ft.Page) -> None:
         short: str,
         what_to_do: str,
         related_scenarios,
+        related_problems,
         source_url: str,
         priority: str,
     ) -> None:
@@ -3033,7 +3388,7 @@ def main(page: ft.Page) -> None:
                 "priority": priority or "medium",
                 "processing_status": "new",
                 "last_checked": "",
-                "related_problems": [],
+                "related_problems": _split_law_problem_ids(related_problems),
                 "profile_tags": [],
             },
         )
@@ -3185,11 +3540,6 @@ def main(page: ft.Page) -> None:
             border_radius=12,
         )
 
-        def _split_problems(raw) -> list[str]:
-            if isinstance(raw, list):
-                return [str(x).strip() for x in raw if str(x).strip()]
-            return [x.strip() for x in (raw or "").split(",") if x.strip()]
-
         def _split_tags(raw) -> list[str]:
             if isinstance(raw, list):
                 return [str(x).strip() for x in raw if str(x).strip()]
@@ -3210,7 +3560,7 @@ def main(page: ft.Page) -> None:
                     "short": _text_value(short_field) or "Описание будет уточнено редактором.",
                     "what_to_do": _text_value(action_field) or "Проверьте официальный источник и уточните актуальный порядок действий.",
                     "related_scenarios": _split_related_scenarios(related_field.value),
-                    "related_problems": _split_problems(related_problems_field.value),
+                    "related_problems": _split_law_problem_ids(related_problems_field.value),
                     "profile_tags": _split_tags(profile_tags_field.value),
                     "source_url": _text_value(source_field) or "https://pravo.by/",
                     "last_checked": _text_value(last_checked_field),
@@ -4341,6 +4691,18 @@ def main(page: ft.Page) -> None:
         )
         _open_control(dialog)
 
+    def admin_verify_scenario(scenario_id: int | str | None) -> None:
+        sid = _to_int(scenario_id)
+        if sid is None:
+            return
+        try:
+            admin_api.verify_scenario(sid)
+            _refresh_admin_scenario_detail(sid)
+            _show_message("Сценарий отмечен как проверенный по источникам.")
+            route_change()
+        except AdminAPIError as exc:
+            _show_message(f"Ошибка: {exc}", APP_COLORS["danger"])
+
     def admin_move_stage(scenario_id: int | str | None, stage_id: int | str | None, direction: str) -> None:
         sid = _to_int(scenario_id)
         stg_id = _to_int(stage_id)
@@ -4354,11 +4716,10 @@ def main(page: ft.Page) -> None:
         swap_idx = idx - 1 if direction == "up" else idx + 1
         if swap_idx < 0 or swap_idx >= len(stages):
             return
-        a, b = stages[idx], stages[swap_idx]
-        order_a, order_b = a.get("order_index", idx), b.get("order_index", swap_idx)
+        stages[idx], stages[swap_idx] = stages[swap_idx], stages[idx]
+        ordered_ids = [s["id"] for s in stages]
         try:
-            admin_api.update_stage(a["id"], {"order_index": order_b})
-            admin_api.update_stage(b["id"], {"order_index": order_a})
+            admin_api.reorder_stages(sid, ordered_ids)
             _refresh_admin_scenario_detail(sid)
             route_change()
         except AdminAPIError as exc:
@@ -4383,11 +4744,10 @@ def main(page: ft.Page) -> None:
         swap_idx = idx - 1 if direction == "up" else idx + 1
         if swap_idx < 0 or swap_idx >= len(steps):
             return
-        a, b = steps[idx], steps[swap_idx]
-        order_a, order_b = a.get("order_index", idx), b.get("order_index", swap_idx)
+        steps[idx], steps[swap_idx] = steps[swap_idx], steps[idx]
+        ordered_ids = [s["id"] for s in steps]
         try:
-            admin_api.update_step(a["id"], {"order_index": order_b})
-            admin_api.update_step(b["id"], {"order_index": order_a})
+            admin_api.reorder_steps(parent_stage["id"], ordered_ids)
             _refresh_admin_scenario_detail(sid)
             route_change()
         except AdminAPIError as exc:
@@ -4567,7 +4927,16 @@ def main(page: ft.Page) -> None:
                 open_global_search,
                 open_problem_category,
                 app_user,
-                build_dashboard_data(situations_state, situation_tasks_state, documents=documents_state, reminder_days=int(app_settings.get("doc_reminder_days", 30))),
+                build_dashboard_data(
+                    situations_state,
+                    situation_tasks_state,
+                    documents=documents_state,
+                    reminder_days=int(app_settings.get("doc_reminder_days", 30)),
+                    utility_payments=utility_payments_state,
+                    tax_obligations=tax_obligations_state,
+                    utility_reminder_days=int(app_settings.get("utility_reminder_days", 7)),
+                    tax_reminder_days=int(app_settings.get("tax_reminder_days", 14)),
+                ),
                 notifications_state,
                 is_tablet=is_tablet,
             ), "home")
@@ -4683,6 +5052,8 @@ def main(page: ft.Page) -> None:
                 open_document_scan,
                 reminder_days=int(app_settings.get("doc_reminder_days", 30)),
                 activity_log=doc_activity_log_state,
+                on_export_pdf=export_documents_pdf,
+                on_import_pdf=import_documents_pdf,
             )
         if screen_key == "notifications":
             return build_notifications_page(
@@ -4816,6 +5187,7 @@ def main(page: ft.Page) -> None:
                 on_delete_source=admin_delete_source,
                 on_set_source_status=admin_set_source_status,
                 on_select_scenario=admin_select_scenario,
+                on_verify_scenario=admin_verify_scenario,
                 on_create_stage=admin_create_stage,
                 on_create_step=admin_create_step,
                 on_set_stage_required=admin_set_stage_required,
@@ -4853,7 +5225,16 @@ def main(page: ft.Page) -> None:
             go_to,
             is_desktop,
             user=app_user,
-            dashboard=build_dashboard_data(situations_state, situation_tasks_state),
+            dashboard=build_dashboard_data(
+                situations_state,
+                situation_tasks_state,
+                documents=documents_state,
+                reminder_days=int(app_settings.get("doc_reminder_days", 30)),
+                utility_payments=utility_payments_state,
+                tax_obligations=tax_obligations_state,
+                utility_reminder_days=int(app_settings.get("utility_reminder_days", 7)),
+                tax_reminder_days=int(app_settings.get("tax_reminder_days", 14)),
+            ),
         )
 
     # ---------------------------------------------------------------------------
@@ -4901,10 +5282,7 @@ def main(page: ft.Page) -> None:
             page.run_task(page.push_route, NAV_ROUTES[key])
 
     def route_change(_event: ft.RouteChangeEvent | None = None) -> None:
-        set_theme_mode(theme_mode_state["value"])
-        page.theme_mode = ft.ThemeMode.DARK if theme_mode_state["value"] == "dark" else ft.ThemeMode.LIGHT
-        page.theme = build_theme(theme_mode_state["value"])
-        page.bgcolor = APP_COLORS["screen"]
+        apply_page_theme()
         screen_key = route_to_screen(page.route)
         auth_screen = screen_key in {"login", "register"}
         intro_screen = screen_key == "onboarding"

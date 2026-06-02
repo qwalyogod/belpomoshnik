@@ -7,7 +7,7 @@ from components.cards import app_card, badge, category_chip, empty_state_card, i
 from components.layout import desktop_content
 from components.placeholders import photo_placeholder
 from data.mock_data import MOCK_USER, SCENARIO_TEMPLATES
-from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 ALL_CATEGORY = "Все"
@@ -189,7 +189,7 @@ def _favorite_button(template: dict, is_favorite: bool, on_toggle_favorite) -> f
         ink=True,
         content=ft.Icon(
             ft.Icons.STAR if is_favorite else ft.Icons.STAR_BORDER,
-            size=22,
+            size=ts(22),
             color=badge_fg,
         ),
     )
@@ -236,20 +236,20 @@ def _scenario_card(
                             badge(category, category_tone),
                             ft.Text(
                                 template["title"],
-                                size=22 if desktop and not compact else 18,
+                                size=ts(22) if desktop and not compact else 18,
                                 weight=ft.FontWeight.W_900,
                                 color=APP_COLORS["text"],
                                 max_lines=2,
                             ),
                             ft.Text(
                                 template.get("short_description") or template.get("description", ""),
-                                size=14 if not compact else 13,
+                                size=ts(14) if not compact else 13,
                                 color=APP_COLORS["muted"],
                                 max_lines=2 if compact else 3,
                             ),
                         ],
                     ),
-                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22, color=APP_COLORS["muted2"]),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(22), color=APP_COLORS["muted2"]),
                 ],
             ),
             ft.Row(
@@ -283,8 +283,8 @@ def _meta_chip(text: str, icon: str) -> ft.Container:
             tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=15, color=APP_COLORS["blue_text"]),
-                ft.Text(text, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], max_lines=1, no_wrap=True),
+                ft.Icon(icon, size=ts(15), color=APP_COLORS["blue_text"]),
+                ft.Text(text, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], max_lines=1, no_wrap=True),
             ],
         ),
     )
@@ -332,7 +332,7 @@ def _recommended_section(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Text("Рекомендуемые сценарии", size=24 if is_desktop else 20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                    ft.Text("Рекомендуемые сценарии", size=ts(24) if is_desktop else 20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     badge("подходят по профилю", "default") if is_desktop else ft.Container(),
                 ],
             ),
@@ -357,7 +357,7 @@ def _all_scenarios_section(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Text("Все сценарии", size=24 if is_desktop else 20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                    ft.Text("Все сценарии", size=ts(24) if is_desktop else 20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     badge("популярные", "blue"),
                 ],
             ),
@@ -382,8 +382,8 @@ def _quick_start_card(open_template) -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Быстрый старт", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                ft.Text("Запустите сценарий и получите личные задачи с дедлайнами.", size=14, color=APP_COLORS["muted"]),
+                ft.Text("Быстрый старт", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Запустите сценарий и получите личные задачи с дедлайнами.", size=ts(14), color=APP_COLORS["muted"]),
                 primary_button("Создать мою ситуацию", icon=ft.Icons.ADD_TASK_OUTLINED, on_click=lambda _: open_template("childbirth"), expand=True),
             ],
         ),
@@ -415,11 +415,11 @@ def _popular_card(open_template, templates: list[dict]) -> ft.Container:
                             spacing=2,
                             expand=True,
                             controls=[
-                                ft.Text(template["title"], size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                                ft.Text(f"{task_count} шагов • {duration}", size=12, color=APP_COLORS["muted"]),
+                                ft.Text(template["title"], size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                                ft.Text(f"{task_count} шагов • {duration}", size=ts(12), color=APP_COLORS["muted"]),
                             ],
                         ),
-                        ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=APP_COLORS["muted2"]),
+                        ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
                     ],
                 ),
             )
@@ -428,7 +428,7 @@ def _popular_card(open_template, templates: list[dict]) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Популярное сейчас", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Популярное сейчас", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(spacing=10, controls=rows),
             ],
         ),
@@ -450,15 +450,15 @@ def _inside_card(templates: list[dict]) -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Что будет внутри", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Что будет внутри", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=11,
                     controls=[
                         ft.Row(
                             spacing=10,
                             controls=[
-                                ft.Icon(icon, size=18, color=APP_COLORS["blue_text"]),
-                                ft.Text(label, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], expand=True),
+                                ft.Icon(icon, size=ts(18), color=APP_COLORS["blue_text"]),
+                                ft.Text(label, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], expand=True),
                             ],
                         )
                         for label, icon in rows
@@ -471,7 +471,7 @@ def _inside_card(templates: list[dict]) -> ft.Container:
                     color=APP_COLORS["blue"],
                     bgcolor=APP_COLORS["surface2"],
                 ),
-                ft.Text(f"Средний сценарий: {avg_steps} шагов", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
+                ft.Text(f"Средний сценарий: {avg_steps} шагов", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["muted"]),
             ],
         ),
         padding=18,
@@ -567,8 +567,8 @@ def _mobile_scenarios(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(ft.Icons.ARROW_BACK_IOS_NEW, size=18, color=APP_COLORS["muted"]),
-                    ft.Text("Жизненные сценарии", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                    ft.Icon(ft.Icons.ARROW_BACK_IOS_NEW, size=ts(18), color=APP_COLORS["muted"]),
+                    ft.Text("Жизненные сценарии", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     icon_circle(ft.Icons.TEXT_FIELDS, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=44),
                     icon_circle(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=44),
                 ],

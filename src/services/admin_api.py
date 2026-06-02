@@ -56,6 +56,9 @@ class AdminAPIClient:
     def update_problem(self, problem_id: int, payload: dict) -> dict:
         return self._request("PUT", f"/api/admin/problems/{problem_id}", payload=payload)
 
+    def delete_problem(self, problem_id: int) -> None:
+        self._request("DELETE", f"/api/admin/problems/{problem_id}")
+
     def create_scenario(self, payload: dict) -> dict:
         return self._request("POST", "/api/admin/scenarios", payload=payload)
 
@@ -64,6 +67,18 @@ class AdminAPIClient:
 
     def delete_scenario(self, scenario_id: int) -> None:
         self._request("DELETE", f"/api/admin/scenarios/{scenario_id}")
+
+    def verify_scenario(self, scenario_id: int) -> dict:
+        return self._request("POST", f"/api/admin/scenarios/{scenario_id}/verify")
+
+    def set_verification_notes(self, scenario_id: int, notes: str) -> dict:
+        return self._request("POST", f"/api/admin/scenarios/{scenario_id}/verify-notes", payload={"notes": notes})
+
+    def reorder_stages(self, scenario_id: int, ids: list[int]) -> None:
+        self._request("PATCH", f"/api/admin/scenarios/{scenario_id}/stages/reorder", payload={"ids": ids})
+
+    def reorder_steps(self, stage_id: int, ids: list[int]) -> None:
+        self._request("PATCH", f"/api/admin/stages/{stage_id}/steps/reorder", payload={"ids": ids})
 
     def get_admin_scenario(self, scenario_id: int) -> dict:
         return self._request("GET", f"/api/admin/scenarios/{scenario_id}")

@@ -3,7 +3,7 @@ import flet as ft
 from components.cards import app_card, badge, icon_circle, page_heading
 from components.layout import desktop_content
 from data.mock_data import ACHIEVEMENTS, LEARNING_CATEGORIES, LEARNING_STATS
-from theme.app_theme import APP_COLORS
+from theme.app_theme import APP_COLORS, ts
 
 
 def _stat_card(label: str, value: str, icon) -> ft.Container:
@@ -17,8 +17,8 @@ def _stat_card(label: str, value: str, icon) -> ft.Container:
                     spacing=3,
                     expand=True,
                     controls=[
-                        ft.Text(value, size=24, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
-                        ft.Text(label, size=13, color=APP_COLORS["muted"]),
+                        ft.Text(value, size=ts(24), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text(label, size=ts(13), color=APP_COLORS["muted"]),
                     ],
                 ),
             ],
@@ -36,8 +36,8 @@ def _category_progress(item: dict) -> ft.Container:
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text(item["name"], size=15, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
-                        ft.Text(f"{item['progress']}%", size=13, weight=ft.FontWeight.BOLD, color=APP_COLORS["muted"]),
+                        ft.Text(item["name"], size=ts(15), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                        ft.Text(f"{item['progress']}%", size=ts(13), weight=ft.FontWeight.BOLD, color=APP_COLORS["muted"]),
                     ],
                 ),
                 ft.ProgressBar(value=value, bar_height=8, border_radius=10, color=APP_COLORS["primary"], bgcolor=APP_COLORS["border_soft"]),
@@ -67,11 +67,11 @@ def _achievement_card(achievement: dict) -> ft.Container:
                         ft.Row(
                             spacing=8,
                             controls=[
-                                ft.Text(achievement["title"], size=15, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
+                                ft.Text(achievement["title"], size=ts(15), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
                                 badge("Получено" if earned else "TODO", "success" if earned else "default"),
                             ],
                         ),
-                        ft.Text(achievement["desc"], size=12, color=APP_COLORS["muted"]),
+                        ft.Text(achievement["desc"], size=ts(12), color=APP_COLORS["muted"]),
                     ],
                 ),
             ],
@@ -95,7 +95,7 @@ def _learning_content() -> ft.Column:
                     ft.Container(col={"xs": 12, "sm": 4}, content=_stat_card("Средний результат", LEARNING_STATS["average_score"], ft.Icons.INSIGHTS_OUTLINED)),
                 ],
             ),
-            ft.Text("Прогресс по категориям", size=22, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+            ft.Text("Прогресс по категориям", size=ts(22), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
             ft.ResponsiveRow(
                 columns=12,
                 spacing=12,
@@ -105,7 +105,7 @@ def _learning_content() -> ft.Column:
                     for item in LEARNING_CATEGORIES
                 ],
             ),
-            ft.Text("Достижения", size=22, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+            ft.Text("Достижения", size=ts(22), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
             ft.ResponsiveRow(
                 columns=12,
                 spacing=12,

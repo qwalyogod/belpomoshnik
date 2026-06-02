@@ -3,12 +3,12 @@ from __future__ import annotations
 import flet as ft
 
 from components.layout import avatar
-from theme.app_theme import APP_COLORS, ANIM_FAST, CENTER, border_bottom
+from theme.app_theme import APP_COLORS, ANIM_FAST, CENTER, border_bottom, ts
 
 
 def build_notification_button(go_to=None, unread: int = 0) -> ft.Container:
     """Round notification bell button — used in mobile header and on non-profile pages."""
-    bell = ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=22, color=APP_COLORS["text"])
+    bell = ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=ts(22), color=APP_COLORS["text"])
     badge_dot: list[ft.Control] = []
     if unread > 0:
         badge_dot = [
@@ -73,7 +73,7 @@ def build_mobile_topbar(
                     border_radius=12,
                     bgcolor=APP_COLORS["blue"],
                     alignment=CENTER,
-                    content=ft.Text("Б", size=18, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
+                    content=ft.Text("Б", size=ts(18), weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
                 ),
                 ft.Text(
                     title,
@@ -106,7 +106,7 @@ def build_mobile_topbar(
         bgcolor=APP_COLORS["active"], alignment=CENTER, ink=True,
         on_click=on_open_ai_chat, tooltip="ИИ-помощник",
         animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
-        content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=18, color=APP_COLORS["blue"]),
+        content=ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=ts(18), color=APP_COLORS["blue"]),
     ) if on_open_ai_chat else ft.Container(width=0)
 
     return ft.Container(
@@ -120,8 +120,8 @@ def build_mobile_topbar(
             controls=[
                 ft.Row(spacing=10, expand=True, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                     ft.Container(width=34, height=34, border_radius=12, bgcolor=APP_COLORS["blue"], alignment=CENTER,
-                        content=ft.Text("Б", size=18, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE)),
-                    ft.Text(title, size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
+                        content=ft.Text("Б", size=ts(18), weight=ft.FontWeight.W_900, color=ft.Colors.WHITE)),
+                    ft.Text(title, size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
                 ]),
                 ft.Row(spacing=4, controls=[
                     ai_btn,

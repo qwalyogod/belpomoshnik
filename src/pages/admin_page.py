@@ -3,7 +3,7 @@ import flet as ft
 from components.buttons import primary_button, secondary_button
 from components.cards import app_card, badge, icon_circle, page_heading
 from components.layout import desktop_content
-from theme.app_theme import APP_COLORS, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, border_all, padding_symmetric, ts
 
 
 ACTION_OPTIONS = [
@@ -82,7 +82,7 @@ def _field(
         cursor_color=APP_COLORS["primary"],
         label_style=ft.TextStyle(color=APP_COLORS["muted"]),
         hint_style=ft.TextStyle(color=APP_COLORS["muted2"]),
-        text_style=ft.TextStyle(size=14),
+        text_style=ft.TextStyle(size=ts(14)),
         content_padding=ft.Padding(left=12, top=10, right=12, bottom=10),
         dense=dense,
         read_only=read_only,
@@ -133,15 +133,15 @@ def _api_status_card(state: dict, on_refresh=None) -> ft.Container:
                     spacing=2,
                     expand=True,
                     controls=[
-                        ft.Text("Backend API", size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Backend API", size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         ft.Text(
                             "Подключено" if connected else state.get("error", "Нет подключения"),
-                            size=13,
+                            size=ts(13),
                             color=APP_COLORS["muted"],
                         ),
                         ft.Text(
                             f"Последняя синхронизация: {state.get('last_sync') or '—'}",
-                            size=12,
+                            size=ts(12),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -189,7 +189,7 @@ def _full_audit_log_card(audit_logs: list[dict], selected_filter: str = "all") -
                 border_radius=999,
                 bgcolor=APP_COLORS["primary"] if selected_filter == fid else APP_COLORS["surface_alt"],
                 border=border_all(APP_COLORS["primary"] if selected_filter == fid else APP_COLORS["border_soft"]),
-                content=ft.Text(flabel, size=12, weight=ft.FontWeight.W_700, color="#FFFFFF" if selected_filter == fid else APP_COLORS["text"]),
+                content=ft.Text(flabel, size=ts(12), weight=ft.FontWeight.W_700, color="#FFFFFF" if selected_filter == fid else APP_COLORS["text"]),
             )
             for fid, flabel in filter_options
         ],
@@ -211,12 +211,12 @@ def _full_audit_log_card(audit_logs: list[dict], selected_filter: str = "all") -
                             wrap=True,
                             controls=[
                                 badge(_AUDIT_EVENT_LABELS.get(etype, "Прочее"), _AUDIT_EVENT_VARIANTS.get(etype, "default")),
-                                ft.Text(entry.get("action", "Действие"), size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["text"], expand=True),
+                                ft.Text(entry.get("action", "Действие"), size=ts(13), weight=ft.FontWeight.W_600, color=APP_COLORS["text"], expand=True),
                             ],
                         ),
                         ft.Text(
                             f"{entry.get('actor', 'Пользователь')} · {entry.get('role_id', '')} · {entry.get('created_at', '')}",
-                            size=11,
+                            size=ts(11),
                             color=APP_COLORS["muted"],
                         ),
                     ],
@@ -231,14 +231,14 @@ def _full_audit_log_card(audit_logs: list[dict], selected_filter: str = "all") -
                 ft.Row(
                     spacing=8,
                     controls=[
-                        ft.Icon(ft.Icons.HISTORY_OUTLINED, size=20, color=APP_COLORS["primary"]),
-                        ft.Text("Журнал действий редактора", size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
-                        ft.Text(f"({len(filtered)})", size=13, color=APP_COLORS["muted"]),
+                        ft.Icon(ft.Icons.HISTORY_OUTLINED, size=ts(20), color=APP_COLORS["primary"]),
+                        ft.Text("Журнал действий редактора", size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text(f"({len(filtered)})", size=ts(13), color=APP_COLORS["muted"]),
                     ],
                 ),
                 chips,
                 ft.Container(height=1, bgcolor=APP_COLORS["border_soft"]),
-                ft.Column(spacing=6, controls=rows or [ft.Text("Действий по этому фильтру нет.", size=13, color=APP_COLORS["muted"])]),
+                ft.Column(spacing=6, controls=rows or [ft.Text("Действий по этому фильтру нет.", size=ts(13), color=APP_COLORS["muted"])]),
             ],
         ),
         padding=20,
@@ -270,8 +270,8 @@ def _role_access_card(state: dict, on_select_admin_role=None) -> ft.Container:
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
-                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=16, color=APP_COLORS["secondary"]),
-                ft.Text(item, size=13, color=APP_COLORS["muted"], expand=True),
+                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=ts(16), color=APP_COLORS["secondary"]),
+                ft.Text(item, size=ts(13), color=APP_COLORS["muted"], expand=True),
             ],
         )
         for item in current_role.get("permissions", [])
@@ -282,7 +282,7 @@ def _role_access_card(state: dict, on_select_admin_role=None) -> ft.Container:
             spacing=8,
             wrap=True,
             controls=[
-                ft.Text(user.get("name", "Пользователь"), size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["text"], expand=True),
+                ft.Text(user.get("name", "Пользователь"), size=ts(13), weight=ft.FontWeight.W_600, color=APP_COLORS["text"], expand=True),
                 badge(role_title_by_id.get(user.get("role_id"), user.get("role_id", "роль")), "default"),
                 badge(user.get("status", "active"), "success" if user.get("status") == "active" else "warning"),
             ],
@@ -298,10 +298,10 @@ def _role_access_card(state: dict, on_select_admin_role=None) -> ft.Container:
             content=ft.Column(
                 spacing=4,
                 controls=[
-                    ft.Text(item.get("action", "Действие"), size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                    ft.Text(item.get("action", "Действие"), size=ts(13), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
                     ft.Text(
                         f"{item.get('actor', 'Пользователь')} · {role_title_by_id.get(item.get('role_id'), item.get('role_id', 'роль'))} · {item.get('created_at', '')}",
-                        size=12,
+                        size=ts(12),
                         color=APP_COLORS["muted"],
                     ),
                 ],
@@ -320,10 +320,10 @@ def _role_access_card(state: dict, on_select_admin_role=None) -> ft.Container:
                             spacing=3,
                             expand=True,
                             controls=[
-                                ft.Text("Роли и доступ", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                                ft.Text("Роли и доступ", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                                 ft.Text(
                                     "Демо-раздел показывает будущую модель: гражданин, редактор контента и админ площадки.",
-                                    size=13,
+                                    size=ts(13),
                                     color=APP_COLORS["muted"],
                                 ),
                             ],
@@ -331,27 +331,27 @@ def _role_access_card(state: dict, on_select_admin_role=None) -> ft.Container:
                     ],
                 ),
                 role_dropdown,
-                ft.Text(current_role.get("description", ""), size=13, color=APP_COLORS["muted"]),
-                ft.Text("Доступные разделы", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                ft.Text(current_role.get("description", ""), size=ts(13), color=APP_COLORS["muted"]),
+                ft.Text("Доступные разделы", size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
                 ft.Row(wrap=True, spacing=8, run_spacing=8, controls=section_badges or [badge("Нет разделов", "default")]),
-                ft.Text("Права роли", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
-                ft.Column(spacing=6, controls=permission_items or [ft.Text("Права пока не настроены.", size=13, color=APP_COLORS["muted"])]),
+                ft.Text("Права роли", size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                ft.Column(spacing=6, controls=permission_items or [ft.Text("Права пока не настроены.", size=ts(13), color=APP_COLORS["muted"])]),
     ]
     if current_role.get("id") == "platform_admin":
         controls.extend(
             [
                 ft.Divider(height=1, color=APP_COLORS["border"]),
-                ft.Text("Пользователи и роли", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
-                ft.Column(spacing=8, controls=users_controls or [ft.Text("Пользователи пока не добавлены.", size=13, color=APP_COLORS["muted"])]),
-                ft.Text("Последние действия", size=14, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
-                ft.Column(spacing=8, controls=audit_controls or [ft.Text("Журнал действий пока пуст.", size=13, color=APP_COLORS["muted"])]),
+                ft.Text("Пользователи и роли", size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                ft.Column(spacing=8, controls=users_controls or [ft.Text("Пользователи пока не добавлены.", size=ts(13), color=APP_COLORS["muted"])]),
+                ft.Text("Последние действия", size=ts(14), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                ft.Column(spacing=8, controls=audit_controls or [ft.Text("Журнал действий пока пуст.", size=ts(13), color=APP_COLORS["muted"])]),
             ]
         )
     else:
         controls.append(
             ft.Text(
                 "Пользователи, роли и аудит доступны только в режиме «Админ площадки».",
-                size=12,
+                size=ts(12),
                 color=APP_COLORS["muted"],
             )
         )
@@ -373,7 +373,7 @@ def _problem_create_card(on_create_problem=None) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Создать проблему", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Создать проблему", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 title_field,
                 category_field,
                 short_field,
@@ -422,7 +422,7 @@ def _scenario_create_card(problems: list[dict], on_create_scenario=None) -> ft.C
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Создать сценарий", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Создать сценарий", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 problem_dropdown,
                 title_field,
                 short_field,
@@ -460,10 +460,10 @@ def _source_create_card(on_create_source=None) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить источник", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить источник", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 ft.Text(
                     "Используйте только открытые официальные ресурсы Республики Беларусь.",
-                    size=12,
+                    size=ts(12),
                     color=APP_COLORS["muted"],
                 ),
                 title_field,
@@ -493,7 +493,7 @@ def _sources_list_card(
     source_type_map = dict(SOURCE_TYPE_OPTIONS)
     rows: list[ft.Control] = []
     if not sources:
-        rows.append(ft.Text("Пока нет источников. Добавьте первый официальный источник.", size=14, color=APP_COLORS["muted"]))
+        rows.append(ft.Text("Пока нет источников. Добавьте первый официальный источник.", size=ts(14), color=APP_COLORS["muted"]))
 
     for source in sources:
         current_status = source.get("status", "requires_check")
@@ -507,7 +507,7 @@ def _sources_list_card(
                             spacing=8,
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text(source.get("title", "Без названия"), size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
+                                ft.Text(source.get("title", "Без названия"), size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
                                 _source_status_badge(current_status),
                             ],
                         ),
@@ -520,8 +520,8 @@ def _sources_list_card(
                                 badge(f"Проверка: {source.get('last_checked_at') or 'требует проверки'}", "warning" if not source.get("last_checked_at") else "default"),
                             ],
                         ),
-                        ft.Text(source.get("description", ""), size=13, color=APP_COLORS["muted"]),
-                        ft.Text(source.get("url", ""), size=12, color=APP_COLORS["blue"]),
+                        ft.Text(source.get("description", ""), size=ts(13), color=APP_COLORS["muted"]),
+                        ft.Text(source.get("url", ""), size=ts(12), color=APP_COLORS["blue"]),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.END,
                             spacing=8,
@@ -559,10 +559,10 @@ def _sources_list_card(
         ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Официальные источники", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Официальные источники", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 ft.Text(
                     "Справочник нужен редактору для проверки сценариев, шагов и закон-апдейтов.",
-                    size=13,
+                    size=ts(13),
                     color=APP_COLORS["muted"],
                 ),
                 *rows,
@@ -587,6 +587,10 @@ def _law_update_create_card(on_create_law_update=None) -> ft.Container:
                           hint_text="Например: проверить срок обращения и подготовить документы",
                           multiline=True, min_lines=2, max_lines=3)
     related_field = _field("Связанные сценарии", hint_text="Через запятую: Рождение ребёнка, Пособия")
+    related_problems_field = _field(
+        "Связанные проблемы",
+        hint_text="ID через запятую: childbirth, lost-passport",
+    )
     source_field = _field("Официальный источник", hint_text="https://pravo.by/")
     priority_dropdown = ft.Dropdown(
         label="Приоритет",
@@ -609,6 +613,7 @@ def _law_update_create_card(on_create_law_update=None) -> ft.Container:
                 short_field.value or "",
                 action_field.value or "",
                 related_field.value or "",
+                related_problems_field.value or "",
                 source_field.value or "",
                 priority_dropdown.value or "medium",
             )
@@ -617,7 +622,7 @@ def _law_update_create_card(on_create_law_update=None) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить закон-апдейт", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить закон-апдейт", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 title_field,
                 ft.Row(
                     spacing=10,
@@ -633,6 +638,7 @@ def _law_update_create_card(on_create_law_update=None) -> ft.Container:
                 short_field,
                 action_field,
                 related_field,
+                related_problems_field,
                 source_field,
                 primary_button("Добавить закон-апдейт", on_click=submit, icon=ft.Icons.GAVEL_OUTLINED, expand=True),
             ],
@@ -648,7 +654,7 @@ def _law_updates_list_card(
 ) -> ft.Container:
     rows: list[ft.Control] = []
     if not laws:
-        rows.append(ft.Text("Пока нет закон-апдейтов.", size=14, color=APP_COLORS["muted"]))
+        rows.append(ft.Text("Пока нет закон-апдейтов.", size=ts(14), color=APP_COLORS["muted"]))
 
     for item in laws:
         current_status = item.get("status", "published")
@@ -656,6 +662,8 @@ def _law_updates_list_card(
         priority = item.get("priority", "medium")
         related = item.get("related_scenarios") or []
         related_text = ", ".join(related) if related else "не указаны"
+        related_problems = item.get("related_problems") or []
+        related_problems_text = ", ".join(related_problems) if related_problems else "не указаны"
         rows.append(
             app_card(
                 ft.Column(
@@ -664,7 +672,7 @@ def _law_updates_list_card(
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text(item.get("title", "Без названия"), size=16, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
+                                ft.Text(item.get("title", "Без названия"), size=ts(16), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
                                 _status_badge(current_status),
                             ],
                         ),
@@ -678,10 +686,11 @@ def _law_updates_list_card(
                                 badge(item.get("date", "без даты"), "default"),
                             ],
                         ),
-                        ft.Text(item.get("short", ""), size=13, color=APP_COLORS["muted"]),
-                        ft.Text(f"Кого касается: {item.get('target', 'не указано')}", size=12, color=APP_COLORS["muted"]),
-                        ft.Text(f"Что сделать: {item.get('what_to_do') or 'будет уточнено редактором'}", size=12, color=APP_COLORS["muted"]),
-                        ft.Text(f"Связанные сценарии: {related_text}", size=12, color=APP_COLORS["muted"]),
+                        ft.Text(item.get("short", ""), size=ts(13), color=APP_COLORS["muted"]),
+                        ft.Text(f"Кого касается: {item.get('target', 'не указано')}", size=ts(12), color=APP_COLORS["muted"]),
+                        ft.Text(f"Что сделать: {item.get('what_to_do') or 'будет уточнено редактором'}", size=ts(12), color=APP_COLORS["muted"]),
+                        ft.Text(f"Связанные сценарии: {related_text}", size=ts(12), color=APP_COLORS["muted"]),
+                        ft.Text(f"Связанные проблемы: {related_problems_text}", size=ts(12), color=APP_COLORS["muted"]),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.END,
                             spacing=8,
@@ -716,7 +725,7 @@ def _law_updates_list_card(
     return app_card(
         ft.Column(
             spacing=10,
-            controls=[ft.Text("Закон-апдейты редактора", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
+            controls=[ft.Text("Закон-апдейты редактора", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
         )
     )
 
@@ -724,7 +733,7 @@ def _law_updates_list_card(
 def _problems_list_card(problems: list[dict], on_set_problem_status=None) -> ft.Container:
     rows: list[ft.Control] = []
     if not problems:
-        rows.append(ft.Text("Пока нет проблем в базе.", size=14, color=APP_COLORS["muted"]))
+        rows.append(ft.Text("Пока нет проблем в базе.", size=ts(14), color=APP_COLORS["muted"]))
 
     for item in problems:
         current_status = item.get("status", "draft")
@@ -739,7 +748,7 @@ def _problems_list_card(problems: list[dict], on_set_problem_status=None) -> ft.
                             controls=[
                                 ft.Text(
                                     item.get("title", "Без названия"),
-                                    size=17,
+                                    size=ts(17),
                                     weight=ft.FontWeight.BOLD,
                                     color=APP_COLORS["text"],
                                     expand=True,
@@ -747,7 +756,7 @@ def _problems_list_card(problems: list[dict], on_set_problem_status=None) -> ft.
                                 _status_badge(current_status),
                             ],
                         ),
-                        ft.Text(item.get("short_description", ""), size=13, color=APP_COLORS["muted"]),
+                        ft.Text(item.get("short_description", ""), size=ts(13), color=APP_COLORS["muted"]),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.END,
                             controls=[
@@ -768,7 +777,7 @@ def _problems_list_card(problems: list[dict], on_set_problem_status=None) -> ft.
     return app_card(
         ft.Column(
             spacing=10,
-            controls=[ft.Text("Проблемы", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
+            controls=[ft.Text("Проблемы", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
         )
     )
 
@@ -776,7 +785,7 @@ def _problems_list_card(problems: list[dict], on_set_problem_status=None) -> ft.
 def _scenarios_list_card(scenarios: list[dict], on_set_scenario_status=None, on_select_scenario=None, on_edit_scenario=None, on_delete_scenario=None) -> ft.Container:
     rows: list[ft.Control] = []
     if not scenarios:
-        rows.append(ft.Text("Пока нет сценариев в базе.", size=14, color=APP_COLORS["muted"]))
+        rows.append(ft.Text("Пока нет сценариев в базе.", size=ts(14), color=APP_COLORS["muted"]))
 
     for item in scenarios:
         current_status = item.get("status", "draft")
@@ -791,7 +800,7 @@ def _scenarios_list_card(scenarios: list[dict], on_set_scenario_status=None, on_
                             controls=[
                                 ft.Text(
                                     item.get("title", "Без названия"),
-                                    size=17,
+                                    size=ts(17),
                                     weight=ft.FontWeight.BOLD,
                                     color=APP_COLORS["text"],
                                     expand=True,
@@ -806,7 +815,7 @@ def _scenarios_list_card(scenarios: list[dict], on_set_scenario_status=None, on_
                                 badge(item.get("estimated_duration") or "duration: n/a", "default"),
                             ],
                         ),
-                        ft.Text(item.get("short_description", ""), size=13, color=APP_COLORS["muted"]),
+                        ft.Text(item.get("short_description", ""), size=ts(13), color=APP_COLORS["muted"]),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             wrap=True,
@@ -851,7 +860,7 @@ def _scenarios_list_card(scenarios: list[dict], on_set_scenario_status=None, on_
     return app_card(
         ft.Column(
             spacing=10,
-            controls=[ft.Text("Сценарии", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
+            controls=[ft.Text("Сценарии", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]), *rows],
         )
     )
 
@@ -882,7 +891,7 @@ def _document_create_card(on_create_document=None) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить документ", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить документ", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 title_f, type_f, where_f, validity_f, desc_f, required_cb,
                 primary_button("Добавить", on_click=submit, height=44),
             ],
@@ -896,7 +905,7 @@ def _documents_list_card(
     on_delete_document=None,
 ) -> ft.Container:
     if not documents:
-        return app_card(ft.Text("Документов пока нет.", size=13, color=APP_COLORS["muted"]))
+        return app_card(ft.Text("Документов пока нет.", size=ts(13), color=APP_COLORS["muted"]))
     rows: list[ft.Control] = []
     for item in documents:
         rows.append(
@@ -907,10 +916,10 @@ def _documents_list_card(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(item.get("title", "Без названия"), size=14, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                            ft.Text(item.get("title", "Без названия"), size=ts(14), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                             ft.Text(
                                 " · ".join(filter(None, [item.get("document_type"), item.get("status")])),
-                                size=11, color=APP_COLORS["muted"],
+                                size=ts(11), color=APP_COLORS["muted"],
                             ),
                         ],
                     ),
@@ -930,7 +939,7 @@ def _documents_list_card(
         ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Документы", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Документы", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 *rows,
             ],
         )
@@ -964,7 +973,7 @@ def _authority_create_card(on_create_authority=None) -> ft.Container:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить учреждение", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить учреждение", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 title_f, type_f, address_f, phone_f, url_f, hours_f, desc_f,
                 primary_button("Добавить", on_click=submit, height=44),
             ],
@@ -978,7 +987,7 @@ def _authorities_list_card(
     on_delete_authority=None,
 ) -> ft.Container:
     if not authorities:
-        return app_card(ft.Text("Учреждений пока нет.", size=13, color=APP_COLORS["muted"]))
+        return app_card(ft.Text("Учреждений пока нет.", size=ts(13), color=APP_COLORS["muted"]))
     rows: list[ft.Control] = []
     for item in authorities:
         rows.append(
@@ -989,10 +998,10 @@ def _authorities_list_card(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(item.get("title", "Без названия"), size=14, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                            ft.Text(item.get("title", "Без названия"), size=ts(14), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                             ft.Text(
                                 " · ".join(filter(None, [item.get("type"), item.get("address")])),
-                                size=11, color=APP_COLORS["muted"],
+                                size=ts(11), color=APP_COLORS["muted"],
                             ),
                         ],
                     ),
@@ -1012,7 +1021,7 @@ def _authorities_list_card(
         ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Учреждения", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Учреждения", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 *rows,
             ],
         )
@@ -1024,6 +1033,7 @@ def _scenario_builder_header(
     selected_scenario_id: int | None,
     scenario_detail: dict | None,
     on_select_scenario=None,
+    on_verify_scenario=None,
 ) -> ft.Control:
     scenario_options = [ft.dropdown.Option(str(item["id"]), item.get("title", f"#{item['id']}")) for item in scenarios]
     selector = ft.Dropdown(
@@ -1034,30 +1044,51 @@ def _scenario_builder_header(
         on_select=(lambda e: on_select_scenario(e.control.value) if on_select_scenario else None),
     )
 
+    controls: list[ft.Control] = [
+        ft.Text("Конструктор сценария", size=ts(20), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+        selector,
+    ]
+
     if not scenario_detail:
-        summary = ft.Text("Выберите сценарий, чтобы добавить этапы и шаги.", size=13, color=APP_COLORS["muted"])
+        controls.append(ft.Text("Выберите сценарий, чтобы добавить этапы и шаги.", size=ts(13), color=APP_COLORS["muted"]))
     else:
-        summary = ft.Row(
-            wrap=True,
-            spacing=8,
-            run_spacing=8,
-            controls=[
-                badge(scenario_detail.get("difficulty_level", "medium"), "blue"),
-                badge(f"Этапов: {len(scenario_detail.get('stages', []))}", "default"),
-                badge(scenario_detail.get("status", "draft"), "success" if scenario_detail.get("status") == "published" else "warning"),
-            ],
+        verified_at = scenario_detail.get("content_verified_at")
+        verified_by = scenario_detail.get("verified_by", "")
+        controls.append(
+            ft.Row(
+                wrap=True,
+                spacing=8,
+                run_spacing=8,
+                controls=[
+                    badge(scenario_detail.get("difficulty_level", "medium"), "blue"),
+                    badge(f"Этапов: {len(scenario_detail.get('stages', []))}", "default"),
+                    badge(scenario_detail.get("status", "draft"), "success" if scenario_detail.get("status") == "published" else "warning"),
+                    badge(
+                        "Проверено" if verified_at else "Не проверено",
+                        "success" if verified_at else "warning",
+                    ),
+                ],
+            )
+        )
+        if verified_at:
+            checked = str(verified_at)[:10]
+            controls.append(
+                ft.Text(
+                    f"Проверено: {checked}" + (f" · {verified_by}" if verified_by else ""),
+                    size=ts(12),
+                    color=APP_COLORS["muted"],
+                )
+            )
+        controls.append(
+            secondary_button(
+                "Отметить проверенным по источникам",
+                icon=ft.Icons.VERIFIED_OUTLINED,
+                on_click=lambda _, sid=selected_scenario_id: on_verify_scenario(sid) if on_verify_scenario else None,
+                height=38,
+            )
         )
 
-    return app_card(
-        ft.Column(
-            spacing=12,
-            controls=[
-                ft.Text("Конструктор сценария", size=20, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
-                selector,
-                summary,
-            ],
-        ),
-    )
+    return app_card(ft.Column(spacing=12, controls=controls))
 
 
 def _stage_create_card(
@@ -1089,7 +1120,7 @@ def _stage_create_card(
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить этап", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить этап", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 title_field,
                 description_field,
                 ft.Row(spacing=10, run_spacing=8, wrap=True, controls=[order_field, required_switch]),
@@ -1165,7 +1196,7 @@ def _step_create_card(
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Добавить шаг", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Добавить шаг", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 stage_dropdown,
                 title_field,
                 description_field,
@@ -1173,13 +1204,13 @@ def _step_create_card(
                 action_dropdown,
                 authority_dropdown,
                 deadline_dropdown,
-                ft.Text("Документы шага", size=14, color=APP_COLORS["text"], weight=ft.FontWeight.W_600),
+                ft.Text("Документы шага", size=ts(14), color=APP_COLORS["text"], weight=ft.FontWeight.W_600),
                 ft.Container(
                     height=140,
                     padding=ft.Padding(left=8, top=8, right=8, bottom=8),
                     border=border_all(APP_COLORS["border"]),
                     border_radius=12,
-                    content=ft.Column(scroll=ft.ScrollMode.AUTO, spacing=4, controls=document_checks or [ft.Text("Нет документов", size=12, color=APP_COLORS["muted"])]),
+                    content=ft.Column(scroll=ft.ScrollMode.AUTO, spacing=4, controls=document_checks or [ft.Text("Нет документов", size=ts(12), color=APP_COLORS["muted"])]),
                 ),
                 primary_button("Добавить шаг", on_click=submit, icon=ft.Icons.ADD_TASK, expand=True),
             ],
@@ -1211,8 +1242,8 @@ def _step_dependencies_block(
             ft.Row(
                 spacing=6,
                 controls=[
-                    ft.Icon(ft.Icons.LOCK_OUTLINE, size=14, color=APP_COLORS["warning"]),
-                    ft.Text(prereq_title, size=12, color=APP_COLORS["muted"], expand=True),
+                    ft.Icon(ft.Icons.LOCK_OUTLINE, size=ts(14), color=APP_COLORS["warning"]),
+                    ft.Text(prereq_title, size=ts(12), color=APP_COLORS["muted"], expand=True),
                     ft.IconButton(
                         ft.Icons.CLOSE,
                         icon_size=14,
@@ -1226,14 +1257,14 @@ def _step_dependencies_block(
     if not dep_controls and not on_add_dependency:
         return ft.Container(visible=False)
 
-    body = dep_controls if dep_controls else [ft.Text("нет зависимостей", size=11, color=APP_COLORS["muted"])]
+    body = dep_controls if dep_controls else [ft.Text("нет зависимостей", size=ts(11), color=APP_COLORS["muted"])]
     return ft.Column(
         spacing=4,
         controls=[
             ft.Row(
                 spacing=6,
                 controls=[
-                    ft.Text("Зависит от:", size=12, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                    ft.Text("Зависит от:", size=ts(12), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
                     ft.TextButton(
                         "+ добавить",
                         style=ft.ButtonStyle(color=APP_COLORS["primary"], padding=ft.Padding(0, 0, 0, 0)),
@@ -1265,9 +1296,9 @@ def _related_scenarios_card(
             ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.LINK, size=14, color=APP_COLORS["primary"]),
-                    ft.Text(r.get("related_scenario_title", f"#{r.get('related_scenario_id')}"), size=13, expand=True),
-                    ft.Text(r.get("relation_type", ""), size=11, color=APP_COLORS["muted"]),
+                    ft.Icon(ft.Icons.LINK, size=ts(14), color=APP_COLORS["primary"]),
+                    ft.Text(r.get("related_scenario_title", f"#{r.get('related_scenario_id')}"), size=ts(13), expand=True),
+                    ft.Text(r.get("relation_type", ""), size=ts(11), color=APP_COLORS["muted"]),
                     ft.IconButton(
                         ft.Icons.CLOSE,
                         icon_size=14,
@@ -1287,7 +1318,7 @@ def _related_scenarios_card(
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text("Связанные сценарии", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Связанные сценарии", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         secondary_button(
                             "Добавить связь",
                             icon=ft.Icons.ADD_LINK,
@@ -1298,7 +1329,7 @@ def _related_scenarios_card(
                         ),
                     ],
                 ),
-                *(rows if rows else [ft.Text("Нет связанных сценариев.", size=13, color=APP_COLORS["muted"])]),
+                *(rows if rows else [ft.Text("Нет связанных сценариев.", size=ts(13), color=APP_COLORS["muted"])]),
             ],
         )
     )
@@ -1343,13 +1374,13 @@ def _source_references_card(
             ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.LINK, size=14, color=APP_COLORS["accent"]),
+                    ft.Icon(ft.Icons.LINK, size=ts(14), color=APP_COLORS["accent"]),
                     ft.Column(
                         spacing=1,
                         expand=True,
                         controls=[
-                            ft.Text(ref.get("title", ""), size=13, weight=ft.FontWeight.W_500, color=APP_COLORS["text"]),
-                            ft.Text(f"{s_type} · {src_type}", size=11, color=APP_COLORS["muted"]),
+                            ft.Text(ref.get("title", ""), size=ts(13), weight=ft.FontWeight.W_500, color=APP_COLORS["text"]),
+                            ft.Text(f"{s_type} · {src_type}", size=ts(11), color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.IconButton(
@@ -1362,7 +1393,7 @@ def _source_references_card(
             )
         )
 
-    no_refs = [ft.Text("Нет прикреплённых источников.", size=13, color=APP_COLORS["muted"])]
+    no_refs = [ft.Text("Нет прикреплённых источников.", size=ts(13), color=APP_COLORS["muted"])]
     return app_card(
         ft.Column(
             spacing=10,
@@ -1370,7 +1401,7 @@ def _source_references_card(
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text("Источники права", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                        ft.Text("Источники права", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         secondary_button(
                             "Добавить источник",
                             icon=ft.Icons.ADD_LINK,
@@ -1401,7 +1432,7 @@ def _scenario_stage_tree(
 ) -> ft.Control:
     stages = sorted((scenario_detail or {}).get("stages", []), key=lambda s: s.get("order_index", 0))
     if not stages:
-        return app_card(ft.Text("Пока нет этапов. Добавьте первый этап через форму выше.", size=13, color=APP_COLORS["muted"]))
+        return app_card(ft.Text("Пока нет этапов. Добавьте первый этап через форму выше.", size=ts(13), color=APP_COLORS["muted"]))
 
     stage_controls: list[ft.Control] = []
     for stage_idx, stage in enumerate(stages):
@@ -1420,11 +1451,11 @@ def _scenario_stage_tree(
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
-                                    ft.Text(step.get("title", "Без названия"), size=14, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
+                                    ft.Text(step.get("title", "Без названия"), size=ts(14), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"], expand=True),
                                     _required_badge(bool(step.get("is_required", True))),
                                 ],
                             ),
-                            ft.Text(step.get("description", ""), size=12, color=APP_COLORS["muted"]),
+                            ft.Text(step.get("description", ""), size=ts(12), color=APP_COLORS["muted"]),
                             ft.Row(
                                 wrap=True,
                                 spacing=6,
@@ -1509,8 +1540,8 @@ def _scenario_stage_tree(
                                 ft.Column(
                                     spacing=4,
                                     controls=[
-                                        ft.Text(stage.get("title", "Без названия"), size=17, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
-                                        ft.Text(stage.get("description", ""), size=13, color=APP_COLORS["muted"]),
+                                        ft.Text(stage.get("title", "Без названия"), size=ts(17), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                                        ft.Text(stage.get("description", ""), size=ts(13), color=APP_COLORS["muted"]),
                                     ],
                                     expand=True,
                                 ),
@@ -1576,7 +1607,7 @@ def _scenario_stage_tree(
                                 ),
                             ],
                         ),
-                        ft.Column(spacing=8, controls=step_controls or [ft.Text("Шаги пока не добавлены.", size=13, color=APP_COLORS["muted"])]),
+                        ft.Column(spacing=8, controls=step_controls or [ft.Text("Шаги пока не добавлены.", size=ts(13), color=APP_COLORS["muted"])]),
                     ],
                 ),
                 padding=14,
@@ -1587,7 +1618,7 @@ def _scenario_stage_tree(
         ft.Column(
             spacing=10,
             controls=[
-                ft.Text("Этапы и шаги сценария", size=18, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                ft.Text("Этапы и шаги сценария", size=ts(18), weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                 *stage_controls,
             ],
         )
@@ -1632,9 +1663,9 @@ def _tab_nav(tabs: list, current_tab: str, on_tab_change, label: str = "") -> ft
                 spacing=6,
                 tight=True,
                 controls=[
-                    ft.Icon(icon, size=14, color="#FFFFFF" if key == current_tab else APP_COLORS["muted"]),
+                    ft.Icon(icon, size=ts(14), color="#FFFFFF" if key == current_tab else APP_COLORS["muted"]),
                     ft.Text(
-                        lbl, size=13, weight=ft.FontWeight.W_700,
+                        lbl, size=ts(13), weight=ft.FontWeight.W_700,
                         color="#FFFFFF" if key == current_tab else APP_COLORS["text"],
                     ),
                 ],
@@ -1645,7 +1676,7 @@ def _tab_nav(tabs: list, current_tab: str, on_tab_change, label: str = "") -> ft
     controls: list[ft.Control] = []
     if label:
         controls.append(
-            ft.Text(label, size=11, weight=ft.FontWeight.W_700,
+            ft.Text(label, size=ts(11), weight=ft.FontWeight.W_700,
                     color=APP_COLORS["muted"],
                     style=ft.TextStyle(letter_spacing=0.8))
         )
@@ -1740,9 +1771,9 @@ def _build_users_tab(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(user.get("name", "—"), size=15, weight=ft.FontWeight.W_800,
+                            ft.Text(user.get("name", "—"), size=ts(15), weight=ft.FontWeight.W_800,
                                     color=APP_COLORS["text"]),
-                            ft.Text(user.get("email", ""), size=12, color=APP_COLORS["muted"]),
+                            ft.Text(user.get("email", ""), size=ts(12), color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.Dropdown(
@@ -1766,7 +1797,7 @@ def _build_users_tab(
                         if on_toggle_user_status else None,
                         content=ft.Text(
                             "Деактивировать" if active else "Активировать",
-                            size=12,
+                            size=ts(12),
                             weight=ft.FontWeight.W_700,
                             color=APP_COLORS["warning"] if active else APP_COLORS["primary"],
                         ),
@@ -1805,8 +1836,8 @@ def _build_users_tab(
                 ft.Row(
                     spacing=8,
                     controls=[
-                        ft.Icon(ft.Icons.PERSON_ADD_OUTLINED, size=18, color=APP_COLORS["primary"]),
-                        ft.Text("Добавить пользователя", size=15, weight=ft.FontWeight.BOLD,
+                        ft.Icon(ft.Icons.PERSON_ADD_OUTLINED, size=ts(18), color=APP_COLORS["primary"]),
+                        ft.Text("Добавить пользователя", size=ts(15), weight=ft.FontWeight.BOLD,
                                 color=APP_COLORS["text"]),
                     ],
                 ),
@@ -1820,7 +1851,7 @@ def _build_users_tab(
     )
 
     user_rows = [_user_row(u) for u in users] or [
-        ft.Text("Пользователей пока нет.", size=13, color=APP_COLORS["muted"])
+        ft.Text("Пользователей пока нет.", size=ts(13), color=APP_COLORS["muted"])
     ]
 
     return ft.Column(
@@ -1829,10 +1860,10 @@ def _build_users_tab(
             ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.PEOPLE_OUTLINE, size=20, color=APP_COLORS["primary"]),
-                    ft.Text("Пользователи и роли", size=20, weight=ft.FontWeight.BOLD,
+                    ft.Icon(ft.Icons.PEOPLE_OUTLINE, size=ts(20), color=APP_COLORS["primary"]),
+                    ft.Text("Пользователи и роли", size=ts(20), weight=ft.FontWeight.BOLD,
                             color=APP_COLORS["text"]),
-                    ft.Text(f"({len(users)})", size=14, color=APP_COLORS["muted"]),
+                    ft.Text(f"({len(users)})", size=ts(14), color=APP_COLORS["muted"]),
                 ],
             ),
             create_form,
@@ -1865,10 +1896,10 @@ def _build_directories_tab(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(ft.Icons.FOLDER_OUTLINED, size=18, color=APP_COLORS["primary"]),
-                    ft.Text(cat["name"], size=14, weight=ft.FontWeight.W_700,
+                    ft.Icon(ft.Icons.FOLDER_OUTLINED, size=ts(18), color=APP_COLORS["primary"]),
+                    ft.Text(cat["name"], size=ts(14), weight=ft.FontWeight.W_700,
                             color=APP_COLORS["text"], expand=True),
-                    ft.Text(cat["id"], size=12, color=APP_COLORS["muted"]),
+                    ft.Text(cat["id"], size=ts(12), color=APP_COLORS["muted"]),
                     ft.IconButton(
                         ft.Icons.DELETE_OUTLINE,
                         icon_color=APP_COLORS["danger"],
@@ -1892,8 +1923,8 @@ def _build_directories_tab(
             content=ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.PLACE_OUTLINED, size=16, color=APP_COLORS["muted"]),
-                    ft.Text(region, size=13, weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
+                    ft.Icon(ft.Icons.PLACE_OUTLINED, size=ts(16), color=APP_COLORS["muted"]),
+                    ft.Text(region, size=ts(13), weight=ft.FontWeight.W_600, color=APP_COLORS["text"]),
                 ],
             ),
         )
@@ -1914,7 +1945,7 @@ def _build_directories_tab(
                 bgcolor=APP_COLORS["primary_light"],
                 border=border_all(APP_COLORS["primary"]),
                 padding=padding_symmetric(horizontal=12, vertical=5),
-                content=ft.Text(tag, size=12, weight=ft.FontWeight.W_700,
+                content=ft.Text(tag, size=ts(12), weight=ft.FontWeight.W_700,
                                 color=APP_COLORS["primary"]),
             )
             for tag in tags_list
@@ -1929,8 +1960,8 @@ def _build_directories_tab(
                     ft.Row(
                         spacing=8,
                         controls=[
-                            ft.Icon(ft.Icons.CATEGORY_OUTLINED, size=18, color=APP_COLORS["primary"]),
-                            ft.Text("Категории проблем и сценариев", size=16,
+                            ft.Icon(ft.Icons.CATEGORY_OUTLINED, size=ts(18), color=APP_COLORS["primary"]),
+                            ft.Text("Категории проблем и сценариев", size=ts(16),
                                     weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         ],
                     ),
@@ -1949,8 +1980,8 @@ def _build_directories_tab(
                     ft.Row(
                         spacing=8,
                         controls=[
-                            ft.Icon(ft.Icons.MAP_OUTLINED, size=18, color=APP_COLORS["primary"]),
-                            ft.Text("Регионы Беларуси", size=16, weight=ft.FontWeight.BOLD,
+                            ft.Icon(ft.Icons.MAP_OUTLINED, size=ts(18), color=APP_COLORS["primary"]),
+                            ft.Text("Регионы Беларуси", size=ts(16), weight=ft.FontWeight.BOLD,
                                     color=APP_COLORS["text"]),
                             badge("только просмотр", "default"),
                         ],
@@ -1967,12 +1998,12 @@ def _build_directories_tab(
                     ft.Row(
                         spacing=8,
                         controls=[
-                            ft.Icon(ft.Icons.LABEL_OUTLINE, size=18, color=APP_COLORS["primary"]),
-                            ft.Text("Теги интересов / релевантности", size=16,
+                            ft.Icon(ft.Icons.LABEL_OUTLINE, size=ts(18), color=APP_COLORS["primary"]),
+                            ft.Text("Теги интересов / релевантности", size=ts(16),
                                     weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                         ],
                     ),
-                    ft.Text("Теги из профилей пользователей:", size=12,
+                    ft.Text("Теги из профилей пользователей:", size=ts(12),
                             color=APP_COLORS["muted"]),
                     tags_chips,
                 ],
@@ -1985,8 +2016,8 @@ def _build_directories_tab(
         ft.Row(
             spacing=8,
             controls=[
-                ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=20, color=APP_COLORS["primary"]),
-                ft.Text("Справочники", size=20, weight=ft.FontWeight.BOLD,
+                ft.Icon(ft.Icons.MENU_BOOK_OUTLINED, size=ts(20), color=APP_COLORS["primary"]),
+                ft.Text("Справочники", size=ts(20), weight=ft.FontWeight.BOLD,
                         color=APP_COLORS["text"]),
             ],
         ),
@@ -2013,13 +2044,13 @@ def _build_notifications_tab(
                 width=64,
                 dense=True,
                 border_radius=8,
-                suffix=ft.Text("дн.", size=12, color=APP_COLORS["muted"]),
+                suffix=ft.Text("дн.", size=ts(12), color=APP_COLORS["muted"]),
                 on_submit=lambda e, rid=rule["id"]: on_edit_rule_days(rid, e.control.value)
                 if on_edit_rule_days else None,
                 keyboard_type=ft.KeyboardType.NUMBER,
             )
             day_row = [
-                ft.Text("Порог:", size=12, color=APP_COLORS["muted"]),
+                ft.Text("Порог:", size=ts(12), color=APP_COLORS["muted"]),
                 day_field,
             ]
 
@@ -2038,9 +2069,9 @@ def _build_notifications_tab(
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(rule.get("title", "Правило"), size=14,
+                            ft.Text(rule.get("title", "Правило"), size=ts(14),
                                     weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                            ft.Text(rule.get("desc", ""), size=12,
+                            ft.Text(rule.get("desc", ""), size=ts(12),
                                     color=APP_COLORS["muted"], max_lines=2),
                             ft.Row(spacing=6, controls=day_row) if day_row else ft.Container(),
                         ],
@@ -2063,9 +2094,9 @@ def _build_notifications_tab(
             ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=20,
+                    ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=ts(20),
                             color=APP_COLORS["primary"]),
-                    ft.Text("Правила уведомлений", size=20, weight=ft.FontWeight.BOLD,
+                    ft.Text("Правила уведомлений", size=ts(20), weight=ft.FontWeight.BOLD,
                             color=APP_COLORS["text"]),
                 ],
             ),
@@ -2076,13 +2107,13 @@ def _build_notifications_tab(
                         ft.Row(
                             spacing=8,
                             controls=[
-                                ft.Icon(ft.Icons.INFO_OUTLINE, size=16,
+                                ft.Icon(ft.Icons.INFO_OUTLINE, size=ts(16),
                                         color=APP_COLORS["primary"]),
                                 ft.Text(
                                     "Включите / выключите каждый тип уведомлений. "
                                     "Порог (в днях) — за сколько дней до события "
                                     "отправлять напоминание.",
-                                    size=13, color=APP_COLORS["muted"], expand=True,
+                                    size=ts(13), color=APP_COLORS["muted"], expand=True,
                                 ),
                             ],
                         ),
@@ -2104,8 +2135,8 @@ def _build_audit_tab(state: dict) -> ft.Control:
             ft.Row(
                 spacing=8,
                 controls=[
-                    ft.Icon(ft.Icons.HISTORY_OUTLINED, size=20, color=APP_COLORS["primary"]),
-                    ft.Text("Аудит действий", size=20, weight=ft.FontWeight.BOLD,
+                    ft.Icon(ft.Icons.HISTORY_OUTLINED, size=ts(20), color=APP_COLORS["primary"]),
+                    ft.Text("Аудит действий", size=ts(20), weight=ft.FontWeight.BOLD,
                             color=APP_COLORS["text"]),
                 ],
             ),
@@ -2156,7 +2187,8 @@ def _tab_body(tab: str, state: dict, **cb) -> ft.Control:
                              )),
             ]),
             _scenario_builder_header(scenarios, sel_id, detail,
-                                     cb.get("on_select_scenario")),
+                                     cb.get("on_select_scenario"),
+                                     cb.get("on_verify_scenario")),
             ft.ResponsiveRow(columns=12, spacing=12, run_spacing=12, controls=[
                 ft.Container(col={"xs": 12, "sm": 6},
                              content=_stage_create_card(sel_id, detail,
@@ -2259,7 +2291,7 @@ def _tab_body(tab: str, state: dict, **cb) -> ft.Control:
         return _build_audit_tab(state)
 
     # Fallback
-    return ft.Text("Раздел не найден.", size=14, color=APP_COLORS["muted"])
+    return ft.Text("Раздел не найден.", size=ts(14), color=APP_COLORS["muted"])
 
 
 def _content(
@@ -2333,16 +2365,16 @@ def _content(
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, size=30,
+                    ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, size=ts(30),
                             color=APP_COLORS["primary"]),
                     ft.Column(
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text("Панель управления", size=30 if desktop else 24,
+                            ft.Text("Панель управления", size=ts(30) if desktop else 24,
                                     weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
                             ft.Text("Белпомощник · административный интерфейс",
-                                    size=13, color=APP_COLORS["muted"]),
+                                    size=ts(13), color=APP_COLORS["muted"]),
                         ],
                     ),
                     badge(role_label, role_tone),
@@ -2365,9 +2397,9 @@ def _content(
                             ft.Row(
                                 spacing=8,
                                 controls=[
-                                    ft.Icon(ft.Icons.LOCK_OUTLINED, size=22,
+                                    ft.Icon(ft.Icons.LOCK_OUTLINED, size=ts(22),
                                             color=APP_COLORS["warning"]),
-                                    ft.Text("Доступ закрыт", size=18,
+                                    ft.Text("Доступ закрыт", size=ts(18),
                                             weight=ft.FontWeight.BOLD,
                                             color=APP_COLORS["text"]),
                                 ],
@@ -2376,7 +2408,7 @@ def _content(
                                 "Роль «Гражданин» не имеет доступа к административным функциям. "
                                 "Создание сценариев, публикация законов и управление пользователями "
                                 "доступны редактору или администратору площадки.",
-                                size=14, color=APP_COLORS["muted"],
+                                size=ts(14), color=APP_COLORS["muted"],
                             ),
                         ],
                     ),
@@ -2414,14 +2446,14 @@ def _content(
             spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.WORKSPACES_OUTLINE, size=20, color=APP_COLORS["primary"]),
+                ft.Icon(ft.Icons.WORKSPACES_OUTLINE, size=ts(20), color=APP_COLORS["primary"]),
                 ft.Column(
                     spacing=2, expand=True,
                     controls=[
                         ft.Text("Workspace — inline-редактор контента",
-                                size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                                size=ts(13), weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
                         ft.Text("Дерево сценариев/шагов без перезагрузки страницы.",
-                                size=12, color=APP_COLORS["muted"]),
+                                size=ts(12), color=APP_COLORS["muted"]),
                     ],
                 ),
                 ft.FilledButton("Открыть", icon=ft.Icons.OPEN_IN_NEW,

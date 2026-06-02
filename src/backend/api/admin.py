@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from backend import schemas
+from backend.schemas import ReorderPayload, ScenarioVerifyNotesPayload
 from backend.api.auth import get_current_user_email, require_role
 from backend.database import get_db
 from backend.enums import ContentStatus
@@ -72,6 +73,18 @@ def admin_update_problem(problem_id: int, payload: schemas.ProblemUpdate, db: Se
     return schemas.ProblemPublicOut.model_validate(obj)
 
 
+@router.delete("/problems/{problem_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_problem(
+    problem_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    problem = _must_get(db, Problem, problem_id, "Проблема не найдена")
+    log_audit_event(db, actor=actor, action=f"Удалена проблема: «{problem.title}»", event_type="delete")
+    db.delete(problem)
+    db.commit()
+
+
 @router.get("/scenarios", response_model=list[schemas.ScenarioPublicSummary])
 def admin_list_scenarios(
     problem_id: int | None = Query(default=None),
@@ -101,6 +114,50 @@ def admin_update_scenario(scenario_id: int, payload: schemas.ScenarioUpdate, db:
         _must_get(db, Problem, payload.problem_id, "Новая проблема для сценария не найдена")
     obj = update_entity(db, scenario, payload)
     return schemas.ScenarioPublicSummary.model_validate(obj)
+
+
+@router.post("/scenarios/{scenario_id}/verify", response_model=schemas.ScenarioPublicSummary)
+def admin_verify_scenario(
+    scenario_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P5 — Отметить сценарий как проверенный по официальным источникам."""
+    from datetime import datetime, timezone as _tz
+
+    scenario = _must_get(db, Scenario, scenario_id, "Сценарий не найден")
+    scenario.content_verified_at = datetime.now(_tz.utc)
+    scenario.verified_by = actor
+    db.commit()
+    db.refresh(scenario)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Сценарий верифицирован: «{scenario.title}»",
+        event_type="verify",
+    )
+    return schemas.ScenarioPublicSummary.model_validate(scenario)
+
+
+@router.post("/scenarios/{scenario_id}/verify-notes", response_model=schemas.ScenarioPublicSummary)
+def admin_set_verification_notes(
+    scenario_id: int,
+    payload: schemas.ScenarioVerifyNotesPayload,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P5 — Сохранить заметки верификации (что проверено, источники)."""
+    scenario = _must_get(db, Scenario, scenario_id, "Сценарий не найден")
+    scenario.verification_notes = payload.notes
+    db.commit()
+    db.refresh(scenario)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Обновлены заметки верификации: «{scenario.title}»",
+        event_type="update",
+    )
+    return schemas.ScenarioPublicSummary.model_validate(scenario)
 
 
 @router.delete("/scenarios/{scenario_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -151,6 +208,28 @@ def admin_update_stage(stage_id: int, payload: schemas.ScenarioStageUpdate, db: 
 def admin_delete_stage(stage_id: int, db: Session = Depends(get_db)):
     stage = _must_get(db, ScenarioStage, stage_id, "Этап не найден")
     db.delete(stage)
+    db.commit()
+
+
+@router.patch("/scenarios/{scenario_id}/stages/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def admin_reorder_stages(scenario_id: int, payload: schemas.ReorderPayload, db: Session = Depends(get_db)):
+    """Переставить этапы сценария. payload.ids — новый порядок id этапов."""
+    _must_get(db, Scenario, scenario_id, "Сценарий не найден")
+    for idx, stage_id in enumerate(payload.ids):
+        stage = db.get(ScenarioStage, stage_id)
+        if stage and stage.scenario_id == scenario_id:
+            stage.order_index = idx
+    db.commit()
+
+
+@router.patch("/stages/{stage_id}/steps/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def admin_reorder_steps(stage_id: int, payload: schemas.ReorderPayload, db: Session = Depends(get_db)):
+    """Переставить шаги этапа. payload.ids — новый порядок id шагов."""
+    _must_get(db, ScenarioStage, stage_id, "Этап не найден")
+    for idx, step_id in enumerate(payload.ids):
+        step = db.get(ScenarioStep, step_id)
+        if step and step.stage_id == stage_id:
+            step.order_index = idx
     db.commit()
 
 

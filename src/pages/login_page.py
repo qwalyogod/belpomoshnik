@@ -15,7 +15,7 @@ from components.auth_forms import (
 )
 from components.buttons import primary_button
 from components.cards import app_card, hint_card
-from theme.app_theme import APP_COLORS, SPACING
+from theme.app_theme import APP_COLORS, SPACING, ts
 
 
 def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> ft.Container:
@@ -37,7 +37,7 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
         value=True,
         active_color=APP_COLORS["blue"],
         check_color=ft.Colors.WHITE,
-        label_style=ft.TextStyle(size=14, color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
+        label_style=ft.TextStyle(size=ts(14), color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
     )
 
     def clear_email_error(_=None) -> None:
@@ -73,10 +73,10 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
         ft.Column(
             spacing=6,
             controls=[
-                ft.Text("Войти в аккаунт", size=28, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Войти в аккаунт", size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Text(
                     "Продолжите работу с планами, задачами и сохранёнными документами.",
-                    size=14,
+                    size=ts(14),
                     color=APP_COLORS["muted"],
                 ),
             ],
@@ -88,7 +88,7 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 remember,
-                ft.Text("Забыли?", size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                ft.Text("Забыли?", size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
             ],
         ),
         primary_button("Войти", icon=ft.Icons.LOGIN_ROUNDED, on_click=submit, expand=True),

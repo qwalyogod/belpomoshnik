@@ -187,9 +187,22 @@ def normalize_theme_mode(mode: str | None) -> str:
     return "dark" if str(mode or "").lower() == "dark" else "light"
 
 
+_LARGE_TEXT: bool = False
+
+
 def set_theme_mode(mode: str | None) -> None:
     global _ACTIVE_THEME_MODE
     _ACTIVE_THEME_MODE = normalize_theme_mode(mode)
+
+
+def set_large_text(value: bool) -> None:
+    global _LARGE_TEXT
+    _LARGE_TEXT = bool(value)
+
+
+def ts(size: int) -> int:
+    """Scale a font size by the current large_text setting (×1.12)."""
+    return round(size * 1.12) if _LARGE_TEXT else size
 
 
 def get_active_theme_mode() -> str:
@@ -252,13 +265,27 @@ APP_SPACING = {
 }
 
 
-def build_theme(mode: str | None = None) -> ft.Theme:
+def build_theme(mode: str | None = None, large_text: bool = False, high_contrast: bool = False) -> ft.Theme:
     theme = get_theme(mode)
+    scale = 1.12 if large_text else 1.0
+    text_color = "#000000" if high_contrast and normalize_theme_mode(mode or _ACTIVE_THEME_MODE) == "light" else theme["text"]
+    muted_color = "#2B3048" if high_contrast and normalize_theme_mode(mode or _ACTIVE_THEME_MODE) == "light" else theme["muted"]
     return ft.Theme(
         color_scheme_seed=theme["blue"],
         use_material3=True,
         visual_density=ft.VisualDensity.COMFORTABLE,
         font_family="Inter, DejaVu Sans, Arial",
+        text_theme=ft.TextTheme(
+            body_large=ft.TextStyle(size=16 * scale, color=text_color),
+            body_medium=ft.TextStyle(size=14 * scale, color=text_color),
+            body_small=ft.TextStyle(size=12 * scale, color=muted_color),
+            title_large=ft.TextStyle(size=22 * scale, weight=ft.FontWeight.W_800, color=text_color),
+            title_medium=ft.TextStyle(size=18 * scale, weight=ft.FontWeight.W_800, color=text_color),
+            title_small=ft.TextStyle(size=15 * scale, weight=ft.FontWeight.W_700, color=text_color),
+            label_large=ft.TextStyle(size=14 * scale, weight=ft.FontWeight.W_700, color=text_color),
+            label_medium=ft.TextStyle(size=12 * scale, weight=ft.FontWeight.W_700, color=text_color),
+            label_small=ft.TextStyle(size=11 * scale, weight=ft.FontWeight.W_700, color=muted_color),
+        ),
     )
 
 

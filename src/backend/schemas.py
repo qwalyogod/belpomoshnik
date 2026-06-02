@@ -69,6 +69,9 @@ class ScenarioUpdate(BaseModel):
     difficulty_level: DifficultyLevel | None = None
     status: ContentStatus | None = None
     priority: int | None = None
+    content_verified_at: datetime | None = None
+    verified_by: str | None = None
+    verification_notes: str | None = None
 
 
 class ScenarioStageBase(BaseModel):
@@ -367,6 +370,9 @@ class ScenarioPublicSummary(ORMModel):
     difficulty_level: DifficultyLevel
     estimated_duration: str
     priority: int
+    content_verified_at: datetime | None = None
+    verified_by: str = ""
+    verification_notes: str = ""
 
 
 class ProblemPublicOut(ORMModel):
@@ -396,6 +402,9 @@ class ScenarioFullOut(ORMModel):
     difficulty_level: DifficultyLevel
     status: ContentStatus
     priority: int
+    content_verified_at: datetime | None = None
+    verified_by: str = ""
+    verification_notes: str = ""
     stages: list[ScenarioStageOut] = Field(default_factory=list)
     dependencies: list[ScenarioDependencyOut] = Field(default_factory=list)
     related_scenarios: list[RelatedScenarioOut] = Field(default_factory=list)
@@ -430,4 +439,12 @@ class EmailNotificationOut(ORMModel):
 
 class AdminListResponse(BaseModel):
     items: list[dict[str, Any]]
+
+
+class ReorderPayload(BaseModel):
+    ids: list[int] = Field(min_length=1)
+
+
+class ScenarioVerifyNotesPayload(BaseModel):
+    notes: str = ""
 

@@ -9,7 +9,7 @@ from components.cards import app_card, badge, empty_state_card, icon_circle
 from components.layout import desktop_content
 from components.placeholders import photo_placeholder
 from data.mock_data import CONTENT_DISCLAIMER, LEGAL_UPDATES, SCENARIO_TEMPLATES
-from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, CENTER, RADIUS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 CATEGORY_TONES = {
@@ -99,10 +99,10 @@ def _section_header(title: str, subtitle: str | None = None, icon: str | None = 
     if icon:
         controls.append(icon_circle(icon, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=42))
     text_controls: list[ft.Control] = [
-        ft.Text(title, size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
+        ft.Text(title, size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"])
     ]
     if subtitle:
-        text_controls.append(ft.Text(subtitle, size=14, color=APP_COLORS["muted"]))
+        text_controls.append(ft.Text(subtitle, size=ts(14), color=APP_COLORS["muted"]))
     controls.append(ft.Column(spacing=4, expand=True, controls=text_controls))
     return ft.Row(spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=controls)
 
@@ -118,8 +118,8 @@ def _small_meta(text: str, icon: str, tone: str = "blue") -> ft.Container:
             tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=15, color=fg),
-                ft.Text(text, size=12, weight=ft.FontWeight.W_800, color=fg, max_lines=1, no_wrap=True),
+                ft.Icon(icon, size=ts(15), color=fg),
+                ft.Text(text, size=ts(12), weight=ft.FontWeight.W_800, color=fg, max_lines=1, no_wrap=True),
             ],
         ),
     )
@@ -133,8 +133,8 @@ def _stat_tile(label: str, value: str | int, icon: str, tone: str = "blue") -> f
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 icon_circle(icon, color=fg, bgcolor=bg, size=44),
-                ft.Text(str(value), size=28, weight=ft.FontWeight.W_900, color=fg, text_align=ft.TextAlign.CENTER),
-                ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
+                ft.Text(str(value), size=ts(28), weight=ft.FontWeight.W_900, color=fg, text_align=ft.TextAlign.CENTER),
+                ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
             ],
         ),
         padding=16,
@@ -200,13 +200,13 @@ def _hero_section(template: dict, go_back, on_create_situation, is_desktop: bool
         ft.Row(wrap=True, spacing=8, run_spacing=8, controls=badges),
         ft.Text(
             template["title"],
-            size=42 if is_desktop else 30,
+            size=ts(42) if is_desktop else 30,
             weight=ft.FontWeight.W_900,
             color=APP_COLORS["text"],
         ),
         ft.Text(
             template.get("short_description") or template.get("description", ""),
-            size=17 if is_desktop else 14,
+            size=ts(17) if is_desktop else 14,
             color=APP_COLORS["muted"],
         ),
         actions,
@@ -239,8 +239,8 @@ def _hero_section(template: dict, go_back, on_create_situation, is_desktop: bool
                     tight=True,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.ARROW_BACK, size=18, color=APP_COLORS["blue_text"]),
-                        ft.Text("Жизненные сценарии", size=15, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                        ft.Icon(ft.Icons.ARROW_BACK, size=ts(18), color=APP_COLORS["blue_text"]),
+                        ft.Text("Жизненные сценарии", size=ts(15), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
                     ],
                 ),
             ),
@@ -267,13 +267,13 @@ def _launch_hint(template: dict, on_create_situation, is_desktop: bool) -> ft.Co
                     controls=[
                         ft.Text(
                             "Сценарий поможет не потеряться в документах и сроках",
-                            size=22 if is_desktop else 18,
+                            size=ts(22) if is_desktop else 18,
                             weight=ft.FontWeight.W_900,
                             color=APP_COLORS["text"],
                         ),
                         ft.Text(
                             "Можно просмотреть план заранее или создать персональную ситуацию с датами и напоминаниями.",
-                            size=14,
+                            size=ts(14),
                             color=APP_COLORS["muted"],
                         ),
                         primary_button(
@@ -303,12 +303,12 @@ def _task_documents(task: dict) -> ft.Control:
                 controls=[
                     ft.Icon(
                         ft.Icons.CHECK_CIRCLE_OUTLINE if document.get("required") else ft.Icons.INFO_OUTLINE,
-                        size=15,
+                        size=ts(15),
                         color=APP_COLORS["green"] if document.get("required") else APP_COLORS["muted2"],
                     ),
                     ft.Text(
                         f"{document['title']} · {'обязательно' if document.get('required') else 'при необходимости'}",
-                        size=12,
+                        size=ts(12),
                         color=APP_COLORS["muted"],
                         expand=True,
                     ),
@@ -338,7 +338,7 @@ def _step_card(task: dict, tasks_by_id: dict[str, dict]) -> ft.Container:
                     spacing=7,
                     expand=True,
                     controls=[
-                        ft.Text(task["title"], size=15, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                        ft.Text(task["title"], size=ts(15), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
                         ft.Row(wrap=True, spacing=7, run_spacing=7, controls=meta_controls),
                     ],
                 ),
@@ -346,7 +346,7 @@ def _step_card(task: dict, tasks_by_id: dict[str, dict]) -> ft.Container:
         )
     ]
     if dependency_text:
-        body_controls.append(ft.Text(dependency_text, size=12, color=APP_COLORS["purple"], weight=ft.FontWeight.W_700))
+        body_controls.append(ft.Text(dependency_text, size=ts(12), color=APP_COLORS["purple"], weight=ft.FontWeight.W_700))
     documents = _task_documents(task)
     if not isinstance(documents, ft.Container):
         body_controls.append(documents)
@@ -374,8 +374,8 @@ def _stage_card(template: dict, stage: dict, index: int, is_desktop: bool) -> ft
                     spacing=6,
                     expand=True,
                     controls=[
-                        ft.Text(stage["title"], size=20 if is_desktop else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text(stage.get("description", "Короткое описание этапа и результата."), size=13, color=APP_COLORS["muted"]),
+                        ft.Text(stage["title"], size=ts(20) if is_desktop else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text(stage.get("description", "Короткое описание этапа и результата."), size=ts(13), color=APP_COLORS["muted"]),
                         ft.Row(
                             wrap=True,
                             spacing=8,
@@ -387,7 +387,7 @@ def _stage_card(template: dict, stage: dict, index: int, is_desktop: bool) -> ft
                         ),
                     ],
                 ),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=22, color=APP_COLORS["muted2"]),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(22), color=APP_COLORS["muted2"]),
             ],
         )
     ]
@@ -445,7 +445,7 @@ def _dependencies_block(template: dict) -> ft.Control:
                             vertical_alignment=ft.CrossAxisAlignment.START,
                             controls=[
                                 icon_circle(ft.Icons.CHECK, color=APP_COLORS["purple"], bgcolor=get_badge_palette()["purple"][0], size=30),
-                                ft.Text(row, size=14, color=APP_COLORS["muted"], expand=True),
+                                ft.Text(row, size=ts(14), color=APP_COLORS["muted"], expand=True),
                             ],
                         )
                         for row in dependency_rows[:4]
@@ -475,8 +475,8 @@ def _documents_section(template: dict, compact: bool = False) -> ft.Control:
                             expand=True,
                             controls=[
                                 badge("Обязательно" if document.get("required") else "При необходимости", "green" if document.get("required") else "gray"),
-                                ft.Text(document["title"], size=15, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text(document.get("description", ""), size=12, color=APP_COLORS["muted"]),
+                                ft.Text(document["title"], size=ts(15), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text(document.get("description", ""), size=ts(12), color=APP_COLORS["muted"]),
                             ],
                         ),
                     ],
@@ -509,14 +509,14 @@ def _authority_card(authority: dict) -> ft.Container:
                     border_radius=24,
                     bgcolor=get_badge_palette()["green"][0],
                     alignment=CENTER,
-                    content=ft.Text(initial, size=16, weight=ft.FontWeight.W_900, color=get_badge_palette()["green"][1]),
+                    content=ft.Text(initial, size=ts(16), weight=ft.FontWeight.W_900, color=get_badge_palette()["green"][1]),
                 ),
                 ft.Column(
                     spacing=4,
                     expand=True,
                     controls=[
-                        ft.Text(title, size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text(authority.get("description", authority.get("type", "")), size=12, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
+                        ft.Text(title, size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text(authority.get("description", authority.get("type", "")), size=ts(12), weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
                         ft.Row(
                             wrap=True,
                             spacing=6,
@@ -528,7 +528,7 @@ def _authority_card(authority: dict) -> ft.Container:
                         ),
                     ],
                 ),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color=APP_COLORS["muted2"]),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(20), color=APP_COLORS["muted2"]),
             ],
         ),
         padding=14,
@@ -563,7 +563,7 @@ def _source_cards(template: dict, open_source) -> ft.Control:
         controls=[
             _section_header("Официальные источники", "Информация используется справочно и сверяется с официальными ресурсами.", ft.Icons.LINK_OUTLINED),
             app_card(
-                ft.Text(CONTENT_DISCLAIMER, size=14, color=APP_COLORS["muted"]),
+                ft.Text(CONTENT_DISCLAIMER, size=ts(14), color=APP_COLORS["muted"]),
                 padding=16,
                 bgcolor=APP_COLORS["surface3"],
             ),
@@ -583,8 +583,8 @@ def _source_cards(template: dict, open_source) -> ft.Control:
                                         spacing=6,
                                         expand=True,
                                         controls=[
-                                            ft.Text(source.get("title", "Официальный источник"), size=15, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                            ft.Text(source.get("description", "Официальный источник для финальной проверки данных."), size=12, color=APP_COLORS["muted"]),
+                                            ft.Text(source.get("title", "Официальный источник"), size=ts(15), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                            ft.Text(source.get("description", "Официальный источник для финальной проверки данных."), size=ts(12), color=APP_COLORS["muted"]),
                                             ft.Row(
                                                 wrap=True,
                                                 spacing=7,
@@ -596,7 +596,7 @@ def _source_cards(template: dict, open_source) -> ft.Control:
                                             ),
                                         ],
                                     ),
-                                    ft.Icon(ft.Icons.OPEN_IN_NEW, size=18, color=APP_COLORS["muted2"]),
+                                    ft.Icon(ft.Icons.OPEN_IN_NEW, size=ts(18), color=APP_COLORS["muted2"]),
                                 ],
                             ),
                             padding=14,
@@ -630,12 +630,12 @@ def _related_section(template: dict) -> ft.Control:
                                     spacing=5,
                                     expand=True,
                                     controls=[
-                                        ft.Text(item.get("title", "Связанный сценарий"), size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                        ft.Text(item.get("description", "Может понадобиться после завершения основного сценария."), size=12, color=APP_COLORS["muted"]),
+                                        ft.Text(item.get("title", "Связанный сценарий"), size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                        ft.Text(item.get("description", "Может понадобиться после завершения основного сценария."), size=ts(12), color=APP_COLORS["muted"]),
                                         badge(item.get("relation_type", "связано"), "gray"),
                                     ],
                                 ),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=20, color=APP_COLORS["muted2"]),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(20), color=APP_COLORS["muted2"]),
                             ],
                         ),
                         padding=14,
@@ -675,8 +675,8 @@ def _law_updates_block(template: dict, law_updates: list[dict], open_law=None) -
                                 spacing=8,
                                 controls=[
                                     ft.Row(wrap=True, spacing=7, run_spacing=7, controls=[badge(law.get("category_name", ""), "blue"), badge(law.get("date", ""), "gray")]),
-                                    ft.Text(law.get("title", ""), size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                    ft.Text(law.get("short", ""), size=13, color=APP_COLORS["muted"]),
+                                    ft.Text(law.get("title", ""), size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                    ft.Text(law.get("short", ""), size=ts(13), color=APP_COLORS["muted"]),
                                 ],
                             ),
                             padding=14,
@@ -703,14 +703,14 @@ def _summary_card(template: dict, on_create_situation) -> ft.Container:
         ft.Column(
             spacing=14,
             controls=[
-                ft.Text("Сводка сценария", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Сводка сценария", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=12,
                     controls=[
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text(label, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                                ft.Text(label, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
                                 badge(value, tone),
                             ],
                         )
@@ -718,7 +718,7 @@ def _summary_card(template: dict, on_create_situation) -> ft.Container:
                     ],
                 ),
                 ft.Divider(height=1, color=APP_COLORS["stroke2"]),
-                ft.Text("После запуска сценарий станет вашей ситуацией: появятся чек-листы, сроки, документы и напоминания.", size=14, color=APP_COLORS["muted"]),
+                ft.Text("После запуска сценарий станет вашей ситуацией: появятся чек-листы, сроки, документы и напоминания.", size=ts(14), color=APP_COLORS["muted"]),
                 primary_button("Создать мою ситуацию", icon=ft.Icons.ADD_TASK_OUTLINED, on_click=lambda _: on_create_situation(template["id"]), expand=True),
             ],
         ),
@@ -736,7 +736,7 @@ def _compact_list_card(title: str, icon: str, rows: list[tuple[str, str]], tone:
                     spacing=10,
                     controls=[
                         icon_circle(icon, color=fg, bgcolor=bg, size=42),
-                        ft.Text(title, size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                        ft.Text(title, size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                     ],
                 ),
                 ft.Column(
@@ -746,13 +746,13 @@ def _compact_list_card(title: str, icon: str, rows: list[tuple[str, str]], tone:
                             spacing=9,
                             vertical_alignment=ft.CrossAxisAlignment.START,
                             controls=[
-                                ft.Container(width=22, height=22, border_radius=11, bgcolor=bg, alignment=CENTER, content=ft.Icon(ft.Icons.CHECK, size=13, color=fg)),
+                                ft.Container(width=22, height=22, border_radius=11, bgcolor=bg, alignment=CENTER, content=ft.Icon(ft.Icons.CHECK, size=ts(13), color=fg)),
                                 ft.Column(
                                     spacing=2,
                                     expand=True,
                                     controls=[
-                                        ft.Text(primary, size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                        ft.Text(secondary, size=12, color=APP_COLORS["muted"]),
+                                        ft.Text(primary, size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                        ft.Text(secondary, size=ts(12), color=APP_COLORS["muted"]),
                                     ],
                                 ),
                             ],
@@ -783,8 +783,8 @@ def _right_column(template: dict, on_create_situation, user: dict | None) -> ft.
                 ft.Row(
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.MY_LOCATION_OUTLINED, size=20, color=APP_COLORS["blue_text"]),
-                        ft.Text(f"Профиль: {', '.join(part for part in [user.get('district'), user.get('city')] if part)}", size=13, color=APP_COLORS["muted"], expand=True),
+                        ft.Icon(ft.Icons.MY_LOCATION_OUTLINED, size=ts(20), color=APP_COLORS["blue_text"]),
+                        ft.Text(f"Профиль: {', '.join(part for part in [user.get('district'), user.get('city')] if part)}", size=ts(13), color=APP_COLORS["muted"], expand=True),
                     ],
                 ),
                 padding=14,
@@ -816,7 +816,7 @@ def _desktop_content(template: dict, go_back, on_create_situation, open_source, 
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Text("Готовы запустить личный план?", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                        ft.Text("Готовы запустить личный план?", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                         primary_button("Создать мою ситуацию", icon=ft.Icons.ADD_TASK_OUTLINED, width=260, on_click=lambda _: on_create_situation(template["id"])),
                     ],
                 ),
@@ -849,7 +849,7 @@ def _mobile_content(template: dict, go_back, on_create_situation, open_source, u
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.IconButton(icon=ft.Icons.ARROW_BACK_IOS_NEW, icon_color=APP_COLORS["muted"], on_click=go_back),
-                ft.Text("Детали сценария", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                ft.Text("Детали сценария", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
                 icon_circle(_category_icon(template.get("category", "")), color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"], size=44),
             ],
         ),

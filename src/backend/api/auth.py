@@ -1,24 +1,16 @@
-"""
-H2 — Эндпоинты авторизации: register, login, refresh, logout.
-
-MVP: Пользователи хранятся в упрощённой SQLite-таблице `users`.
-Production: после добавления alembic-миграций 0002_auth.sql.
-
-Для подключения добавить в app.py:
-    from backend.api.auth import router as auth_router
-    app.include_router(auth_router)
-"""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
     create_access_token,
     create_refresh_token,
     get_token_payload,
@@ -26,7 +18,8 @@ from backend.auth import (
     verify_password,
 )
 from backend.database import get_db
-from backend.models import User
+from backend.models import RefreshToken, User
+from backend.rate_limit import login_limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -60,11 +53,24 @@ class RefreshRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _issue_tokens(db: Session, user: User) -> TokenResponse:
+    access = create_access_token({"sub": user.email, "role": user.role_id})
+    refresh = create_refresh_token({"sub": user.email})
+    from datetime import timedelta
+    expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    db.add(RefreshToken(user_id=user.id, token=refresh, expires_at=expires_at))
+    db.commit()
+    return TokenResponse(access_token=access, refresh_token=refresh)
+
+
+# ---------------------------------------------------------------------------
 # Dependency: current user (H6 RBAC)
 # ---------------------------------------------------------------------------
 
 def get_current_user_email(token: str = Depends(oauth2_scheme)) -> str:
-    """H3/H6 — Извлекает email из JWT. Используется как FastAPI-зависимость."""
     payload = get_token_payload(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(
@@ -79,20 +85,11 @@ def get_current_user_email(token: str = Depends(oauth2_scheme)) -> str:
 
 
 def require_role(required_role: str):
-    """H6 — RBAC-зависимость. Проверяет роль пользователя по JWT + БД.
-
-    Иерархия: citizen (0) < content_editor (1) < platform_admin (2).
-    Использование:
-        @router.get("/admin/...", dependencies=[Depends(require_role("content_editor"))])
-    """
+    """H6 — RBAC. Иерархия: citizen (0) < content_editor (1) < platform_admin (2)."""
     def _check(email: str = Depends(get_current_user_email), db: Session = Depends(get_db)) -> str:
-        from sqlalchemy import select as _select
-        user = db.scalars(_select(User).where(User.email == email)).first()
+        user = db.scalars(select(User).where(User.email == email)).first()
         if not user or not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Пользователь не найден или деактивирован.",
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Пользователь не найден или деактивирован.")
         user_rank = _ROLE_RANK.get(user.role_id, 0)
         required_rank = _ROLE_RANK.get(required_role, 99)
         if user_rank < required_rank:
@@ -110,64 +107,77 @@ def require_role(required_role: str):
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    """
-    H2 — Регистрация пользователя.
-    MVP: сохраняет в таблицу users (после применения 0002_auth.sql).
-    """
-    # Проверить уникальность email
-    # existing = db.execute("SELECT id FROM users WHERE email = ?", (payload.email,)).fetchone()
-    # if existing:
-    #     raise HTTPException(status_code=400, detail="Email уже зарегистрирован.")
-    hashed = hash_password(payload.password)
-    # db.execute("INSERT INTO users (email, hashed_password, name) VALUES (?, ?, ?)",
-    #            (payload.email, hashed, payload.name))
-    # db.commit()
-    access = create_access_token({"sub": payload.email, "name": payload.name})
-    refresh = create_refresh_token({"sub": payload.email})
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    """H2 — Регистрация: создаёт пользователя с bcrypt-паролем, возвращает JWT."""
+    existing = db.scalars(select(User).where(User.email == payload.email)).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email уже зарегистрирован.")
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        name=payload.name,
+        role_id="citizen",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _issue_tokens(db, user)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """
-    H2 — Авторизация по email + пароль.
-    Возвращает JWT access-токен и refresh-токен.
-    """
-    # row = db.execute("SELECT id, hashed_password, name FROM users WHERE email = ?",
-    #                  (form.username,)).fetchone()
-    # if not row or not verify_password(form.password, row["hashed_password"]):
-    #     raise HTTPException(status_code=401, detail="Неверный email или пароль.")
-    email = form.username
-    access = create_access_token({"sub": email})
-    refresh = create_refresh_token({"sub": email})
-    return TokenResponse(access_token=access, refresh_token=refresh)
+def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """H2 — Авторизация: проверяет bcrypt-пароль, возвращает JWT. Rate-limited: 5 попыток / 5 мин."""
+    client_key = f"{request.client.host}:{form.username}" if request.client else form.username
+    if login_limiter.is_blocked(client_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Слишком много попыток входа. Повторите через 5 минут.",
+            headers={"Retry-After": "300"},
+        )
+    user = db.scalars(select(User).where(User.email == form.username)).first()
+    if not user or not user.is_active or not verify_password(form.password, user.hashed_password):
+        login_limiter.record(client_key)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль.")
+    login_limiter.reset(client_key)
+    return _issue_tokens(db, user)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_token(payload: RefreshRequest):
-    """H3 — Обновить access-токен по refresh-токену."""
+def refresh_token(payload: RefreshRequest, db: Session = Depends(get_db)):
+    """H3 — Обновить access-токен по refresh-токену. Старый токен отзывается (rotation)."""
     token_data = get_token_payload(payload.refresh_token)
     if not token_data or token_data.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Невалидный refresh-токен.")
     email = token_data.get("sub")
     if not email:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен не содержит sub.")
-    access = create_access_token({"sub": email})
-    new_refresh = create_refresh_token({"sub": email})
-    return TokenResponse(access_token=access, refresh_token=new_refresh)
+
+    stored = db.scalars(select(RefreshToken).where(RefreshToken.token == payload.refresh_token)).first()
+    if not stored or stored.revoked or stored.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh-токен недействителен или истёк.")
+
+    user = db.scalars(select(User).where(User.email == email)).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден.")
+
+    stored.revoked = True
+    db.commit()
+    return _issue_tokens(db, user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(token: str = Depends(oauth2_scheme)):
-    """
-    H3 — Выход: инвалидация refresh-токена.
-    MVP: no-op (токены не хранятся).
-    Production: помечать refresh_token.revoked = 1 в БД.
-    """
+def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
+    """H3 — Выход: отзывает refresh-токен в БД."""
+    stored = db.scalars(select(RefreshToken).where(RefreshToken.token == payload.refresh_token)).first()
+    if stored and not stored.revoked:
+        stored.revoked = True
+        db.commit()
     return None
 
 
 @router.get("/me")
-def get_me(email: str = Depends(get_current_user_email)):
-    """H3 — Вернуть email текущего пользователя (для проверки токена)."""
-    return {"email": email, "authenticated": True}
+def get_me(email: str = Depends(get_current_user_email), db: Session = Depends(get_db)):
+    """H3 — Текущий пользователь."""
+    user = db.scalars(select(User).where(User.email == email)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден.")
+    return {"id": user.id, "email": user.email, "name": user.name, "role": user.role_id}

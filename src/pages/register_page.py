@@ -16,7 +16,7 @@ from components.auth_forms import (
 from components.buttons import primary_button
 from components.cards import app_card, hint_card
 from components.location_picker import build_location_picker
-from theme.app_theme import APP_COLORS, SPACING
+from theme.app_theme import APP_COLORS, SPACING, ts
 
 
 def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None) -> ft.Container:
@@ -40,9 +40,9 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         value=True,
         active_color=APP_COLORS["blue"],
         check_color=ft.Colors.WHITE,
-        label_style=ft.TextStyle(size=14, color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
+        label_style=ft.TextStyle(size=ts(14), color=APP_COLORS["muted"], weight=ft.FontWeight.W_700),
     )
-    terms_error = ft.Text("", size=12, color=APP_COLORS["red"], weight=ft.FontWeight.W_600, visible=False)
+    terms_error = ft.Text("", size=ts(12), color=APP_COLORS["red"], weight=ft.FontWeight.W_600, visible=False)
 
     fields = [name_field, email_field, password_field, confirm_field]
 
@@ -97,8 +97,8 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
     location_block = ft.Column(
         spacing=10,
         controls=[
-            ft.Text("Местонахождение", size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-            ft.Text("Регион и район нужны для учреждений и сроков.", size=12, color=APP_COLORS["muted"]),
+            ft.Text("Местонахождение", size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+            ft.Text("Регион и район нужны для учреждений и сроков.", size=ts(12), color=APP_COLORS["muted"]),
             location_control,
         ],
     )
@@ -109,10 +109,10 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         ft.Column(
             spacing=6,
             controls=[
-                ft.Text("Создать аккаунт", size=28, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Создать аккаунт", size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Text(
                     "Укажите минимум данных, чтобы подсказки были релевантными.",
-                    size=14,
+                    size=ts(14),
                     color=APP_COLORS["muted"],
                 ),
             ],

@@ -8,7 +8,7 @@ from components.buttons import ghost_button
 from components.cards import app_card, badge, empty_state_card, icon_circle, page_heading, search_box
 from components.layout import desktop_content
 from services.dashboard import parse_due_date
-from theme.app_theme import APP_COLORS, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 FILTERS = [
@@ -177,7 +177,7 @@ def _filter_chip(label: str, selected: bool, on_click=None) -> ft.Container:
     return ft.Container(
         content=ft.Text(
             label,
-            size=13,
+            size=ts(13),
             weight=ft.FontWeight.W_800,
             color=APP_COLORS["on_accent"] if selected else APP_COLORS["text"],
             no_wrap=True,
@@ -204,8 +204,8 @@ def _stats_tile(label: str, value: int, hint: str, icon: str, tone: str, compact
                 spacing=4,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Text(str(value), size=18, weight=ft.FontWeight.W_900, color=fg),
-                    ft.Text(label, size=10, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
+                    ft.Text(str(value), size=ts(18), weight=ft.FontWeight.W_900, color=fg),
+                    ft.Text(label, size=ts(10), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER),
                 ],
             ),
         )
@@ -218,9 +218,9 @@ def _stats_tile(label: str, value: int, hint: str, icon: str, tone: str, compact
                 ft.Column(
                     spacing=2,
                     controls=[
-                        ft.Text(str(value), size=26, weight=ft.FontWeight.W_900, color=fg),
-                        ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                        ft.Text(hint, size=11, color=APP_COLORS["muted2"]),
+                        ft.Text(str(value), size=ts(26), weight=ft.FontWeight.W_900, color=fg),
+                        ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                        ft.Text(hint, size=ts(11), color=APP_COLORS["muted2"]),
                     ],
                 ),
             ],
@@ -279,8 +279,8 @@ def _mini_action(text: str, on_click=None) -> ft.Container:
             spacing=5,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Text(text, size=12, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"], no_wrap=True),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=15, color=APP_COLORS["blue_text"]),
+                ft.Text(text, size=ts(12), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"], no_wrap=True),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(15), color=APP_COLORS["blue_text"]),
             ],
         ),
     )
@@ -318,7 +318,7 @@ def _notification_card(
     right_controls: list[ft.Control] = [
         ft.Text(
             str(notification.get("date") or ""),
-            size=12,
+            size=ts(12),
             weight=ft.FontWeight.W_700,
             color=APP_COLORS["muted"],
             text_align=ft.TextAlign.RIGHT,
@@ -337,7 +337,7 @@ def _notification_card(
             )
         )
     else:
-        right_controls.append(ft.Icon(ft.Icons.DONE, size=18, color=APP_COLORS["green"]))
+        right_controls.append(ft.Icon(ft.Icons.DONE, size=ts(18), color=APP_COLORS["green"]))
 
     title_row = ft.Row(
         spacing=10,
@@ -345,7 +345,7 @@ def _notification_card(
         controls=[
             ft.Text(
                 str(notification.get("title") or "Уведомление"),
-                size=17 if desktop else 15,
+                size=ts(17) if desktop else 15,
                 weight=ft.FontWeight.W_900,
                 color=APP_COLORS["text"],
                 expand=True,
@@ -361,7 +361,7 @@ def _notification_card(
             title_row,
             ft.Text(
                 str(notification.get("desc") or ""),
-                size=14 if desktop else 12,
+                size=ts(14) if desktop else 12,
                 color=APP_COLORS["muted"],
                 max_lines=3,
             ),
@@ -439,8 +439,8 @@ def _grouped_notifications(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Text(group_title, size=20 if desktop else 17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text(str(len(group_items)), size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                            ft.Text(group_title, size=ts(20) if desktop else 17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text(str(len(group_items)), size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.Column(spacing=12, controls=group_cards),
@@ -478,7 +478,7 @@ def _side_panel(notifications: list[dict], on_mark_all_read=None, go_to=None) ->
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
                         icon_circle(icon, size=34, color=fg, bgcolor=bg),
-                        ft.Text(title, size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True, max_lines=1),
+                        ft.Text(title, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True, max_lines=1),
                         badge(str(count), tone),
                     ],
                 ),
@@ -510,8 +510,8 @@ def _side_panel(notifications: list[dict], on_mark_all_read=None, go_to=None) ->
                             spacing=1,
                             expand=True,
                             controls=[
-                                ft.Text(title, size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text(subtitle, size=11, color=APP_COLORS["muted"], max_lines=1),
+                                ft.Text(title, size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
                             ],
                         ),
                         ft.Switch(value=title != "Push", active_color=APP_COLORS["blue"], disabled=True),
@@ -527,7 +527,7 @@ def _side_panel(notifications: list[dict], on_mark_all_read=None, go_to=None) ->
                 ft.Column(
                     spacing=12,
                     controls=[
-                        ft.Text("Типы уведомлений", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Типы уведомлений", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ft.Column(spacing=9, controls=type_controls),
                     ],
                 ),
@@ -537,7 +537,7 @@ def _side_panel(notifications: list[dict], on_mark_all_read=None, go_to=None) ->
                 ft.Column(
                     spacing=10,
                     controls=[
-                        ft.Text("Быстрые действия", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Быстрые действия", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ft.Column(spacing=9, controls=action_controls),
                     ],
                 ),
@@ -547,7 +547,7 @@ def _side_panel(notifications: list[dict], on_mark_all_read=None, go_to=None) ->
                 ft.Column(
                     spacing=10,
                     controls=[
-                        ft.Text("Настройки уведомлений", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Настройки уведомлений", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ft.Column(spacing=9, controls=setting_controls),
                     ],
                 ),
@@ -589,10 +589,10 @@ def _build_dynamic_content(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Text("Лента уведомлений", size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                ft.Text("сгруппировано по важности", size=12, color=APP_COLORS["muted2"]),
+                ft.Text("Лента уведомлений", size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("сгруппировано по важности", size=ts(12), color=APP_COLORS["muted2"]),
             ],
-        ) if desktop else ft.Text("Лента уведомлений", size=21, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+        ) if desktop else ft.Text("Лента уведомлений", size=ts(21), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
         *_grouped_notifications(filtered, desktop, on_mark_read, go_to, on_open_email_preview),
     ]
     if desktop:
@@ -615,7 +615,7 @@ def _build_dynamic_content(
                     ft.Column(
                         spacing=12,
                         controls=[
-                            ft.Text("Настройки уведомлений", size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Настройки уведомлений", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                             ft.Container(
                                 padding=12,
                                 border_radius=16,
@@ -629,8 +629,8 @@ def _build_dynamic_content(
                                             spacing=1,
                                             expand=True,
                                             controls=[
-                                                ft.Text("Email", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                                ft.Text("важные события и сроки", size=11, color=APP_COLORS["muted"]),
+                                                ft.Text("Email", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                                ft.Text("важные события и сроки", size=ts(11), color=APP_COLORS["muted"]),
                                             ],
                                         ),
                                         ft.Switch(value=True, active_color=APP_COLORS["blue"], disabled=True),
@@ -683,7 +683,7 @@ def _page_content(
                 border_radius=22,
                 bgcolor=APP_COLORS["active"],
                 alignment=ft.Alignment(0, 0),
-                content=ft.Text("А", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                content=ft.Text("А", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
             ),
             ft.Container(
                 width=44,
@@ -691,7 +691,7 @@ def _page_content(
                 border_radius=22,
                 bgcolor=APP_COLORS["active"],
                 alignment=ft.Alignment(0, 0),
-                content=ft.Text(str(unread_count), size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                content=ft.Text(str(unread_count), size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
             ),
             ghost_button("Отметить всё прочитанным", on_click=on_mark_all_read, icon=ft.Icons.DONE_ALL),
         ]
@@ -704,10 +704,10 @@ def _page_content(
         header = ft.Column(
             spacing=8,
             controls=[
-                ft.Text("Уведомления", size=30, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                ft.Text("Уведомления", size=ts(30), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
                 ft.Text(
                     "Центр событий: задачи, сроки, документы, закон-апдейты и системные напоминания.",
-                    size=13,
+                    size=ts(13),
                     color=APP_COLORS["muted"],
                     max_lines=3,
                 ),

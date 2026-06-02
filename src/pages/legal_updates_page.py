@@ -16,7 +16,7 @@ from components.cards import (
 )
 from components.layout import desktop_content
 from data.mock_data import LEGAL_UPDATES
-from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, card_shadow, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, card_shadow, padding_symmetric, ts
 
 
 LAW_FILTERS = [
@@ -90,7 +90,7 @@ def _initial_icon(law: dict, size: int = 48) -> ft.Container:
         alignment=ft.Alignment(0, 0),
         content=ft.Text(
             title[:1].upper(),
-            size=16 if size >= 44 else 13,
+            size=ts(16) if size >= 44 else 13,
             weight=ft.FontWeight.W_900,
             color=icon_fg,
         ),
@@ -164,9 +164,9 @@ def _stat_tile(label: str, value: str | int, subtitle: str, icon, tone: str = "b
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     icon_circle(icon, size=34, color=icon_color),
-                    ft.Text(str(value), size=21, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
-                    ft.Text(label, size=10, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER, max_lines=1),
-                    ft.Text(subtitle, size=9, color=APP_COLORS["muted2"], text_align=ft.TextAlign.CENTER, max_lines=1),
+                    ft.Text(str(value), size=ts(21), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
+                    ft.Text(label, size=ts(10), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], text_align=ft.TextAlign.CENTER, max_lines=1),
+                    ft.Text(subtitle, size=ts(9), color=APP_COLORS["muted2"], text_align=ft.TextAlign.CENTER, max_lines=1),
                 ],
             ),
             padding=10,
@@ -180,9 +180,9 @@ def _stat_tile(label: str, value: str | int, subtitle: str, icon, tone: str = "b
                 ft.Column(
                     spacing=1,
                     controls=[
-                        ft.Text(str(value), size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
-                        ft.Text(subtitle, size=11, color=APP_COLORS["muted2"]),
+                        ft.Text(str(value), size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                        ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted2"]),
                     ],
                 ),
             ],
@@ -225,8 +225,8 @@ def _law_card(law: dict, open_law, desktop: bool, user_tags: set | None = None) 
                 content=ft.Row(
                     spacing=4,
                     controls=[
-                        ft.Icon(ft.Icons.OPEN_IN_NEW, size=13, color=APP_COLORS["blue_text"]),
-                        ft.Text("Источник", size=12, color=APP_COLORS["blue_text"], weight=ft.FontWeight.W_600),
+                        ft.Icon(ft.Icons.OPEN_IN_NEW, size=ts(13), color=APP_COLORS["blue_text"]),
+                        ft.Text("Источник", size=ts(12), color=APP_COLORS["blue_text"], weight=ft.FontWeight.W_600),
                     ],
                 ),
                 on_click=lambda _, url=source_url: open_law(law.get("id")),
@@ -248,20 +248,20 @@ def _law_card(law: dict, open_law, desktop: bool, user_tags: set | None = None) 
                     ft.Row(wrap=True, spacing=8, run_spacing=8, controls=badges),
                     ft.Text(
                         law.get("title", "Без названия"),
-                        size=20 if desktop else 17,
+                        size=ts(20) if desktop else 17,
                         weight=ft.FontWeight.W_900,
                         color=APP_COLORS["text"],
                     ),
                     ft.Text(
                         law.get("short", ""),
-                        size=14 if desktop else 13,
+                        size=ts(14) if desktop else 13,
                         color=APP_COLORS["muted"],
                         max_lines=3 if desktop else 2,
                     ),
                     ft.Row(
                         spacing=12,
                         controls=[
-                            ft.Text(meta, size=12, color=APP_COLORS["muted2"], max_lines=1, expand=True),
+                            ft.Text(meta, size=ts(12), color=APP_COLORS["muted2"], max_lines=1, expand=True),
                             *source_btn,
                         ],
                     ),
@@ -289,8 +289,8 @@ def _important_laws_card(laws: list[dict], open_law, desktop: bool) -> ft.Contro
             ft.Column(
                 spacing=8,
                 controls=[
-                    ft.Text("Для меня", size=19, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Персональные апдейты появятся после заполнения профиля и активных ситуаций.", size=13, color=APP_COLORS["muted"]),
+                    ft.Text("Для меня", size=ts(19), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Персональные апдейты появятся после заполнения профиля и активных ситуаций.", size=ts(13), color=APP_COLORS["muted"]),
                 ],
             ),
             padding=18,
@@ -309,8 +309,8 @@ def _important_laws_card(laws: list[dict], open_law, desktop: bool) -> ft.Contro
                             spacing=2,
                             expand=True,
                             controls=[
-                                ft.Text(law.get("title", "Без названия"), size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
-                                ft.Text(law.get("what_to_do") or law.get("short", ""), size=11, color=APP_COLORS["muted2"], max_lines=2),
+                                ft.Text(law.get("title", "Без названия"), size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
+                                ft.Text(law.get("what_to_do") or law.get("short", ""), size=ts(11), color=APP_COLORS["muted2"], max_lines=2),
                             ],
                         ),
                     ],
@@ -327,8 +327,8 @@ def _important_laws_card(laws: list[dict], open_law, desktop: bool) -> ft.Contro
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Для меня", size=20 if desktop else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                ft.Text("Подборка по интересам, активным ситуациям и приоритету.", size=12, color=APP_COLORS["muted"]),
+                ft.Text("Для меня", size=ts(20) if desktop else 18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Подборка по интересам, активным ситуациям и приоритету.", size=ts(12), color=APP_COLORS["muted"]),
                 ft.Column(spacing=10, controls=rows),
             ],
         ),
@@ -380,7 +380,7 @@ def _quick_filter_row(selected_category: str, sort_mode: str, on_category_change
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Фильтры", size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Фильтры", size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=8,
                     controls=[
@@ -392,9 +392,9 @@ def _quick_filter_row(selected_category: str, sort_mode: str, on_category_change
                             content=ft.Row(
                                 spacing=8,
                                 controls=[
-                                    ft.Icon(icon, size=17, color=APP_COLORS["muted2"]),
-                                    ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], expand=True),
-                                    ft.Text(value, size=12, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                    ft.Icon(icon, size=ts(17), color=APP_COLORS["muted2"]),
+                                    ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"], expand=True),
+                                    ft.Text(value, size=ts(12), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                                 ],
                             ),
                         )
@@ -427,7 +427,7 @@ def _how_to_read_card(desktop: bool) -> ft.Control:
         ft.Column(
             spacing=12,
             controls=[
-                ft.Text("Как читать апдейт", size=20 if desktop else 17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Как читать апдейт", size=ts(20) if desktop else 17, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ft.Column(
                     spacing=8,
                     controls=[
@@ -440,9 +440,9 @@ def _how_to_read_card(desktop: bool) -> ft.Control:
                                     border_radius=12,
                                     bgcolor=APP_COLORS["active"],
                                     alignment=ft.Alignment(0, 0),
-                                    content=ft.Text(str(index), size=12, weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
+                                    content=ft.Text(str(index), size=ts(12), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
                                 ),
-                                ft.Text(step, size=13, color=APP_COLORS["text"], expand=True),
+                                ft.Text(step, size=ts(13), color=APP_COLORS["text"], expand=True),
                             ],
                         )
                         for index, step in enumerate(steps, start=1)
@@ -517,8 +517,8 @@ def _desktop_laws(
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.END,
                     controls=[
-                        ft.Text("Лента изменений", size=26, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("понятные объяснения", size=13, color=APP_COLORS["muted"], expand=True),
+                        ft.Text("Лента изменений", size=ts(26), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("понятные объяснения", size=ts(13), color=APP_COLORS["muted"], expand=True),
                     ],
                 ),
                 ft.Column(
@@ -563,7 +563,7 @@ def _mobile_laws(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Text("Для меня" if primary_feed == important_laws else "Лента", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Для меня" if primary_feed == important_laws else "Лента", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ghost_button("Фильтры", icon=ft.Icons.TUNE, height=38, on_click=lambda _: on_sort_change("priority") if on_sort_change else None),
                     ],
                 ),

@@ -13,7 +13,7 @@ from data.mock_data import (
     SCENARIO_TEMPLATES,
     SITUATIONS,
 )
-from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, padding_symmetric, ts
 
 
 FILTERS = [
@@ -116,8 +116,8 @@ def _recent_searches(on_query_change) -> ft.Control:
                 content=ft.Row(
                     spacing=6,
                     controls=[
-                        ft.Icon(ft.Icons.HISTORY_OUTLINED, size=16, color=APP_COLORS["muted2"]),
-                        ft.Text(item, size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                        ft.Icon(ft.Icons.HISTORY_OUTLINED, size=ts(16), color=APP_COLORS["muted2"]),
+                        ft.Text(item, size=ts(13), weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
                     ],
                 ),
             )
@@ -125,7 +125,7 @@ def _recent_searches(on_query_change) -> ft.Control:
     return ft.Column(
         spacing=10,
         controls=[
-            ft.Text("Недавние поиски", size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ft.Text("Недавние поиски", size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
             ft.Row(wrap=True, spacing=8, run_spacing=8, controls=chips),
         ],
     )
@@ -152,7 +152,7 @@ def _popular_requests(go_to, desktop: bool) -> ft.Control:
                         icon_circle(item["icon"], size=36 if desktop else 30, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"]),
                         ft.Text(
                             item["title"],
-                            size=12 if desktop else 10,
+                            size=ts(12) if desktop else 10,
                             weight=ft.FontWeight.W_800,
                             color=APP_COLORS["text"],
                             text_align=ft.TextAlign.CENTER,
@@ -165,7 +165,7 @@ def _popular_requests(go_to, desktop: bool) -> ft.Control:
     return ft.Column(
         spacing=12,
         controls=[
-            ft.Text("Популярные запросы", size=18 if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ft.Text("Популярные запросы", size=ts(18) if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
             ft.Row(wrap=True, spacing=12 if desktop else 8, run_spacing=8, controls=cards),
         ],
     )
@@ -192,7 +192,7 @@ def _quick_filters(on_filter_change=None, on_query_change=None) -> ft.Control:
         ft.Column(
             spacing=8,
             controls=[
-                ft.Text("Быстрые фильтры", size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                ft.Text("Быстрые фильтры", size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 *[
                     ft.Container(
                         ink=True,
@@ -202,16 +202,16 @@ def _quick_filters(on_filter_change=None, on_query_change=None) -> ft.Control:
                         content=ft.Row(
                             spacing=10,
                             controls=[
-                                ft.Icon(icon, size=19, color=APP_COLORS["blue"]),
+                                ft.Icon(icon, size=ts(19), color=APP_COLORS["blue"]),
                                 ft.Column(
                                     spacing=2,
                                     expand=True,
                                     controls=[
-                                        ft.Text(title, size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                                        ft.Text(subtitle, size=11, color=APP_COLORS["muted"], max_lines=1),
+                                        ft.Text(title, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                        ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
                                     ],
                                 ),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=APP_COLORS["muted2"]),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
                             ],
                         ),
                     )
@@ -336,12 +336,12 @@ def _result_card(
                         spacing=4,
                         expand=True,
                         controls=[
-                            ft.Text(title, size=15 if desktop else 14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(subtitle, size=12, color=APP_COLORS["muted"], max_lines=2),
-                            ft.Text(meta, size=11, weight=ft.FontWeight.W_800, color=APP_COLORS["orange"], max_lines=1),
+                            ft.Text(title, size=ts(15) if desktop else 14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(subtitle, size=ts(12), color=APP_COLORS["muted"], max_lines=2),
+                            ft.Text(meta, size=ts(11), weight=ft.FontWeight.W_800, color=APP_COLORS["orange"], max_lines=1),
                         ],
                     ),
-                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=19, color=APP_COLORS["muted2"]),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(19), color=APP_COLORS["muted2"]),
                 ],
             ),
             padding=13 if desktop else 12,
@@ -373,9 +373,9 @@ def _section(
                         border_radius=9,
                         bgcolor=APP_COLORS["active"],
                         alignment=ft.Alignment(0, 0),
-                        content=ft.Icon(icon, size=16, color=APP_COLORS["blue"]),
+                        content=ft.Icon(icon, size=ts(16), color=APP_COLORS["blue"]),
                     ),
-                    ft.Text(title, size=18 if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text(title, size=ts(18) if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                 ],
             ),
             ghost_button("Смотреть все", height=36, on_click=lambda _: go_to(show_all_route) if go_to and show_all_route else None)
@@ -523,7 +523,7 @@ def _header(query: str, selected_filter: str, on_query_change, on_filter_change,
     return ft.Column(
         spacing=12,
         controls=[
-            ft.Text("Глобальный поиск", size=36 if desktop else 22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ft.Text("Глобальный поиск", size=ts(36) if desktop else 22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
             search_box(
                 value=query,
                 hint="Поиск по проблемам, сценариям, документам, законам...",
@@ -532,7 +532,7 @@ def _header(query: str, selected_filter: str, on_query_change, on_filter_change,
             ),
             ft.Text(
                 "Например: замена паспорта, ЖКХ, рождение ребёнка",
-                size=12,
+                size=ts(12),
                 color=APP_COLORS["muted2"],
             ),
             _filter_chips(selected_filter, on_filter_change),
@@ -602,7 +602,7 @@ def _desktop_search(
                 ft.Container(width=320, content=_quick_filters(on_filter_change=on_filter_change, on_query_change=on_query_change)),
             ],
         ),
-        ft.Text("Результаты поиска", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+        ft.Text("Результаты поиска", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
         results_switcher,
     ]
     return desktop_content(
@@ -666,7 +666,7 @@ def _mobile_search(
                     height=42,
                     on_click=lambda _: go_to("/") if go_to else None,
                 ),
-                ft.Text("Глобальный поиск", size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+                ft.Text("Глобальный поиск", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
             ],
         ),
         search_box(
@@ -675,11 +675,11 @@ def _mobile_search(
             on_change=lambda event: on_query_change(event.control.value) if on_query_change else None,
             on_submit=lambda event: on_query_change(event.control.value) if on_query_change else None,
         ),
-        ft.Text("Например: замена паспорта, ЖКХ, рождение ребёнка", size=11, color=APP_COLORS["muted2"]),
+        ft.Text("Например: замена паспорта, ЖКХ, рождение ребёнка", size=ts(11), color=APP_COLORS["muted2"]),
         _filter_chips(selected_filter, on_filter_change),
         _recent_searches(on_query_change),
         _popular_requests(go_to, False),
-        ft.Text("Результаты поиска", size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+        ft.Text("Результаты поиска", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
         results_switcher,
     ]
     return ft.Container(

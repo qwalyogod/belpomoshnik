@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, border_all
+from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, border_all, ts
 
 
 def photo_placeholder(

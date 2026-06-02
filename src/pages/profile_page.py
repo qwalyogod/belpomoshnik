@@ -4,7 +4,7 @@ from components.buttons import ghost_button, primary_button, secondary_button
 from components.cards import app_card, badge, empty_state_card, icon_circle
 from components.layout import desktop_content
 from data.mock_data import ACHIEVEMENTS, LEARNING_STATS, MOCK_USER, SCENARIO_TEMPLATES
-from theme.app_theme import APP_COLORS, CENTER, SPACING, border_all, get_badge_palette, padding_symmetric
+from theme.app_theme import APP_COLORS, CENTER, SPACING, border_all, get_badge_palette, padding_symmetric, ts
 
 
 EMPLOYMENT_OPTIONS = [
@@ -64,12 +64,12 @@ def _panel_title(title: str, icon=None, subtitle: str | None = None) -> ft.Colum
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             icon_circle(icon or ft.Icons.INFO_OUTLINE, size=34, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"]),
-            ft.Text(title, size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
+            ft.Text(title, size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),
         ],
     )
     controls: list[ft.Control] = [header]
     if subtitle:
-        controls.append(ft.Text(subtitle, size=13, color=APP_COLORS["muted"]))
+        controls.append(ft.Text(subtitle, size=ts(13), color=APP_COLORS["muted"]))
     return ft.Column(spacing=7, controls=controls)
 
 
@@ -116,10 +116,10 @@ def _profile_hero(user: dict, settings: dict, desktop: bool, on_logout=None, on_
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(icon, size=15, color=APP_COLORS["on_accent"] if active else APP_COLORS["blue_text"]),
+                    ft.Icon(icon, size=ts(15), color=APP_COLORS["on_accent"] if active else APP_COLORS["blue_text"]),
                     ft.Text(
                         text,
-                        size=12,
+                        size=ts(12),
                         weight=ft.FontWeight.W_900,
                         color=APP_COLORS["on_accent"] if active else APP_COLORS["text"],
                         no_wrap=True,
@@ -141,13 +141,13 @@ def _profile_hero(user: dict, settings: dict, desktop: bool, on_logout=None, on_
         controls=[
             ft.Text(
                 _field_value(user, "name", "Пользователь"),
-                size=28 if desktop else 19,
+                size=ts(28) if desktop else 19,
                 weight=ft.FontWeight.W_900,
                 color=APP_COLORS["text"],
                 max_lines=2,
                 text_align=ft.TextAlign.CENTER if not desktop else ft.TextAlign.START,
             ),
-            ft.Text(_field_value(user, "email", "email не указан"), size=13, color=APP_COLORS["muted"], max_lines=1),
+            ft.Text(_field_value(user, "email", "email не указан"), size=ts(13), color=APP_COLORS["muted"], max_lines=1),
             ft.Row(
                 wrap=True,
                 alignment=ft.MainAxisAlignment.CENTER if not desktop else ft.MainAxisAlignment.START,
@@ -200,9 +200,9 @@ def _stat_tile(label: str, value: str | int, hint: str, icon, tone: str = "blue"
                     spacing=1,
                     expand=True,
                     controls=[
-                        ft.Text(str(value), size=22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
-                        ft.Text(hint, size=11, color=APP_COLORS["muted2"]),
+                        ft.Text(str(value), size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+                        ft.Text(hint, size=ts(11), color=APP_COLORS["muted2"]),
                     ],
                 ),
             ],
@@ -256,7 +256,7 @@ def _profile_text_field(label: str, value: str, icon=None) -> tuple[ft.Column, f
     control = ft.Column(
         spacing=7,
         controls=[
-            ft.Text(label, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
+            ft.Text(label, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["muted"]),
             text_field,
         ],
     )
@@ -321,7 +321,7 @@ def _employment_card(user: dict, on_change=None, desktop: bool = False) -> ft.Co
                     controls=[
                         ft.Text(
                             label,
-                            size=13,
+                            size=ts(13),
                             weight=ft.FontWeight.W_900,
                             color=APP_COLORS["on_accent"] if selected else APP_COLORS["text"],
                             max_lines=1,
@@ -329,7 +329,7 @@ def _employment_card(user: dict, on_change=None, desktop: bool = False) -> ft.Co
                         ),
                         ft.Text(
                             hint,
-                            size=10,
+                            size=ts(10),
                             color=APP_COLORS["on_accent"] if selected else APP_COLORS["muted"],
                             max_lines=1,
                             no_wrap=True,
@@ -371,8 +371,8 @@ def _household_card(user: dict, on_change=None, desktop: bool = False) -> ft.Con
                             spacing=1,
                             expand=True,
                             controls=[
-                                ft.Text(label, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                                ft.Text(hint, size=12, color=APP_COLORS["muted"], max_lines=2),
+                                ft.Text(label, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                ft.Text(hint, size=ts(12), color=APP_COLORS["muted"], max_lines=2),
                             ],
                         ),
                         ft.Checkbox(
@@ -416,7 +416,7 @@ def _locations_card(
 
         primary_badge = [
             ft.Container(
-                content=ft.Text("основной", size=10, weight=ft.FontWeight.W_800, color=APP_COLORS["blue"]),
+                content=ft.Text("основной", size=ts(10), weight=ft.FontWeight.W_800, color=APP_COLORS["blue"]),
                 padding=ft.Padding(left=8, top=2, right=8, bottom=2),
                 border_radius=8,
                 bgcolor=APP_COLORS["active"],
@@ -461,11 +461,11 @@ def _locations_card(
                             expand=True,
                             controls=[
                                 ft.Row(spacing=8, controls=[
-                                    ft.Text(loc.get("label", "Адрес"), size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                    ft.Text(loc.get("label", "Адрес"), size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
                                     *primary_badge,
                                 ]),
-                                ft.Text(place, size=12, color=APP_COLORS["muted"], max_lines=1),
-                                *([ft.Text(address, size=12, color=APP_COLORS["muted2"], max_lines=1)] if address else []),
+                                ft.Text(place, size=ts(12), color=APP_COLORS["muted"], max_lines=1),
+                                *([ft.Text(address, size=ts(12), color=APP_COLORS["muted2"], max_lines=1)] if address else []),
                             ],
                         ),
                         ft.Row(spacing=0, controls=actions),
@@ -475,7 +475,7 @@ def _locations_card(
         )
 
     if not rows:
-        rows = [ft.Text("Адреса не добавлены.", size=13, color=APP_COLORS["muted"])]
+        rows = [ft.Text("Адреса не добавлены.", size=ts(13), color=APP_COLORS["muted"])]
 
     add_btn = ft.Container(
         ink=True,
@@ -488,8 +488,8 @@ def _locations_card(
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=8,
             controls=[
-                ft.Icon(ft.Icons.ADD_LOCATION_ALT_OUTLINED, size=18, color=APP_COLORS["blue"]),
-                ft.Text("Добавить адрес", size=14, weight=ft.FontWeight.W_700, color=APP_COLORS["blue_text"]),
+                ft.Icon(ft.Icons.ADD_LOCATION_ALT_OUTLINED, size=ts(18), color=APP_COLORS["blue"]),
+                ft.Text("Добавить адрес", size=ts(14), weight=ft.FontWeight.W_700, color=APP_COLORS["blue_text"]),
             ],
         ),
     )
@@ -531,7 +531,7 @@ def _interests_card(user: dict, on_add_interest=None, on_toggle_tag=None, deskto
                 ink=True,
                 content=ft.Text(
                     label,
-                    size=12,
+                    size=ts(12),
                     weight=ft.FontWeight.W_900,
                     color=fg if active else APP_COLORS["muted"],
                     max_lines=1,
@@ -587,8 +587,8 @@ def _setting_row(title: str, subtitle: str, value: bool = False, icon=None, on_c
                             spacing=1,
                             expand=True,
                             controls=[
-                                ft.Text(title, size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text(subtitle, size=11, color=APP_COLORS["muted"], max_lines=2),
+                                ft.Text(title, size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=2),
                             ],
                         ),
                     ],
@@ -609,7 +609,6 @@ def _settings_card(settings: dict, on_setting_change=None, desktop: bool = False
         _setting_row("Высокий контраст", "Усилить читаемость", settings.get("high_contrast", False), ft.Icons.CONTRAST, lambda value: on_setting_change("high_contrast", value) if on_setting_change else None),
         _setting_row("Тёмная тема", "Переключить оформление", settings.get("dark_theme", False), ft.Icons.DARK_MODE_OUTLINED, lambda value: on_setting_change("dark_theme", value) if on_setting_change else None),
         _setting_row("Режим обучения", "Показывать микро-тесты", settings.get("learning_mode", False), ft.Icons.SCHOOL_OUTLINED, lambda value: on_setting_change("learning_mode", value) if on_setting_change else None),
-        _setting_row("Email-уведомления", "Демо-напоминания о сроках", settings.get("email_notifications", True), ft.Icons.NOTIFICATIONS_NONE_OUTLINED, lambda value: on_setting_change("email_notifications", value) if on_setting_change else None),
     ]
     language = ft.Container(
         padding=12,
@@ -624,8 +623,8 @@ def _settings_card(settings: dict, on_setting_change=None, desktop: bool = False
                     spacing=1,
                     expand=True,
                     controls=[
-                        ft.Text("Язык интерфейса", size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Русский", size=11, color=APP_COLORS["muted"]),
+                        ft.Text("Язык интерфейса", size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Русский", size=ts(11), color=APP_COLORS["muted"]),
                     ],
                 ),
                 badge("RU", "blue"),
@@ -639,6 +638,152 @@ def _settings_card(settings: dict, on_setting_change=None, desktop: bool = False
                 _panel_title("Настройки", ft.Icons.SETTINGS_OUTLINED),
                 *rows,
                 language,
+            ],
+        ),
+        padding=22 if desktop else 16,
+        width=float("inf"),
+    )
+
+
+def _reminder_days_dropdown(
+    key: str,
+    current: int,
+    options: list[int],
+    on_setting_change=None,
+) -> ft.Dropdown:
+    option_values = [str(item) for item in options]
+    value = str(current) if str(current) in option_values else option_values[0]
+    return ft.Dropdown(
+        width=112,
+        value=value,
+        border_radius=14,
+        border_color=APP_COLORS["stroke2"],
+        focused_border_color=APP_COLORS["blue"],
+        text_size=12,
+        options=[ft.dropdown.Option(str(item), f"{item} дн.") for item in options],
+        on_select=(
+            lambda event, setting_key=key: on_setting_change(setting_key, int(event.control.value))
+        ) if on_setting_change else None,
+    )
+
+
+def _reminder_row(
+    title: str,
+    subtitle: str,
+    enabled_key: str,
+    days_key: str | None,
+    days_options: list[int],
+    settings: dict,
+    icon,
+    on_setting_change=None,
+) -> ft.Container:
+    enabled = bool(settings.get(enabled_key, True))
+    days = int(settings.get(days_key, days_options[0])) if days_key else 0
+    trailing: list[ft.Control] = [
+        ft.Switch(
+            value=enabled,
+            active_color=APP_COLORS["blue"],
+            on_change=(
+                lambda event, setting_key=enabled_key: on_setting_change(setting_key, bool(event.control.value))
+            ) if on_setting_change else None,
+        )
+    ]
+    if days_key:
+        trailing.insert(0, _reminder_days_dropdown(days_key, days, days_options, on_setting_change))
+
+    return ft.Container(
+        padding=12,
+        border_radius=16,
+        bgcolor=APP_COLORS["surface2"],
+        border=border_all(APP_COLORS["stroke2"]),
+        content=ft.Row(
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                icon_circle(icon, size=34, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"]),
+                ft.Column(
+                    spacing=2,
+                    expand=True,
+                    controls=[
+                        ft.Text(title, size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=2),
+                    ],
+                ),
+                ft.Row(spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=trailing),
+            ],
+        ),
+    )
+
+
+def _reminders_card(settings: dict, on_setting_change=None, desktop: bool = False) -> ft.Container:
+    rows = [
+        _reminder_row(
+            "Задачи",
+            "Напоминать о сроках личных ситуаций",
+            "task_reminders_enabled",
+            "task_reminder_days",
+            [1, 3, 7, 14],
+            settings,
+            ft.Icons.TASK_ALT_OUTLINED,
+            on_setting_change,
+        ),
+        _reminder_row(
+            "Документы",
+            "Контроль срока действия паспорта, медкнижки и других документов",
+            "document_reminders_enabled",
+            "doc_reminder_days",
+            [7, 14, 30, 60, 120],
+            settings,
+            ft.Icons.DESCRIPTION_OUTLINED,
+            on_setting_change,
+        ),
+        _reminder_row(
+            "ЖКХ",
+            "Передача показаний и оплата",
+            "utility_reminders_enabled",
+            "utility_reminder_days",
+            [1, 3, 5, 7, 14],
+            settings,
+            ft.Icons.HOME_WORK_OUTLINED,
+            on_setting_change,
+        ),
+        _reminder_row(
+            "Налоги",
+            "Сроки налоговых обязательств",
+            "tax_reminders_enabled",
+            "tax_reminder_days",
+            [3, 7, 14, 30],
+            settings,
+            ft.Icons.ACCOUNT_BALANCE_OUTLINED,
+            on_setting_change,
+        ),
+        _reminder_row(
+            "Закон-апдейты",
+            "Важные изменения для вашего профиля",
+            "law_update_notifications_enabled",
+            None,
+            [],
+            settings,
+            ft.Icons.GAVEL_OUTLINED,
+            on_setting_change,
+        ),
+        _reminder_row(
+            "Email-demo",
+            "Формировать демонстрационное письмо без реальной SMTP-отправки",
+            "email_notifications",
+            None,
+            [],
+            settings,
+            ft.Icons.MARK_EMAIL_UNREAD_OUTLINED,
+            on_setting_change,
+        ),
+    ]
+    return app_card(
+        ft.Column(
+            spacing=12,
+            controls=[
+                _panel_title("Напоминания", ft.Icons.NOTIFICATIONS_ACTIVE_OUTLINED, "Настройте, какие сроки показывать в центре уведомлений."),
+                ft.Column(spacing=8, controls=rows),
             ],
         ),
         padding=22 if desktop else 16,
@@ -667,12 +812,12 @@ def _favorite_card(template: dict, width: int | None, on_open_scenario=None) -> 
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(template.get("title", "Сценарий"), size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                            ft.Text(f"{category} • {duration}", size=11, color=APP_COLORS["muted"], max_lines=1),
+                            ft.Text(template.get("title", "Сценарий"), size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                            ft.Text(f"{category} • {duration}", size=ts(11), color=APP_COLORS["muted"], max_lines=1),
                         ],
                     ),
-                    ft.Icon(ft.Icons.STAR, size=18, color=APP_COLORS["orange"]),
-                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=APP_COLORS["muted2"]),
+                    ft.Icon(ft.Icons.STAR, size=ts(18), color=APP_COLORS["orange"]),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
                 ],
             ),
         ),
@@ -688,12 +833,52 @@ def _favorite_scenarios_card(
     favorite_set = set(favorite_ids or [])
     favorites = [template for template in SCENARIO_TEMPLATES if template.get("id") in favorite_set]
     if not favorites:
-        return empty_state_card(
-            "Избранных сценариев пока нет",
-            "Добавьте сценарий в избранное, чтобы быстро вернуться к нему.",
-            "Выбрать сценарий",
-            lambda _: go_to("/scenarios") if go_to else None,
-            ft.Icons.STAR_BORDER,
+        return app_card(
+            ft.Column(
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    _panel_title("Избранные сценарии", ft.Icons.STAR_OUTLINE),
+                    ft.Container(
+                        padding=ft.Padding(left=18, top=20, right=18, bottom=20),
+                        border_radius=18,
+                        bgcolor=APP_COLORS["surface2"],
+                        content=ft.Column(
+                            spacing=12,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                icon_circle(
+                                    ft.Icons.STAR_BORDER,
+                                    size=52,
+                                    color=APP_COLORS["blue"],
+                                    bgcolor=APP_COLORS["active"],
+                                ),
+                                ft.Text(
+                                    "Избранных сценариев пока нет",
+                                    size=ts(18) if desktop else 16,
+                                    weight=ft.FontWeight.W_900,
+                                    color=APP_COLORS["text"],
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Text(
+                                    "Добавьте сценарий в избранное, чтобы быстро вернуться к нему.",
+                                    size=ts(13),
+                                    color=APP_COLORS["muted"],
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ghost_button(
+                                    "Выбрать сценарий",
+                                    icon=ft.Icons.ARROW_FORWARD,
+                                    height=42,
+                                    on_click=lambda _: go_to("/scenarios") if go_to else None,
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+            padding=22 if desktop else 16,
+            width=float("inf"),
         )
 
     if desktop:
@@ -744,8 +929,8 @@ def _achievements_card(go_to=None, desktop: bool = False) -> ft.Container:
                             spacing=2,
                             expand=True,
                             controls=[
-                                ft.Text(item.get("title", "Достижение"), size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text("получено" if earned else "в процессе", size=11, color=APP_COLORS["muted"]),
+                                ft.Text(item.get("title", "Достижение"), size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text("получено" if earned else "в процессе", size=ts(11), color=APP_COLORS["muted"]),
                             ],
                         ),
                     ],
@@ -761,7 +946,7 @@ def _achievements_card(go_to=None, desktop: bool = False) -> ft.Container:
                 ft.Column(spacing=8, controls=rows),
                 ft.Text(
                     f"Пройдено тестов: {LEARNING_STATS['completed_tests']}. Средний результат: {LEARNING_STATS['average_score']}.",
-                    size=12,
+                    size=ts(12),
                     color=APP_COLORS["muted"],
                 ),
                 secondary_button("Подробнее об обучении", icon=ft.Icons.SCHOOL_OUTLINED, on_click=lambda _: go_to("/learning") if go_to else None, expand=not desktop),
@@ -797,11 +982,11 @@ def _profile_sections_card(go_to=None, on_reset_demo=None, on_logout=None, deskt
                             spacing=2,
                             expand=True,
                             controls=[
-                                ft.Text(title, size=13, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                ft.Text(subtitle, size=11, color=APP_COLORS["muted"]),
+                                ft.Text(title, size=ts(13), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                                ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"]),
                             ],
                         ),
-                        ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=APP_COLORS["muted2"]),
+                        ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
                     ],
                 ),
             )
@@ -828,7 +1013,7 @@ def _activity_card(activity_log: list[dict] | None, desktop: bool = False) -> ft
                 spacing=10,
                 controls=[
                     _panel_title("Журнал активности", ft.Icons.HISTORY_OUTLINED),
-                    ft.Text("Действия пока не зафиксированы.", size=13, color=APP_COLORS["muted"]),
+                    ft.Text("Действия пока не зафиксированы.", size=ts(13), color=APP_COLORS["muted"]),
                 ],
             ),
             padding=22 if desktop else 16,
@@ -849,8 +1034,8 @@ def _activity_card(activity_log: list[dict] | None, desktop: bool = False) -> ft
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(entry.get("title", "Событие"), size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                            ft.Text(entry.get("date", ""), size=11, color=APP_COLORS["muted"]),
+                            ft.Text(entry.get("title", "Событие"), size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                            ft.Text(entry.get("date", ""), size=ts(11), color=APP_COLORS["muted"]),
                         ],
                     ),
                 ],
@@ -912,6 +1097,7 @@ def _desktop_profile(
         spacing=16,
         controls=[
             _settings_card(settings, on_setting_change, True),
+            _reminders_card(settings, on_setting_change, True),
             _achievements_card(go_to, True),
             _profile_sections_card(go_to, on_reset_demo, on_logout, True),
             _activity_card(activity_log, True),
@@ -929,8 +1115,8 @@ def _desktop_profile(
                         spacing=5,
                         expand=True,
                         controls=[
-                            ft.Text("Профиль", size=34, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text("Личные данные, интересы, настройки доступности и персональные рекомендации.", size=14, color=APP_COLORS["muted"]),
+                            ft.Text("Профиль", size=ts(34), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text("Личные данные, интересы, настройки доступности и персональные рекомендации.", size=ts(14), color=APP_COLORS["muted"]),
                         ],
                     ),
                     ft.Row(spacing=10, controls=[icon_circle(ft.Icons.PERSON_OUTLINE, size=42, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"]), badge("4", "blue")]),
@@ -983,7 +1169,7 @@ def _mobile_profile(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Text("Профиль", size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Профиль", size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
                         ft.Row(spacing=8, controls=[icon_circle(ft.Icons.PERSON_OUTLINE, size=36, color=APP_COLORS["blue_text"], bgcolor=APP_COLORS["active"]), badge("4", "blue")]),
                     ],
                 ),
@@ -993,6 +1179,7 @@ def _mobile_profile(
                 _locations_card(user, on_add_location, on_delete_location, on_set_primary_location, False),
                 _interests_card(user, on_add_interest, on_toggle_tag, False),
                 _settings_card(settings, on_setting_change, False),
+                _reminders_card(settings, on_setting_change, False),
                 _favorite_scenarios_card(favorite_ids, on_open_scenario, go_to, False),
                 _achievements_card(go_to, False),
                 _employment_card(user, on_employment_change, False),

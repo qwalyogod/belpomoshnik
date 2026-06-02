@@ -8,7 +8,7 @@ from components.buttons import ghost_button, primary_button, secondary_button
 from components.cards import app_card, badge, category_chip, empty_state_card, icon_circle, section_title
 from components.layout import desktop_content
 from data.mock_data import CATEGORIES, LEGAL_UPDATES, MOCK_USER, NOTIFICATIONS, PROBLEMS, SCENARIO_TEMPLATES
-from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, GRADIENT_FUTUREWAFE, SPACING, border_all, padding_symmetric
+from theme.app_theme import APP_COLORS, APP_RADIUS, CENTER, GRADIENT_FUTUREWAFE, SPACING, border_all, padding_symmetric, ts
 
 
 def _icon(name: str) -> str:
@@ -45,7 +45,7 @@ def _demo_tip(text: str) -> ft.Container:
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
                 icon_circle(ft.Icons.TIPS_AND_UPDATES_OUTLINED, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=38),
-                ft.Text(text, size=14, color=APP_COLORS["muted"], expand=True),
+                ft.Text(text, size=ts(14), color=APP_COLORS["muted"], expand=True),
             ],
         ),
         padding=14,
@@ -65,7 +65,7 @@ def _search_hero(search_field: ft.TextField, run_search, go_to, desktop: bool) -
             spacing=12,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.SEARCH, size=28 if desktop else 25, color=APP_COLORS["blue"]),
+                ft.Icon(ft.Icons.SEARCH, size=ts(28) if desktop else 25, color=APP_COLORS["blue"]),
                 search_field,
             ],
         ),
@@ -98,8 +98,8 @@ def _search_hero(search_field: ft.TextField, run_search, go_to, desktop: bool) -
                     spacing=2,
                     expand=True,
                     controls=[
-                        ft.Text("Что случилось?", size=18 if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Например: паспорт, ЖКХ, налог, пособие", size=13, color=APP_COLORS["muted"]),
+                        ft.Text("Что случилось?", size=ts(18) if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Например: паспорт, ЖКХ, налог, пособие", size=ts(13), color=APP_COLORS["muted"]),
                     ],
                 )
                 if desktop
@@ -125,8 +125,8 @@ def _quick_action(title: str, value: str, icon, route: str, go_to, desktop: bool
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     icon_circle(icon, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=42),
-                    ft.Text(value, size=20, weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
-                    ft.Text(title, size=12, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
+                    ft.Text(value, size=ts(20), weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
+                    ft.Text(title, size=ts(12), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], text_align=ft.TextAlign.CENTER),
                 ],
             ),
             padding=14,
@@ -145,8 +145,8 @@ def _stat_card(label: str, value: str, tone: str, icon) -> ft.Container:
                 ft.Column(
                     spacing=2,
                     controls=[
-                        ft.Text(value, size=28, weight=ft.FontWeight.W_900, color=APP_COLORS[tone]),
-                        ft.Text(label, size=13, color=APP_COLORS["muted"], weight=ft.FontWeight.W_600),
+                        ft.Text(value, size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS[tone]),
+                        ft.Text(label, size=ts(13), color=APP_COLORS["muted"], weight=ft.FontWeight.W_600),
                     ],
                 ),
             ],
@@ -157,12 +157,15 @@ def _stat_card(label: str, value: str, tone: str, icon) -> ft.Container:
 
 def _stats_grid(data: dict, desktop: bool) -> ft.ResponsiveRow:
     active = str(data.get("active_count", 0))
-    task_count = str(len(data.get("upcoming_tasks", [])) + len(data.get("overdue_tasks", [])))
-    laws_count = str(len([law for law in LEGAL_UPDATES if law.get("status", "published") == "published"]))
+    task_count = str(
+        len(data.get("upcoming_tasks", []))
+        + len(data.get("overdue_tasks", []))
+        + int(data.get("obligations_count", 0))
+    )
     docs_count = str(len(data.get("documents_to_prepare", [])) + len(data.get("expiring_documents", [])) + len(data.get("overdue_documents", [])))
     items = [
         ("активные", active, "blue", ft.Icons.TASK_ALT_OUTLINED),
-        ("задач", task_count, "orange", ft.Icons.EVENT_NOTE_OUTLINED),
+        ("сроков", task_count, "orange", ft.Icons.EVENT_NOTE_OUTLINED),
         ("прогресс", f"{data.get('active_progress', 0)}%", "green", ft.Icons.TRENDING_UP),
         ("документа", docs_count, "purple", ft.Icons.ARTICLE_OUTLINED),
     ]
@@ -182,6 +185,8 @@ def _quick_actions_grid(data: dict, go_to) -> ft.ResponsiveRow:
         ("Сценарий", "+", ft.Icons.ROUTE_OUTLINED, "/scenarios"),
         ("Ситуации", str(data.get("active_count", 0)), ft.Icons.TASK_ALT_OUTLINED, "/situations"),
         ("Документы", str(len(data.get("documents_to_prepare", []))), ft.Icons.ARTICLE_OUTLINED, "/documents"),
+        ("ЖКХ", str(len(data.get("utility_events", []))), ft.Icons.HOME_WORK_OUTLINED, "/utility"),
+        ("Налоги", str(len(data.get("tax_events", []))), ft.Icons.RECEIPT_LONG_OUTLINED, "/taxes"),
     ]
     return ft.Column(
         spacing=9,
@@ -196,8 +201,8 @@ def _quick_actions_grid(data: dict, go_to) -> ft.ResponsiveRow:
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             icon_circle(icon, color=APP_COLORS["blue"], bgcolor=APP_COLORS["active"], size=38),
-                            ft.Text(title, size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True),
-                            ft.Text(value, size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
+                            ft.Text(title, size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], expand=True),
+                            ft.Text(value, size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
                         ],
                     ),
                     padding=12,
@@ -224,8 +229,8 @@ def _active_actions_card(data: dict, go_to, desktop: bool) -> ft.Container:
                         spacing=2,
                         expand=True,
                         controls=[
-                            ft.Text(task["title"], size=13, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
-                            ft.Text(task["due_date_display"], size=12, color=APP_COLORS["muted"]),
+                            ft.Text(task["title"], size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
+                            ft.Text(task["due_date_display"], size=ts(12), color=APP_COLORS["muted"]),
                         ],
                     ),
                 ],
@@ -233,7 +238,7 @@ def _active_actions_card(data: dict, go_to, desktop: bool) -> ft.Container:
         )
 
     if not rows:
-        rows.append(ft.Text("Добавьте ситуацию из сценария, и ближайшие действия появятся здесь.", size=13, color=APP_COLORS["muted"]))
+        rows.append(ft.Text("Добавьте ситуацию из сценария, и ближайшие действия появятся здесь.", size=ts(13), color=APP_COLORS["muted"]))
 
     content = ft.Row(
         spacing=18,
@@ -244,8 +249,8 @@ def _active_actions_card(data: dict, go_to, desktop: bool) -> ft.Container:
                 expand=True,
                 controls=[
                     badge("сегодня важно", "orange"),
-                    ft.Text(f"У вас {count} ближайших действия" if count else "Начните с готового сценария", size=26 if desktop else 23, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                    ft.Text("Документы, заявления и сроки собраны в одном маршруте.", size=14, color=APP_COLORS["muted"]),
+                    ft.Text(f"У вас {count} ближайших действия" if count else "Начните с готового сценария", size=ts(26) if desktop else 23, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                    ft.Text("Документы, заявления и сроки собраны в одном маршруте.", size=ts(14), color=APP_COLORS["muted"]),
                     primary_button("Открыть задачи", on_click=lambda _: go_to("/situations"), width=170 if desktop else None, expand=not desktop, height=44),
                 ],
             ),
@@ -260,8 +265,8 @@ def _active_actions_card(data: dict, go_to, desktop: bool) -> ft.Container:
                     spacing=8,
                     controls=[
                         badge("сегодня важно", "orange"),
-                        ft.Text(f"{max(count, 0)} ближайших действия" if count else "Начните с готового сценария", size=24, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Документы, заявления и сроки собраны в одном маршруте.", size=13, color=APP_COLORS["muted"]),
+                        ft.Text(f"{max(count, 0)} ближайших действия" if count else "Начните с готового сценария", size=ts(24), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Документы, заявления и сроки собраны в одном маршруте.", size=ts(13), color=APP_COLORS["muted"]),
                     ],
                 ),
                 ft.Column(spacing=9, controls=rows),
@@ -293,11 +298,11 @@ def _situation_summary_card(item: dict, go_to, desktop: bool) -> ft.Container:
                                 spacing=8,
                                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                 controls=[
-                                    ft.Text(title, size=16 if desktop else 15, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True, max_lines=1),
+                                    ft.Text(title, size=ts(16) if desktop else 15, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True, max_lines=1),
                                     badge(f"{progress}%", variant),
                                 ],
                             ),
-                            ft.Text(f"{item.get('completed_tasks', 0)} из {item.get('total_tasks', 0)} задач", size=12, color=APP_COLORS["muted"]),
+                            ft.Text(f"{item.get('completed_tasks', 0)} из {item.get('total_tasks', 0)} задач", size=ts(12), color=APP_COLORS["muted"]),
                             ft.ProgressBar(value=progress / 100, bar_height=6, border_radius=10, color=APP_COLORS["blue"], bgcolor=APP_COLORS["stroke2"]),
                         ],
                     ),
@@ -346,8 +351,8 @@ def _task_row(task: dict, go_to, overdue: bool = False) -> ft.Container:
                     spacing=3,
                     expand=True,
                     controls=[
-                        ft.Text(task.get("title", "Задача"), size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
-                        ft.Text(f"{task.get('due_date_display', 'Без срока')} · {task.get('situation_title', 'ситуация')}", size=12, color=APP_COLORS["muted"], max_lines=1),
+                        ft.Text(task.get("title", "Задача"), size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=2),
+                        ft.Text(f"{task.get('due_date_display', 'Без срока')} · {task.get('situation_title', 'ситуация')}", size=ts(12), color=APP_COLORS["muted"], max_lines=1),
                     ],
                 ),
             ],
@@ -365,7 +370,7 @@ def _tasks_section(data: dict, go_to, desktop: bool) -> ft.Control:
         rows = [
             ft.Text(
                 "Ближайших задач пока нет. Они появятся после создания ситуации и добавления сроков.",
-                size=13,
+                size=ts(13),
                 color=APP_COLORS["muted"],
             )
         ]
@@ -398,8 +403,8 @@ def _category_card(category: dict, open_category, go_to) -> ft.Container:
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(category["name"], size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(_category_subtitle(category["id"]), size=13, color=APP_COLORS["muted"], max_lines=1),
+                            ft.Text(category["name"], size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(_category_subtitle(category["id"]), size=ts(13), color=APP_COLORS["muted"], max_lines=1),
                         ],
                     ),
                 ],
@@ -451,11 +456,11 @@ def _problem_row(problem: dict, index: int, open_problem) -> ft.Container:
                     spacing=3,
                     expand=True,
                     controls=[
-                        ft.Text(problem["title"], size=14, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
-                        ft.Text(problem.get("description", ""), size=12, color=APP_COLORS["muted"], max_lines=1),
+                        ft.Text(problem["title"], size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=1),
+                        ft.Text(problem.get("description", ""), size=ts(12), color=APP_COLORS["muted"], max_lines=1),
                     ],
                 ),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=APP_COLORS["muted2"]),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
             ],
         ),
     )
@@ -486,8 +491,8 @@ def _popular_problems_section(open_problem, go_to, desktop: bool) -> ft.Control:
                     ft.Column(
                         spacing=8,
                         controls=[
-                            ft.Text(problem["title"], size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text(problem.get("description", ""), size=13, color=APP_COLORS["muted"], max_lines=2),
+                            ft.Text(problem["title"], size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                            ft.Text(problem.get("description", ""), size=ts(13), color=APP_COLORS["muted"], max_lines=2),
                         ],
                     ),
                     padding=18,
@@ -520,8 +525,8 @@ def _documents_panel(data: dict, go_to) -> ft.Container:
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(document["title"], size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(f"Для: {document['situation_title']}", size=12, color=APP_COLORS["muted"], max_lines=1),
+                            ft.Text(document["title"], size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(f"Для: {document['situation_title']}", size=ts(12), color=APP_COLORS["muted"], max_lines=1),
                         ],
                     ),
                     badge("обяз." if document["required"] else "опц.", "green" if document["required"] else "gray"),
@@ -538,8 +543,8 @@ def _documents_panel(data: dict, go_to) -> ft.Container:
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(document["title"], size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(f"до {document['expiry_date']} · {document['days_left']} дн.", size=12, color=APP_COLORS["orange"]),
+                            ft.Text(document["title"], size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(f"до {document['expiry_date']} · {document['days_left']} дн.", size=ts(12), color=APP_COLORS["orange"]),
                         ],
                     ),
                 ],
@@ -555,15 +560,15 @@ def _documents_panel(data: dict, go_to) -> ft.Container:
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(document["title"], size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(f"Просрочен · {document['expiry_date']}", size=12, color=APP_COLORS["red"]),
+                            ft.Text(document["title"], size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(f"Просрочен · {document['expiry_date']}", size=ts(12), color=APP_COLORS["red"]),
                         ],
                     ),
                 ],
             )
         )
     if not rows:
-        rows = [ft.Text("Документы появятся после создания ситуации или добавления личных документов.", size=13, color=APP_COLORS["muted"])]
+        rows = [ft.Text("Документы появятся после создания ситуации или добавления личных документов.", size=ts(13), color=APP_COLORS["muted"])]
     return app_card(
         ft.Column(
             spacing=14,
@@ -571,6 +576,98 @@ def _documents_panel(data: dict, go_to) -> ft.Container:
                 section_title("Документы и напоминания"),
                 ft.Column(spacing=13, controls=rows),
                 ghost_button("Управлять документами", on_click=lambda _: go_to("/documents"), expand=True, height=42),
+            ],
+        ),
+        padding=18,
+    )
+
+
+def _amount_text(amount) -> str:
+    try:
+        value = float(amount or 0)
+    except (TypeError, ValueError):
+        value = 0
+    if value <= 0:
+        return "сумма не указана"
+    return f"{value:.2f}".replace(".", ",") + " руб."
+
+
+def _obligation_row(item: dict, go_to) -> ft.Container:
+    overdue = item.get("status") == "Просрочено"
+    kind = item.get("kind")
+    color_key = "red" if overdue else "orange"
+    icon = ft.Icons.HOME_WORK_OUTLINED if kind == "utility" else ft.Icons.RECEIPT_LONG_OUTLINED
+    if item.get("days_left", 0) < 0:
+        due_label = "Просрочено на " + str(abs(int(item.get("days_left", 0)))) + " дн."
+    elif item.get("days_left") == 0:
+        due_label = "Сегодня"
+    else:
+        due_label = "Через " + str(item.get("days_left", 0)) + " дн."
+    return ft.Container(
+        ink=True,
+        on_click=lambda _: go_to(item.get("route", "/")),
+        border_radius=APP_RADIUS["button"],
+        padding=padding_symmetric(horizontal=4, vertical=2),
+        content=ft.Row(
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            controls=[
+                icon_circle(icon, color=APP_COLORS[color_key], bgcolor=APP_COLORS["surface2"], size=36),
+                ft.Column(
+                    spacing=4,
+                    expand=True,
+                    controls=[
+                        ft.Row(
+                            spacing=8,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                ft.Text(item.get("title", "Срок"), size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True, max_lines=2),
+                                badge("проср." if overdue else "срок", "red" if overdue else "orange"),
+                            ],
+                        ),
+                        ft.Text(f"{item.get('subtitle', '')} · {due_label}", size=ts(12), color=APP_COLORS[color_key] if overdue else APP_COLORS["muted"], max_lines=1),
+                        ft.Text(_amount_text(item.get("amount")), size=ts(12), color=APP_COLORS["muted2"], max_lines=1),
+                    ],
+                ),
+            ],
+        ),
+    )
+
+
+def _obligations_panel(data: dict, go_to, desktop: bool) -> ft.Container:
+    overdue = data.get("overdue_obligations", [])
+    upcoming = data.get("upcoming_obligations", [])
+    rows = [_obligation_row(item, go_to) for item in overdue[:3]]
+    rows.extend(_obligation_row(item, go_to) for item in upcoming[:3])
+    if not rows:
+        rows = [
+            ft.Text(
+                "Ближайших сроков по ЖКХ и налогам нет. Добавьте лицевой счёт или налоговое обязательство, чтобы видеть их здесь.",
+                size=ts(13),
+                color=APP_COLORS["muted"],
+            )
+        ]
+    return app_card(
+        ft.Column(
+            spacing=14,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        section_title("ЖКХ и налоги"),
+                        badge(str(data.get("obligations_count", 0)), "orange") if desktop else ft.Container(width=0),
+                    ],
+                ),
+                ft.Text("Платежи, показания и налоговые сроки из локальных трекеров.", size=ts(13), color=APP_COLORS["muted"]),
+                ft.Column(spacing=12, controls=rows),
+                ft.Row(
+                    spacing=10,
+                    controls=[
+                        ghost_button("ЖКХ", icon=ft.Icons.HOME_WORK_OUTLINED, on_click=lambda _: go_to("/utility"), expand=True, height=42),
+                        ghost_button("Налоги", icon=ft.Icons.RECEIPT_LONG_OUTLINED, on_click=lambda _: go_to("/taxes"), expand=True, height=42),
+                    ],
+                ),
             ],
         ),
         padding=18,
@@ -590,8 +687,8 @@ def _law_updates_panel(go_to, desktop: bool) -> ft.Container:
                     spacing=7,
                     controls=[
                         ft.Row(spacing=8, controls=[badge(law.get("category_name", "Закон"), "cyan"), badge("важно для вас", priority)]),
-                        ft.Text(law["title"], size=16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
-                        ft.Text(law.get("short", ""), size=13, color=APP_COLORS["muted"], max_lines=2),
+                        ft.Text(law["title"], size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], max_lines=2),
+                        ft.Text(law.get("short", ""), size=ts(13), color=APP_COLORS["muted"], max_lines=2),
                         ghost_button("Открыть обзор", icon=ft.Icons.ARROW_FORWARD, on_click=lambda _, lid=law["id"]: go_to(f"/legal-updates/{lid}"), width=170 if desktop else None),
                     ],
                 ),
@@ -615,15 +712,15 @@ def _reminders_panel(go_to, desktop: bool, notifications: list[dict] | None = No
                         spacing=3,
                         expand=True,
                         controls=[
-                            ft.Text(notification.get("title", "Уведомление"), size=14, weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
-                            ft.Text(notification.get("desc", ""), size=12, color=APP_COLORS["muted"], max_lines=2),
+                            ft.Text(notification.get("title", "Уведомление"), size=ts(14), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
+                            ft.Text(notification.get("desc", ""), size=ts(12), color=APP_COLORS["muted"], max_lines=2),
                         ],
                     ),
                 ],
             )
         )
     if not rows:
-        rows = [ft.Text("Новых напоминаний нет.", size=13, color=APP_COLORS["muted"])]
+        rows = [ft.Text("Новых напоминаний нет.", size=ts(13), color=APP_COLORS["muted"])]
     return app_card(
         ft.Column(
             spacing=14,
@@ -650,8 +747,8 @@ def _scenario_start_card(go_to, desktop: bool) -> ft.Container:
                     expand=True,
                     controls=[
                         badge("демо-сценарий", "purple"),
-                        ft.Text(scenario["title"], size=18, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Для демонстрации начните с него: создайте личную ситуацию и отметьте несколько задач.", size=13, color=APP_COLORS["muted"], max_lines=2),
+                        ft.Text(scenario["title"], size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+                        ft.Text("Для демонстрации начните с него: создайте личную ситуацию и отметьте несколько задач.", size=ts(13), color=APP_COLORS["muted"], max_lines=2),
                     ],
                 ),
                 primary_button("Начать", on_click=lambda _: go_to(f"/scenarios/{scenario['id']}"), width=110 if desktop else None),
@@ -730,7 +827,7 @@ def _desktop_home(
                         ft.Container(
                             content=ft.Text(
                                 f"Добрый день, {first_name}",
-                                size=13,
+                                size=ts(13),
                                 weight=ft.FontWeight.W_600,
                                 color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                             ),
@@ -740,14 +837,14 @@ def _desktop_home(
                         ),
                         ft.Text(
                             "Личный цифровой\nпомощник гражданина.",
-                            size=34,
+                            size=ts(34),
                             weight=ft.FontWeight.W_900,
                             color=ft.Colors.WHITE,
                             height=None,
                         ),
                         ft.Text(
                             "Опишите ситуацию — Белпомощник разберёт её по шагам,\nподскажет документы и куда обратиться.",
-                            size=14,
+                            size=ts(14),
                             color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                         ),
                         ft.Container(height=4),
@@ -761,7 +858,7 @@ def _desktop_home(
                                 spacing=10,
                                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                 controls=[
-                                    ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
+                                    ft.Icon(ft.Icons.SEARCH, size=ts(22), color=APP_COLORS["blue"]),
                                     search_field,
                                     ft.Container(
                                         ink=True,
@@ -772,8 +869,8 @@ def _desktop_home(
                                         content=ft.Row(
                                             spacing=6,
                                             controls=[
-                                                ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=16, color=ft.Colors.WHITE),
-                                                ft.Text("Подсказать", size=14, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                                                ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=ts(16), color=ft.Colors.WHITE),
+                                                ft.Text("Подсказать", size=ts(14), weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
                                             ],
                                         ),
                                     ),
@@ -808,7 +905,16 @@ def _desktop_home(
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
                     ft.Container(expand=True, content=_popular_problems_section(open_problem, go_to, True)),
-                    ft.Container(width=340, content=_documents_panel(data, go_to)),
+                    ft.Container(
+                        width=340,
+                        content=ft.Column(
+                            spacing=18,
+                            controls=[
+                                _documents_panel(data, go_to),
+                                _obligations_panel(data, go_to, True),
+                            ],
+                        ),
+                    ),
                 ],
             ),
             _scenario_start_card(go_to, True),
@@ -873,7 +979,7 @@ def _mobile_home(
                 ft.Container(
                     content=ft.Text(
                         f"Привет, {first_name}!",
-                        size=12,
+                        size=ts(12),
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                     ),
@@ -883,13 +989,13 @@ def _mobile_home(
                 ),
                 ft.Text(
                     "Личный цифровой\nпомощник гражданина.",
-                    size=26,
+                    size=ts(26),
                     weight=ft.FontWeight.W_900,
                     color=ft.Colors.WHITE,
                 ),
                 ft.Text(
                     "Опишите ситуацию — получите пошаговый план действий.",
-                    size=13,
+                    size=ts(13),
                     color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                 ),
                 ft.Container(
@@ -900,7 +1006,7 @@ def _mobile_home(
                         spacing=8,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Icon(ft.Icons.SEARCH, size=20, color=APP_COLORS["blue"]),
+                            ft.Icon(ft.Icons.SEARCH, size=ts(20), color=APP_COLORS["blue"]),
                             search_field,
                             ft.Container(
                                 ink=True,
@@ -908,7 +1014,7 @@ def _mobile_home(
                                 padding=ft.Padding(left=12, top=8, right=12, bottom=8),
                                 bgcolor=APP_COLORS["blue"],
                                 on_click=lambda _: _run_home_search(search_field, run_search, go_to),
-                                content=ft.Icon(ft.Icons.ARROW_FORWARD, size=16, color=ft.Colors.WHITE),
+                                content=ft.Icon(ft.Icons.ARROW_FORWARD, size=ts(16), color=ft.Colors.WHITE),
                             ),
                         ],
                     ),
@@ -928,6 +1034,7 @@ def _mobile_home(
             _stats_grid(data, False),
             _situations_section(data, go_to, False),
             _tasks_section(data, go_to, False),
+            _obligations_panel(data, go_to, False),
             _documents_panel(data, go_to),
             _law_updates_panel(go_to, False),
             _category_section(open_category, go_to, False),
@@ -978,7 +1085,7 @@ def _tablet_home(
                 ft.Container(
                     content=ft.Text(
                         f"Добрый день, {first_name}",
-                        size=12,
+                        size=ts(12),
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                     ),
@@ -986,10 +1093,10 @@ def _tablet_home(
                     border_radius=20,
                     bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                 ),
-                ft.Text("Личный цифровой помощник гражданина.", size=26, weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
+                ft.Text("Личный цифровой помощник гражданина.", size=ts(26), weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
                 ft.Text(
                     "Опишите ситуацию — получите пошаговый план действий и список документов.",
-                    size=13,
+                    size=ts(13),
                     color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
                 ),
                 ft.Container(
@@ -1000,7 +1107,7 @@ def _tablet_home(
                         spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
-                            ft.Icon(ft.Icons.SEARCH, size=22, color=APP_COLORS["blue"]),
+                            ft.Icon(ft.Icons.SEARCH, size=ts(22), color=APP_COLORS["blue"]),
                             search_field,
                             ft.Container(
                                 ink=True,
@@ -1009,8 +1116,8 @@ def _tablet_home(
                                 bgcolor=APP_COLORS["blue"],
                                 on_click=lambda _: _run_home_search(search_field, run_search, go_to),
                                 content=ft.Row(spacing=6, controls=[
-                                    ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=16, color=ft.Colors.WHITE),
-                                    ft.Text("Подсказать", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                                    ft.Icon(ft.Icons.AUTO_AWESOME_OUTLINED, size=ts(16), color=ft.Colors.WHITE),
+                                    ft.Text("Подсказать", size=ts(13), weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
                                 ]),
                             ),
                         ],
@@ -1038,6 +1145,7 @@ def _tablet_home(
                         ft.Container(width=280, content=_tasks_section(data, go_to, True)),
                     ],
                 ),
+                _obligations_panel(data, go_to, True),
                 _category_section(open_category, go_to, True),
                 _popular_problems_section(open_problem, go_to, True),
                 _documents_panel(data, go_to),

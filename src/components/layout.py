@@ -214,19 +214,31 @@ def build_desktop_header(active_key: str, go_to, width: int = 1320) -> ft.Contai
                                     ft.Container(
                                         on_click=lambda _: go_to("/profile"),
                                         ink=True,
+                                        height=54,
+                                        alignment=CENTER,
+                                        padding=ft.Padding(left=10, top=4, right=4, bottom=4),
+                                        border_radius=18,
                                         content=ft.Row(
                                             spacing=12,
                                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                             controls=[
                                                 ft.Column(
-                                                    spacing=0,
+                                                    spacing=1,
+                                                    alignment=ft.MainAxisAlignment.CENTER,
                                                     horizontal_alignment=ft.CrossAxisAlignment.END,
                                                     controls=[
-                                                        ft.Text(MOCK_USER["name"], size=14, weight=ft.FontWeight.BOLD, color=APP_COLORS["text"]),
+                                                        ft.Text(
+                                                            MOCK_USER["name"],
+                                                            size=14,
+                                                            weight=ft.FontWeight.BOLD,
+                                                            color=APP_COLORS["text"],
+                                                            max_lines=1,
+                                                            no_wrap=True,
+                                                        ),
                                                         ft.Text("Профиль", size=12, color=APP_COLORS["muted"]),
                                                     ],
                                                 ),
-                                                avatar(radius=19),
+                                                avatar(radius=20),
                                             ],
                                         ),
                                     ),
