@@ -247,28 +247,47 @@ def build_user_menu(
         bgcolor=APP_COLORS["panel"],
         border_radius=14,
         border=border_all(APP_COLORS["stroke"]),
-        shadow=ft.BoxShadow(blur_radius=24, color=ft.Colors.with_opacity(0.15, ft.Colors.BLACK)),
+        shadow=ft.BoxShadow(blur_radius=28, color=ft.Colors.with_opacity(0.22, ft.Colors.BLACK)),
         width=300,
         padding=padding_symmetric(horizontal=6, vertical=6),
         content=ft.Column(spacing=2, tight=True, controls=items),
+        # Лёгкая анимация появления
+        animate_opacity=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
+        animate_scale=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
     )
 
-    menu_dialog = ft.AlertDialog(
-        modal=False,
-        content=menu_card,
-        bgcolor=ft.Colors.TRANSPARENT,
-        content_padding=0,
-        inset_padding=padding_symmetric(horizontal=10, vertical=10),
-        shape=ft.RoundedRectangleBorder(radius=14),
-    )
+    # Anchored dropdown: backdrop (закрытие по клику вне) + карточка справа-сверху.
+    state = {"open": False, "layer": None}
 
-    def _close_menu() -> None:
-        from components.dialog_util import close_dialog
-        close_dialog(page, menu_dialog)
+    def _close_menu(_=None) -> None:
+        layer = state.get("layer")
+        if layer is not None and layer in page.overlay:
+            page.overlay.remove(layer)
+        state["open"] = False
+        state["layer"] = None
+        try:
+            page.update()
+        except Exception:
+            pass
 
     def _open_menu(_=None) -> None:
-        from components.dialog_util import open_dialog
-        open_dialog(page, menu_dialog)
+        if state["open"]:
+            _close_menu()
+            return
+        backdrop = ft.GestureDetector(
+            on_tap=_close_menu,
+            content=ft.Container(expand=True, bgcolor=ft.Colors.TRANSPARENT),
+        )
+        positioned = ft.Container(
+            content=menu_card,
+            right=18,
+            top=70,
+        )
+        layer = ft.Stack(controls=[backdrop, positioned], expand=True)
+        state["layer"] = layer
+        state["open"] = True
+        page.overlay.append(layer)
+        page.update()
 
     trigger = ft.Container(
         ink=True,
