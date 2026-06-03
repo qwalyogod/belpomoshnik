@@ -151,7 +151,137 @@ def _nav_item(label: str, route: str, active: bool, go_to) -> ft.Container:
     )
 
 
-def build_desktop_header(active_key: str, go_to, width: int = 1320) -> ft.Container:
+def build_desktop_header(
+    active_key: str,
+    go_to,
+    width: int = 1320,
+    *,
+    page=None,
+    user: dict | None = None,
+    role: str = "guest",
+    test_accounts: list[dict] | None = None,
+    on_logout=None,
+    on_switch_account=None,
+    on_login=None,
+) -> ft.Container:
+    user = user or {}
+    is_guest = role == "guest"
+
+    # Admin/editor link — только для нужных ролей
+    admin_button = None
+    if role == "platform_admin":
+        admin_button = ft.Container(
+            ink=True,
+            on_click=lambda _: go_to("/admin"),
+            border_radius=12,
+            padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+            bgcolor=APP_COLORS["active"],
+            content=ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, size=18, color=APP_COLORS["blue"]),
+                    ft.Text("Админ-панель", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["blue"]),
+                ],
+            ),
+            tooltip="Перейти в админ-панель",
+        )
+    elif role == "content_editor":
+        admin_button = ft.Container(
+            ink=True,
+            on_click=lambda _: go_to("/admin"),
+            border_radius=12,
+            padding=ft.Padding(left=12, top=8, right=12, bottom=8),
+            bgcolor=APP_COLORS["active"],
+            content=ft.Row(
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon(ft.Icons.EDIT_NOTE_OUTLINED, size=18, color=APP_COLORS["blue"]),
+                    ft.Text("Редакторская", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["blue"]),
+                ],
+            ),
+            tooltip="Редакторские инструменты",
+        )
+
+    # Notifications bell (всем кроме гостя — гостю просто визуальная иконка)
+    bell = ft.Container(
+        width=40, height=40, border_radius=20,
+        ink=True,
+        on_click=lambda _: go_to("/notifications"),
+        alignment=ft.Alignment(0, 0),
+        content=ft.Stack(
+            width=34, height=34,
+            controls=[
+                ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=24, color=APP_COLORS["muted"]),
+                ft.Container(width=7, height=7, border_radius=4, bgcolor=APP_COLORS["danger"], right=2, top=2) if not is_guest else ft.Container(width=0),
+            ],
+        ),
+        tooltip="Уведомления",
+    )
+
+    # User area: гость → «Войти», иначе user_menu + role_switcher
+    user_area_controls: list[ft.Control] = []
+
+    if is_guest:
+        user_area_controls.append(
+            ft.Container(
+                ink=True,
+                on_click=lambda _: (on_login() if on_login else go_to("/login")),
+                border_radius=12,
+                padding=ft.Padding(left=14, top=9, right=14, bottom=9),
+                bgcolor=APP_COLORS["blue"],
+                content=ft.Row(
+                    spacing=8,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Icon(ft.Icons.LOGIN, size=16, color=ft.Colors.WHITE),
+                        ft.Text("Войти", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                    ],
+                ),
+                tooltip="Войти или зарегистрироваться",
+            )
+        )
+    else:
+        if page is not None:
+            from components.user_menu import build_user_menu
+            user_area_controls.append(
+                build_user_menu(
+                    page=page,
+                    user=user,
+                    on_profile=lambda: go_to("/profile"),
+                    on_settings=lambda: go_to("/settings"),
+                    on_logout=on_logout if on_logout else (lambda: go_to("/login")),
+                    size=40,
+                )
+            )
+        else:
+            user_area_controls.append(
+                ft.Container(on_click=lambda _: go_to("/profile"), ink=True, content=avatar(radius=20))
+            )
+
+    # Role switcher (если есть test accounts)
+    if page is not None and test_accounts:
+        from components.role_switcher import build_role_switcher
+        user_area_controls.append(
+            build_role_switcher(
+                page=page,
+                current_role=role,
+                accounts=test_accounts,
+                on_switch=on_switch_account,
+                size=40,
+            )
+        )
+
+    right_controls: list[ft.Control] = []
+    if admin_button is not None:
+        right_controls.append(admin_button)
+    right_controls.extend([
+        bell,
+        ft.Container(width=1, height=32, bgcolor=APP_COLORS["stroke2"]),
+        *user_area_controls,
+    ])
+
     return ft.Container(
         height=78,
         bgcolor=APP_COLORS["surface"],
@@ -191,58 +321,9 @@ def build_desktop_header(active_key: str, go_to, width: int = 1320) -> ft.Contai
                                 ],
                             ),
                             ft.Row(
-                                spacing=22,
+                                spacing=16,
                                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                controls=[
-                                    ft.Container(
-                                        width=40,
-                                        height=40,
-                                        border_radius=20,
-                                        ink=True,
-                                        on_click=lambda _: go_to("/notifications"),
-                                        alignment=ft.Alignment(0, 0),
-                                        content=ft.Stack(
-                                            width=34,
-                                            height=34,
-                                            controls=[
-                                                ft.Icon(ft.Icons.NOTIFICATIONS_NONE_OUTLINED, size=24, color=APP_COLORS["muted"]),
-                                                ft.Container(width=7, height=7, border_radius=4, bgcolor=APP_COLORS["danger"], right=2, top=2),
-                                            ],
-                                        ),
-                                    ),
-                                    ft.Container(width=1, height=32, bgcolor=APP_COLORS["stroke2"]),
-                                    ft.Container(
-                                        on_click=lambda _: go_to("/profile"),
-                                        ink=True,
-                                        height=54,
-                                        alignment=CENTER,
-                                        padding=ft.Padding(left=10, top=4, right=4, bottom=4),
-                                        border_radius=18,
-                                        content=ft.Row(
-                                            spacing=12,
-                                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                            controls=[
-                                                ft.Column(
-                                                    spacing=1,
-                                                    alignment=ft.MainAxisAlignment.CENTER,
-                                                    horizontal_alignment=ft.CrossAxisAlignment.END,
-                                                    controls=[
-                                                        ft.Text(
-                                                            MOCK_USER["name"],
-                                                            size=14,
-                                                            weight=ft.FontWeight.BOLD,
-                                                            color=APP_COLORS["text"],
-                                                            max_lines=1,
-                                                            no_wrap=True,
-                                                        ),
-                                                        ft.Text("Профиль", size=12, color=APP_COLORS["muted"]),
-                                                    ],
-                                                ),
-                                                avatar(radius=20),
-                                            ],
-                                        ),
-                                    ),
-                                ],
+                                controls=right_controls,
                             ),
                         ],
                     ),
@@ -269,7 +350,6 @@ def build_desktop_footer(go_to, width: int = 1120) -> ft.Container:
                             ft.Row(
                                 spacing=22,
                                 controls=[
-                                    ft.TextButton("Админ-панель", on_click=lambda _: go_to("/admin"), style=ft.ButtonStyle(color=APP_COLORS["muted"])),
                                     ft.TextButton("О проекте", on_click=lambda _: go_to("/about"), style=ft.ButtonStyle(color=APP_COLORS["muted"])),
                                 ],
                             ),

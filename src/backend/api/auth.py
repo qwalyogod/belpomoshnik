@@ -181,3 +181,24 @@ def get_me(email: str = Depends(get_current_user_email), db: Session = Depends(g
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден.")
     return {"id": user.id, "email": user.email, "name": user.name, "role": user.role_id}
+
+
+@router.get("/test-accounts")
+def list_test_accounts(db: Session = Depends(get_db)):
+    """
+    Список тестовых аккаунтов для UI-переключателя ролей.
+
+    Возвращает только пользователей с is_test_account=True. Обычные
+    регистрации сюда не попадают. В production отключить через флаг
+    BELPOMOSHNIK_ENABLE_TEST_SWITCHER=false (см. settings).
+    """
+    import os as _os
+    if _os.getenv("BELPOMOSHNIK_ENABLE_TEST_SWITCHER", "true").lower() != "true":
+        return []
+    users = db.scalars(
+        select(User).where(User.is_test_account == True).order_by(User.id)  # noqa: E712
+    ).all()
+    return [
+        {"email": u.email, "name": u.name, "role": u.role_id}
+        for u in users
+    ]

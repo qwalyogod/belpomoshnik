@@ -1152,9 +1152,9 @@ def build_situation_detail_page(
             on_delete_situation,
             on_save,
             task_filter,
-            on_task_filter_change,
             notes=notes,
             on_add_note=on_add_note,
+            on_task_filter_change=on_task_filter_change,
         )
     return _mobile_content(
         situation,

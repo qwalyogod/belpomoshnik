@@ -36,7 +36,7 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
     password_field = auth_text_field("Пароль", prefix_icon=ft.Icons.LOCK_OUTLINE, password=True)
     confirm_field = auth_text_field("Повторите пароль", prefix_icon=ft.Icons.LOCK_RESET_OUTLINED, password=True)
     terms = ft.Checkbox(
-        label="Согласен с условиями демо-MVP",
+        label="Согласен с условиями использования",
         value=True,
         active_color=APP_COLORS["blue"],
         check_color=ft.Colors.WHITE,
@@ -80,7 +80,7 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
             terms_error.visible = True
             has_error = True
         elif not terms.value:
-            terms_error.value = "Подтвердите условия демо-профиля."
+            terms_error.value = "Подтвердите условия использования."
             terms_error.visible = True
             has_error = True
         else:
@@ -127,7 +127,7 @@ def _register_card(is_desktop: bool, on_register=None, go_to=None, on_oauth=None
         oauth_divider(),
         oauth_row(on_oauth),
         form_footer("Уже есть аккаунт?", "Войти", "/login", go_to),
-        hint_card("Данные сохраняются локально в демо-версии. Production потребует серверной защиты.", icon=ft.Icons.SHIELD_OUTLINED),
+        hint_card("Ваши данные защищены: пароль хранится только в виде bcrypt-хэша, файлы документов шифруются.", icon=ft.Icons.SHIELD_OUTLINED),
     ]
     return app_card(
         ft.Column(

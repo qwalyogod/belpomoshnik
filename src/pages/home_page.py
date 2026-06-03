@@ -746,9 +746,9 @@ def _scenario_start_card(go_to, desktop: bool) -> ft.Container:
                     spacing=4,
                     expand=True,
                     controls=[
-                        badge("демо-сценарий", "purple"),
+                        badge("популярный", "purple"),
                         ft.Text(scenario["title"], size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                        ft.Text("Для демонстрации начните с него: создайте личную ситуацию и отметьте несколько задач.", size=ts(13), color=APP_COLORS["muted"], max_lines=2),
+                        ft.Text("Начните с него: создайте личную ситуацию и отметьте несколько задач.", size=ts(13), color=APP_COLORS["muted"], max_lines=2),
                     ],
                 ),
                 primary_button("Начать", on_click=lambda _: go_to(f"/scenarios/{scenario['id']}"), width=110 if desktop else None),

@@ -409,6 +409,7 @@ class User(Base, TimestampMixin):
     interest_tags: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     role: Mapped[Role] = relationship(back_populates="users")
     documents: Mapped[list[UserDocument]] = relationship(

@@ -49,7 +49,12 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
     email_field.on_change = clear_email_error
     password_field.on_change = clear_password_error
 
+    submitting = {"value": False}
+
     def submit(_=None) -> None:
+        # Защита от двойного клика на UI-уровне
+        if submitting["value"]:
+            return
         email = (email_field.value or "").strip()
         password = password_field.value or ""
         email_error = None
@@ -63,9 +68,24 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
         if email_error or password_error:
             return
         if on_login:
-            on_login(email, password, bool(remember.value))
+            submitting["value"] = True
+            login_button.disabled = True
+            try:
+                login_button.update()
+            except Exception:
+                pass
+            try:
+                on_login(email, password, bool(remember.value))
+            finally:
+                submitting["value"] = False
+                login_button.disabled = False
+                try:
+                    login_button.update()
+                except Exception:
+                    pass
 
     password_field.on_submit = submit
+    login_button = primary_button("Войти", icon=ft.Icons.LOGIN_ROUNDED, on_click=submit, expand=True)
 
     controls: list[ft.Control] = [
         auth_logo(),
@@ -91,11 +111,11 @@ def _login_card(is_desktop: bool, on_login=None, go_to=None, on_oauth=None) -> f
                 ft.Text("Забыли?", size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["blue_text"]),
             ],
         ),
-        primary_button("Войти", icon=ft.Icons.LOGIN_ROUNDED, on_click=submit, expand=True),
+        login_button,
         oauth_divider(),
         oauth_row(on_oauth),
         form_footer("Нет аккаунта?", "Создать аккаунт", "/register", go_to),
-        hint_card("Демо-доступ: ivan@example.by / 123456", icon=ft.Icons.INFO_OUTLINE),
+        hint_card("Тестовый вход: citizen@test.local / Test12345!", icon=ft.Icons.INFO_OUTLINE),
     ]
     return app_card(
         ft.Column(

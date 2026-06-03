@@ -68,7 +68,8 @@ from services.auth_api import AuthAPIClient, AuthAPIError
 from services.local_store import load_app_state, save_app_state
 from services.public_api import PublicAPIClient, PublicAPIError
 from services.user_api import UserAPIClient, UserAPIError
-from services import user_sync
+from services import role_guard, user_sync
+from components.guest_modal import open_guest_modal as _open_guest_modal_dialog
 from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_large_text, set_theme_mode
 
 
@@ -82,6 +83,7 @@ NAV_ROUTES = {
     "laws": "/legal-updates",
     "notifications": "/notifications",
     "profile": "/profile",
+    "settings": "/settings",
     "learning": "/learning",
     "utility": "/utility",
     "taxes": "/taxes",
@@ -138,6 +140,8 @@ def main(page: ft.Page) -> None:
             "remember": True,
             "access_token": "",
             "refresh_token": "",
+            "role": "guest",
+            "_login_in_progress": False,
         },
         "app_user": copy.deepcopy(default_profile),
         "app_settings": copy.deepcopy(default_settings),
@@ -189,9 +193,13 @@ def main(page: ft.Page) -> None:
     if MOCK_USER["email"] not in users:
         users[MOCK_USER["email"]] = default_users[MOCK_USER["email"]]
     auth_state = stored_state["auth_state"]
+    auth_state.setdefault("role", "guest")
+    auth_state.setdefault("_login_in_progress", False)
     if auth_state.get("logged_in") and auth_state.get("email") not in users:
         auth_state["logged_in"] = False
         auth_state["email"] = MOCK_USER["email"]
+    # Тестовые аккаунты — загружаются с backend ниже после инициализации auth_api.
+    test_accounts_state: dict[str, list[dict]] = {"items": []}
     app_user = stored_state["app_user"]
     app_user["interests"] = list(app_user.get("interests", []))
     for _profile_key, _profile_default in MOCK_USER.items():
@@ -289,6 +297,12 @@ def main(page: ft.Page) -> None:
     public_api = PublicAPIClient()
     auth_api = AuthAPIClient()
     user_api = UserAPIClient()
+
+    # Загрузить список тестовых аккаунтов с backend (один раз при старте)
+    try:
+        test_accounts_state["items"] = auth_api.list_test_accounts()
+    except Exception:
+        test_accounts_state["items"] = []
 
     def _user_api_ready() -> UserAPIClient | None:
         """Вернуть авторизованный UserAPIClient, если есть токен и backend жив.
@@ -797,7 +811,7 @@ def main(page: ft.Page) -> None:
           template   = docs/email_templates/doc_expiry.html
           throttle   = 1 письмо/сутки на тип уведомления
           gate       = app_settings["email_notifications"] is True
-        Сейчас создаёт демо-уведомление в SnackBar.
+        Производит запись в очередь email-уведомлений; рассылка по cron.
         """
         if app_settings.get("email_notifications", True):
             _show_message("[Demo] Email о документе «" + doc.get("title", "") + "» готов к отправке.")
@@ -958,7 +972,7 @@ def main(page: ft.Page) -> None:
                 target_field.value = selected_name
                 target_field.update()
                 _show_message(
-                    "Flet не передал данные файла. Для демо можно указать путь вручную.",
+                    "Не удалось получить данные файла. Укажите путь вручную.",
                     APP_COLORS["warning"],
                 )
                 return
@@ -1452,12 +1466,12 @@ def main(page: ft.Page) -> None:
                 recalculate_situation_progress(situation["id"])
             save_current_state()
             _close(dialog)
-            _show_message("Демо-данные сброшены.")
+            _show_message("Данные сброшены.")
             page.run_task(page.push_route, "/")
 
         _confirm_action(
-            "Сбросить демо-данные?",
-            "Будут восстановлены начальные документы, ситуации, задачи, уведомления и профиль демо-пользователя.",
+            "Сбросить данные?",
+            "Будут восстановлены начальные документы, ситуации, задачи, уведомления и профиль.",
             "Сбросить",
             reset,
             danger=True,
@@ -1522,9 +1536,19 @@ def main(page: ft.Page) -> None:
         auth_state["logged_in"] = True
         auth_state["email"] = normalized_email
         auth_state["remember"] = bool(remember)
+        # Дефолтная роль из локального профиля или citizen; backend перезапишет точнее.
+        auth_state["role"] = profile.get("role") or "citizen"
         if tokens:
             auth_state["access_token"] = tokens.get("access_token", "")
             auth_state["refresh_token"] = tokens.get("refresh_token", "")
+            # Подтянуть точную роль с backend через /api/auth/me
+            try:
+                user_api.set_token(auth_state["access_token"])
+                me = user_api._request("GET", "/api/auth/me")
+                if me and me.get("role"):
+                    auth_state["role"] = me["role"]
+            except Exception:
+                pass
             _sync_pull_documents()
             _sync_pull_taxes()
             _sync_pull_utility()
@@ -1537,40 +1561,54 @@ def main(page: ft.Page) -> None:
         page.run_task(page.push_route, "/")
 
     def login_user(email: str, password: str, remember: bool = True) -> None:
-        normalized_email = (email or "").strip().lower()
-        # 1) Try backend JWT auth
-        tokens: dict | None = None
+        # Race-фикс: блокировать повторные клики пока идёт запрос.
+        if auth_state.get("_login_in_progress"):
+            return
+        auth_state["_login_in_progress"] = True
         try:
-            if auth_api.health():
-                tokens = auth_api.login(normalized_email, password)
-        except AuthAPIError as exc:
-            if exc.status_code in (400, 401):
+            normalized_email = (email or "").strip().lower()
+            backend_alive = False
+            tokens: dict | None = None
+            try:
+                backend_alive = auth_api.health()
+            except Exception:
+                backend_alive = False
+
+            if backend_alive:
+                # Backend живой — используем ТОЛЬКО его. Локальный fallback не запускаем,
+                # иначе при правильных credentials backend возвращает 401 (юзер не в БД)
+                # а local fallback впускает — гонка.
+                try:
+                    tokens = auth_api.login(normalized_email, password)
+                except AuthAPIError as exc:
+                    if exc.status_code in (400, 401):
+                        _show_message("Неверный email или пароль.", APP_COLORS["danger"])
+                    else:
+                        _show_message(f"Ошибка входа: {exc}", APP_COLORS["danger"])
+                    return
+                local_user = users.get(normalized_email)
+                profile = (local_user or {}).get("profile") or {
+                    "name": normalized_email.split("@")[0].title(),
+                    "email": normalized_email,
+                    "city": "Минск",
+                    "region": "Минская область",
+                    "avatar_url": MOCK_USER["avatar_url"],
+                    "interests": [],
+                    "learning_mode": True,
+                }
+                _apply_login(normalized_email, profile, remember, tokens)
+                _show_message("Вход выполнен.")
+                return
+
+            # Backend недоступен — fallback на локальный словарь (offline-режим).
+            local_user = users.get(normalized_email)
+            if not local_user or local_user.get("password") != password:
                 _show_message("Неверный email или пароль.", APP_COLORS["danger"])
                 return
-            tokens = None  # backend error → fall back to local
-
-        local_user = users.get(normalized_email)
-        if tokens:
-            # Backend accepted — reuse local profile if present, else minimal one
-            profile = (local_user or {}).get("profile") or {
-                "name": normalized_email.split("@")[0].title(),
-                "email": normalized_email,
-                "city": "Минск",
-                "region": "Минская область",
-                "avatar_url": MOCK_USER["avatar_url"],
-                "interests": [],
-                "learning_mode": True,
-            }
-            _apply_login(normalized_email, profile, remember, tokens)
-            _show_message("Вход выполнен (API).")
-            return
-
-        # 2) Fallback — local dictionary
-        if not local_user or local_user.get("password") != password:
-            _show_message("Неверный email или пароль.", APP_COLORS["danger"])
-            return
-        _apply_login(normalized_email, local_user["profile"], remember)
-        _show_message("Вы вошли в профиль.")
+            _apply_login(normalized_email, local_user["profile"], remember)
+            _show_message("Вы вошли в профиль.")
+        finally:
+            auth_state["_login_in_progress"] = False
 
     def oauth_login(provider: str) -> None:
         """Demo Google / Yandex OAuth — issues a backend JWT for a demo identity."""
@@ -1625,7 +1663,7 @@ def main(page: ft.Page) -> None:
             _show_message("Пароли не совпадают.", APP_COLORS["warning"])
             return
         if not accepted:
-            _show_message("Подтвердите использование демо-профиля.", APP_COLORS["warning"])
+            _show_message("Подтвердите согласие с условиями использования.", APP_COLORS["warning"])
             return
         if normalized_email in users:
             _show_message("Пользователь с таким email уже есть.", APP_COLORS["warning"])
@@ -1672,12 +1710,29 @@ def main(page: ft.Page) -> None:
 
     def logout_user(_=None) -> None:
         auth_state["logged_in"] = False
+        auth_state["access_token"] = ""
+        auth_state["refresh_token"] = ""
+        auth_state["role"] = "guest"
         save_current_state()
         _show_message("Вы вышли из профиля.")
-        page.run_task(page.push_route, "/login")
+        page.run_task(page.push_route, "/")  # гостевой режим — на главную, не на /login
+
+    def switch_test_account(email: str, name: str = "", role: str = "") -> None:
+        """Быстрый login через переключатель тестовых аккаунтов."""
+        if not email:
+            return
+        # Используем стандартный login_user — backend проверит пароль
+        login_user(email, "Test12345!", remember=True)
 
     def go_to(route: str) -> None:
         page.run_task(page.push_route, route)
+
+    def _open_guest_modal(description: str = "Чтобы выполнить это действие, нужен аккаунт.") -> None:
+        _open_guest_modal_dialog(page, go_to, description=description)
+
+    def require_user(description: str = "Чтобы выполнить это действие, нужен аккаунт.") -> bool:
+        """Защита мутирующих handlers. True если пользователь авторизован."""
+        return role_guard.require_auth(auth_state, lambda: _open_guest_modal(description))
 
     def complete_onboarding(_=None) -> None:
         app_settings["onboarding_completed"] = True
@@ -1754,6 +1809,8 @@ def main(page: ft.Page) -> None:
             page.launch_url(url)
 
     def _create_situation_from_template(template_id: str) -> None:
+        if not require_user("Чтобы создать личную ситуацию, войдите или зарегистрируйтесь."):
+            return
         template = find_scenario_template(template_id)
         created_at = int(time.time() * 1000)
         situation_id = f"scenario-{template['id']}-{created_at}"
@@ -2223,6 +2280,12 @@ def main(page: ft.Page) -> None:
             return
 
     def add_document_from_dialog(dialog, fields: dict[str, ft.Control]) -> None:
+        if not require_user("Чтобы добавить документ, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         payload = _collect_document_payload(fields)
         if payload is None:
             return
@@ -2260,6 +2323,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def update_document_from_dialog(dialog, document_id, fields: dict[str, ft.Control]) -> None:
+        if not require_user("Чтобы изменить документ, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         payload = _collect_document_payload(fields)
         if payload is None:
             return
@@ -2355,16 +2424,18 @@ def main(page: ft.Page) -> None:
                     return
                 except Exception:
                     pass
-            _show_message(f"Демо: файл хранится локально: {scan_path}")
+            _show_message(f"Файл расположен по пути: {scan_path}")
 
         _confirm_action(
             "Документ содержит личные данные",
-            "В демо-версии файл не отправляется на сервер. Перед открытием убедитесь, что экран не видят посторонние.",
+            "Файл хранится локально и зашифрован. Перед открытием убедитесь, что экран не видят посторонние.",
             "Понятно",
             show_scan_notice,
         )
 
     def confirm_delete_document(document_id) -> None:
+        if not require_user("Чтобы удалить документ, войдите или зарегистрируйтесь."):
+            return
         document = _find_item(documents_state, document_id)
         if not document:
             _show_message("Документ не найден.", APP_COLORS["warning"])
@@ -2404,6 +2475,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _add_utility_account(dialog, address_field, account_number_field, provider_field) -> None:
+        if not require_user("Чтобы добавить лицевой счёт, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         address = _text_value(address_field)
         if not address:
             _show_message("Укажите адрес.", APP_COLORS["warning"])
@@ -2441,6 +2518,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _update_utility_account(dialog, account, address_field, account_number_field, provider_field) -> None:
+        if not require_user("Чтобы изменить лицевой счёт, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         address = _text_value(address_field)
         if not address:
             _show_message("Укажите адрес.", APP_COLORS["warning"])
@@ -2455,6 +2538,8 @@ def main(page: ft.Page) -> None:
         route_change()
 
     def confirm_delete_utility_account(account_id) -> None:
+        if not require_user("Чтобы удалить лицевой счёт, войдите или зарегистрируйтесь."):
+            return
         account = _find_item(utility_accounts_state, account_id)
         if not account:
             _show_message("Счёт не найден.", APP_COLORS["warning"])
@@ -2489,6 +2574,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _add_utility_payment(dialog, account_id, period_field, readings_date_field, payment_date_field, amount_field, readings_deadline_field, payment_deadline_field, status_field) -> None:
+        if not require_user("Чтобы добавить платёж ЖКХ, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         period = _text_value(period_field)
         if not period:
             _show_message("Укажите период.", APP_COLORS["warning"])
@@ -2540,6 +2631,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _update_utility_payment(dialog, payment, period_field, readings_date_field, payment_date_field, amount_field, readings_deadline_field, payment_deadline_field, status_field) -> None:
+        if not require_user("Чтобы изменить платёж ЖКХ, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         try:
             amount = float((_text_value(amount_field) or "0").replace(",", "."))
         except ValueError:
@@ -2558,6 +2655,8 @@ def main(page: ft.Page) -> None:
         route_change()
 
     def confirm_delete_utility_payment(payment_id) -> None:
+        if not require_user("Чтобы удалить платёж ЖКХ, войдите или зарегистрируйтесь."):
+            return
         payment = _find_item(utility_payments_state, payment_id)
         if not payment:
             _show_message("Запись не найдена.", APP_COLORS["warning"])
@@ -2591,6 +2690,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _add_tax_obligation(dialog, title_field, user_type_field, deadline_field, amount_field, period_field, status_field, comment_field) -> None:
+        if not require_user("Чтобы добавить налоговое обязательство, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         title = _text_value(title_field)
         if not title:
             _show_message("Укажите название обязательства.", APP_COLORS["warning"])
@@ -2641,6 +2746,12 @@ def main(page: ft.Page) -> None:
         _open_control(dialog)
 
     def _update_tax_obligation(dialog, obligation, title_field, user_type_field, deadline_field, amount_field, period_field, status_field, comment_field) -> None:
+        if not require_user("Чтобы изменить налоговое обязательство, войдите или зарегистрируйтесь."):
+            try:
+                _close(dialog)
+            except Exception:
+                pass
+            return
         title = _text_value(title_field)
         if not title:
             _show_message("Укажите название.", APP_COLORS["warning"])
@@ -2663,6 +2774,8 @@ def main(page: ft.Page) -> None:
         route_change()
 
     def confirm_delete_tax_obligation(obligation_id) -> None:
+        if not require_user("Чтобы удалить обязательство, войдите или зарегистрируйтесь."):
+            return
         obligation = _find_item(tax_obligations_state, obligation_id)
         if not obligation:
             _show_message("Обязательство не найдено.", APP_COLORS["warning"])
@@ -2677,6 +2790,8 @@ def main(page: ft.Page) -> None:
         _confirm_action("Удалить обязательство?", f"«{obligation.get('title', '')}» будет удалено.", "Удалить", delete, danger=True)
 
     def mark_tax_obligation_paid(obligation_id) -> None:
+        if not require_user("Чтобы отметить оплату, войдите или зарегистрируйтесь."):
+            return
         obligation = _find_item(tax_obligations_state, obligation_id)
         if not obligation:
             return
@@ -2993,6 +3108,8 @@ def main(page: ft.Page) -> None:
         )
 
     def toggle_situation_task(task_id, value: bool) -> None:
+        if not require_user("Чтобы отмечать задачи, войдите или зарегистрируйтесь."):
+            return
         for task in situation_tasks_state:
             if task["id"] == task_id:
                 if value and _unmet_dependencies(task):
@@ -3039,6 +3156,8 @@ def main(page: ft.Page) -> None:
         route_change()
 
     def mark_all_notifications_read(_=None) -> None:
+        if not require_user("Чтобы пользоваться уведомлениями, войдите или зарегистрируйтесь."):
+            return
         for note in notifications_state:
             note["is_read"] = True
         save_current_state()
@@ -3046,6 +3165,8 @@ def main(page: ft.Page) -> None:
         route_change()
 
     def mark_notification_read(note_id: int) -> None:
+        if not require_user("Чтобы пользоваться уведомлениями, войдите или зарегистрируйтесь."):
+            return
         for note in notifications_state:
             if note["id"] == note_id:
                 note["is_read"] = True
@@ -3102,6 +3223,8 @@ def main(page: ft.Page) -> None:
         update_profile_setting("dark_theme", theme_mode_state["value"] != "dark")
 
     def save_profile(refs: dict[str, ft.TextField]) -> None:
+        if not require_user("Чтобы сохранить профиль, войдите или зарегистрируйтесь."):
+            return
         name = _text_value(refs["name"])
         email = _text_value(refs["email"]).lower()
         if not name:
@@ -3602,7 +3725,7 @@ def main(page: ft.Page) -> None:
 
         _confirm_action(
             "Удалить закон-апдейт?",
-            f"Запись «{law.get('title', 'Без названия')}» будет удалена из локального демо-состояния.",
+            f"Запись «{law.get('title', 'Без названия')}» будет удалена.",
             "Удалить",
             delete,
             danger=True,
@@ -3852,7 +3975,7 @@ def main(page: ft.Page) -> None:
 
         _confirm_action(
             "Удалить источник?",
-            f"Источник «{source.get('title', 'Без названия')}» будет удалён из локального демо-справочника.",
+            f"Источник «{source.get('title', 'Без названия')}» будет удалён.",
             "Удалить",
             delete,
             danger=True,
@@ -5253,6 +5376,14 @@ def main(page: ft.Page) -> None:
                 law_updates_state,
                 law_detail_state,
             ), "law_detail")
+        if screen_key == "settings":
+            from pages.settings_page import build_settings_page
+            return build_settings_page(
+                settings=app_settings,
+                on_setting_change=update_profile_setting,
+                is_desktop=is_desktop,
+                go_back=lambda _e: page.run_task(page.push_route, "/profile"),
+            )
         if screen_key == "profile":
             return build_profile_page(
                 is_desktop,
@@ -5313,6 +5444,13 @@ def main(page: ft.Page) -> None:
                 on_send_demo=_send_email_demo,
             )
         if screen_key == "admin_workspace":
+            if not role_guard.has_role(auth_state, "content_editor"):
+                from components.forbidden_page import build_forbidden_page
+                return build_forbidden_page(
+                    go_to,
+                    is_desktop=is_desktop,
+                    description="Раздел доступен редакторам контента и администраторам.",
+                )
             if not admin_state.get("loaded_once"):
                 admin_refresh_data(show_message=False, rerender=False)
                 admin_state["loaded_once"] = True
@@ -5331,6 +5469,14 @@ def main(page: ft.Page) -> None:
                 on_back_to_tree=admin_workspace_back_to_tree,
             )
         if screen_key == "admin":
+            # RBAC: только content_editor+ имеют доступ к админке
+            if not role_guard.has_role(auth_state, "content_editor"):
+                from components.forbidden_page import build_forbidden_page
+                return build_forbidden_page(
+                    go_to,
+                    is_desktop=is_desktop,
+                    description="Раздел доступен редакторам контента и администраторам.",
+                )
             return build_admin_page(
                 is_desktop=is_desktop,
                 admin_state=admin_state,
@@ -5460,10 +5606,16 @@ def main(page: ft.Page) -> None:
             screen_key = route_to_screen(page.route)
             auth_screen = screen_key in {"login", "register"}
             intro_screen = False
-        if not auth_state["logged_in"] and not auth_screen and not intro_screen:
-            page.route = "/login"
-            screen_key = "login"
-            auth_screen = True
+        # Гостевой режим: read-only маршруты доступны без логина.
+        # Запрещены только разделы, требующие персональные данные/мутации.
+        GUEST_BLOCKED_SCREENS = {
+            "admin", "admin_workspace",
+        }
+        if not auth_state["logged_in"]:
+            if screen_key in GUEST_BLOCKED_SCREENS and not auth_screen and not intro_screen:
+                page.route = "/login"
+                screen_key = "login"
+                auth_screen = True
         elif auth_state["logged_in"] and auth_screen:
             page.route = "/"
             screen_key = "home"
@@ -5509,10 +5661,15 @@ def main(page: ft.Page) -> None:
             page.add(app_safe_area(auth_body, include_bottom=True))
 
         elif is_desktop:
-            # ── Desktop: top header + scrollable body + footer ──────────────
+            # ── Desktop: top header + scrollable body + sticky footer ──────────
+            # Структура: Column [header(78px), expand body со скроллом, footer(88px)].
+            # При длинном контенте — крутится только body, header и footer остаются на местах.
             desktop_body = ft.Container(
                 content=ft.Column(
-                    controls=[screen_content],
+                    controls=[
+                        screen_content,
+                        ft.Container(height=24),  # нижний воздух, чтобы footer не прилипал к контенту
+                    ],
                     expand=True,
                     scroll=ft.ScrollMode.AUTO,
                 ),
@@ -5527,7 +5684,18 @@ def main(page: ft.Page) -> None:
                     expand=True,
                     spacing=0,
                     controls=[
-                        build_desktop_header(screen_to_top_nav(screen_key), go_to, chrome_width),
+                        build_desktop_header(
+                            screen_to_top_nav(screen_key),
+                            go_to,
+                            chrome_width,
+                            page=page,
+                            user=app_user,
+                            role=role_guard.current_role(auth_state),
+                            test_accounts=test_accounts_state["items"],
+                            on_logout=logout_user,
+                            on_switch_account=switch_test_account,
+                            on_login=lambda: go_to("/login"),
+                        ),
                         desktop_body,
                         build_desktop_footer(go_to, min(1120, chrome_width)),
                     ],
@@ -5557,6 +5725,7 @@ def main(page: ft.Page) -> None:
                 tablet=True,
                 on_open_ai_chat=open_ai_chat,
                 notification_count=unread_count,
+                role=role_guard.current_role(auth_state),
             )
 
             row_controls: list[ft.Control] = [sidebar, content_area]

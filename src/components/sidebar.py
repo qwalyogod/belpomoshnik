@@ -26,15 +26,28 @@ _PRODUCT_ITEMS = [
     ("laws", "Новости", ft.Icons.NEWSPAPER_OUTLINED, "/legal-updates"),
 ]
 
-_SERVICE_ITEMS = [
+_BASE_SERVICE_ITEMS = [
     ("utility", "ЖКХ-трекер", ft.Icons.HOME_WORK_OUTLINED, "/utility"),
     ("taxes", "Налоговый трекер", ft.Icons.RECEIPT_LONG_OUTLINED, "/taxes"),
     ("learning", "Обучение", ft.Icons.SCHOOL_OUTLINED, "/learning"),
-    ("admin", "Администрирование", ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, "/admin"),
 ]
 
-# All items combined (for compatibility)
-SIDEBAR_ITEMS = _PRODUCT_ITEMS + _SERVICE_ITEMS
+_EDITOR_ITEM = ("admin", "Редакторская", ft.Icons.EDIT_NOTE_OUTLINED, "/admin")
+_ADMIN_ITEM = ("admin", "Администрирование", ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, "/admin")
+
+
+def _service_items_for(role: str) -> list[tuple]:
+    """Возвращает список сервисных пунктов sidebar в зависимости от роли."""
+    items = list(_BASE_SERVICE_ITEMS)
+    if role == "platform_admin":
+        items.append(_ADMIN_ITEM)
+    elif role == "content_editor":
+        items.append(_EDITOR_ITEM)
+    return items
+
+
+# All items combined (for compatibility — default to citizen view, no admin item).
+SIDEBAR_ITEMS = _PRODUCT_ITEMS + _BASE_SERVICE_ITEMS
 
 
 def _section_label(text: str) -> ft.Container:
@@ -131,6 +144,7 @@ def build_sidebar(
     tablet: bool = False,
     on_open_ai_chat=None,
     notification_count: int = 0,
+    role: str = "citizen",
 ) -> ft.Container:
     dark_mode = theme_mode == "dark"
     width = SIDEBAR_WIDTH_TABLET if tablet else SIDEBAR_WIDTH_DESKTOP
@@ -199,7 +213,7 @@ def build_sidebar(
     ]
     service_items = [
         _sidebar_item(key, label, icon, route, active_key, go_to, tablet=tablet)
-        for key, label, icon, route in _SERVICE_ITEMS
+        for key, label, icon, route in _service_items_for(role)
     ]
 
     # AI chat button

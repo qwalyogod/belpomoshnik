@@ -65,6 +65,17 @@ class AuthAPIClient:
             "password": password,
         })
 
+    def list_test_accounts(self) -> list[dict]:
+        """GET /api/auth/test-accounts — список seed-аккаунтов для UI-переключателя."""
+        try:
+            url = f"{self.base_url}/api/auth/test-accounts"
+            req = request.Request(url=url, method="GET", headers={"Accept": "application/json"})
+            with self._opener.open(req, timeout=4) as response:
+                raw = response.read()
+                return json.loads(raw.decode("utf-8")) or []
+        except (error.URLError, error.HTTPError, json.JSONDecodeError):
+            return []
+
     def oauth(self, provider: str, email: str, name: str) -> dict:
         """
         Demo OAuth flow for Google / Yandex.

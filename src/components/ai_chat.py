@@ -80,10 +80,10 @@ def _input_area(messages: list[dict], on_update) -> ft.Container:
             return
         messages.append({"role": "user", "text": text})
         field.value = ""
-        # Demo auto-reply
+        # Базовый ответ — будет заменён интеллектуальным intent-роутером в следующей итерации.
         messages.append({
             "role": "assistant",
-            "text": "Понял вас. Сейчас это демо-режим — подключение к реальному агенту появится в следующей версии.",
+            "text": "Понял вас. Подсказка по нужному разделу появится здесь.",
         })
         on_update()
 

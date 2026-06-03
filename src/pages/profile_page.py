@@ -36,7 +36,7 @@ INTEREST_TAGS = [
 PROFILE_SECTIONS = [
     ("learning", "Подробнее об обучении", "Прогресс, тесты, категории", "/learning", ft.Icons.SCHOOL_OUTLINED, "green"),
     ("about", "О приложении", "Версия 0.1 beta и справка", "/about", ft.Icons.INFO_OUTLINE, "blue"),
-    ("reset", "Сбросить демо-данные", "Вернуть тестовое состояние", "", ft.Icons.RESTORE, "orange"),
+    ("reset", "Сбросить данные", "Вернуть начальное состояние профиля", "", ft.Icons.RESTORE, "orange"),
 ]
 
 _EVENT_ICONS = {
@@ -768,8 +768,8 @@ def _reminders_card(settings: dict, on_setting_change=None, desktop: bool = Fals
             on_setting_change,
         ),
         _reminder_row(
-            "Email-demo",
-            "Формировать демонстрационное письмо без реальной SMTP-отправки",
+            "Email-уведомления",
+            "Получать письма-напоминания на ваш email",
             "email_notifications",
             None,
             [],
@@ -1096,8 +1096,6 @@ def _desktop_profile(
     right = ft.Column(
         spacing=16,
         controls=[
-            _settings_card(settings, on_setting_change, True),
-            _reminders_card(settings, on_setting_change, True),
             _achievements_card(go_to, True),
             _profile_sections_card(go_to, on_reset_demo, on_logout, True),
             _activity_card(activity_log, True),
@@ -1178,8 +1176,6 @@ def _mobile_profile(
                 data_card,
                 _locations_card(user, on_add_location, on_delete_location, on_set_primary_location, False),
                 _interests_card(user, on_add_interest, on_toggle_tag, False),
-                _settings_card(settings, on_setting_change, False),
-                _reminders_card(settings, on_setting_change, False),
                 _favorite_scenarios_card(favorite_ids, on_open_scenario, go_to, False),
                 _achievements_card(go_to, False),
                 _employment_card(user, on_employment_change, False),

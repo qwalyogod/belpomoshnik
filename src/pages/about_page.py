@@ -54,7 +54,7 @@ def _content(go_back=None, is_desktop: bool = False) -> ft.Column:
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.IconButton(icon=ft.Icons.ARROW_BACK, icon_color=APP_COLORS["muted"], on_click=go_back),
-                    ft.Container(expand=True, content=page_heading("О приложении", "Первая демонстрационная бета.")),
+                    ft.Container(expand=True, content=page_heading("О приложении", "Beta-версия.")),
                 ],
             ),
             app_card(

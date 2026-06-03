@@ -54,13 +54,49 @@ def ensure_admin(db: Session, email: str, password: str, name: str = "Админ
     return True
 
 
+TEST_ACCOUNTS: list[tuple[str, str, str, str]] = [
+    # (email, name, role_id, password)
+    ("citizen@test.local", "Тестовый гражданин", "citizen", "Test12345!"),
+    ("editor@test.local", "Тестовый редактор", "content_editor", "Test12345!"),
+    ("admin@test.local", "Тестовый администратор", "platform_admin", "Test12345!"),
+]
+
+
+def seed_test_accounts(db: Session) -> int:
+    """Создать тестовые аккаунты для UI-переключателя. Идемпотентно."""
+    from sqlalchemy import select
+
+    added = 0
+    for email, name, role_id, password in TEST_ACCOUNTS:
+        existing = db.scalars(select(User).where(User.email == email)).first()
+        if existing:
+            # Гарантируем флаг + актуальную роль (на случай переезда между БД)
+            if not existing.is_test_account or existing.role_id != role_id:
+                existing.is_test_account = True
+                existing.role_id = role_id
+                db.commit()
+            continue
+        db.add(User(
+            email=email,
+            hashed_password=hash_password(password),
+            name=name,
+            role_id=role_id,
+            is_test_account=True,
+        ))
+        added += 1
+    db.commit()
+    return added
+
+
 def bootstrap_database() -> None:
-    """Создать схему + роли (+ опционально админа из env). Идемпотентно."""
+    """Создать схему + роли + тестовые аккаунты (+ опционально админа из env). Идемпотентно."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        added = seed_roles(db)
-        print(f"[bootstrap] схема создана; ролей добавлено: {added}")
+        added_roles = seed_roles(db)
+        print(f"[bootstrap] схема создана; ролей добавлено: {added_roles}")
+        added_test = seed_test_accounts(db)
+        print(f"[bootstrap] тестовых аккаунтов добавлено: {added_test}")
         admin_email = os.getenv("BELPOMOSHNIK_ADMIN_EMAIL")
         admin_password = os.getenv("BELPOMOSHNIK_ADMIN_PASSWORD")
         if admin_email and admin_password:

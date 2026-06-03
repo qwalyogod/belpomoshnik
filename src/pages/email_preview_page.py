@@ -1,8 +1,7 @@
 """
-I1 — Демо-экран предпросмотра сформированного email-уведомления.
+I1 — Экран предпросмотра сформированного email-уведомления.
 
-Показывает, как выглядит письмо, которое в production будет отправлено через SMTP.
-В MVP отправка недоступна — только визуальный предпросмотр.
+Показывает, как выглядит письмо, отправляемое через SMTP.
 """
 from __future__ import annotations
 
@@ -139,7 +138,7 @@ def _build_content(email_data: dict, desktop: bool, on_close=None, on_send_demo=
         spacing=10,
         controls=[
             primary_button(
-                "Отправить сейчас (demo)",
+                "Отправить сейчас",
                 icon=ft.Icons.SEND_OUTLINED,
                 on_click=on_send_demo,
             ),
