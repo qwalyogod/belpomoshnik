@@ -224,6 +224,26 @@ def build_desktop_header(
     user_area_controls: list[ft.Control] = []
 
     if is_guest:
+        # Гость: кнопка «Регистрация» (контурная) + «Войти» (синяя)
+        user_area_controls.append(
+            ft.Container(
+                ink=True,
+                on_click=lambda _: go_to("/register"),
+                border_radius=12,
+                padding=ft.Padding(left=14, top=9, right=14, bottom=9),
+                bgcolor=APP_COLORS["surface"],
+                border=border_all(APP_COLORS["stroke2"]),
+                content=ft.Row(
+                    spacing=8,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Icon(ft.Icons.PERSON_ADD_OUTLINED, size=16, color=APP_COLORS["text"]),
+                        ft.Text("Регистрация", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                    ],
+                ),
+                tooltip="Создать аккаунт",
+            )
+        )
         user_area_controls.append(
             ft.Container(
                 ink=True,
@@ -239,7 +259,7 @@ def build_desktop_header(
                         ft.Text("Войти", size=13, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
                     ],
                 ),
-                tooltip="Войти или зарегистрироваться",
+                tooltip="Войти в аккаунт",
             )
         )
     else:

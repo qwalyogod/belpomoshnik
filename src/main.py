@@ -1734,6 +1734,12 @@ def main(page: ft.Page) -> None:
         """Защита мутирующих handlers. True если пользователь авторизован."""
         return role_guard.require_auth(auth_state, lambda: _open_guest_modal(description))
 
+    def _display_user() -> dict:
+        """Профиль для отображения: для гостя без имени (нейтральное приветствие)."""
+        if role_guard.is_guest(auth_state):
+            return {**app_user, "first_name": "", "name": "Гость"}
+        return app_user
+
     def complete_onboarding(_=None) -> None:
         app_settings["onboarding_completed"] = True
         save_current_state()
@@ -5213,7 +5219,7 @@ def main(page: ft.Page) -> None:
                 is_desktop,
                 open_global_search,
                 open_problem_category,
-                app_user,
+                _display_user(),
                 build_dashboard_data(
                     situations_state,
                     situation_tasks_state,
@@ -5534,7 +5540,7 @@ def main(page: ft.Page) -> None:
             open_problem,
             go_to,
             is_desktop,
-            user=app_user,
+            user=_display_user(),
             dashboard=build_dashboard_data(
                 situations_state,
                 situation_tasks_state,

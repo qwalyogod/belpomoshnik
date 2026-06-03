@@ -24,10 +24,18 @@ def is_guest(auth_state: dict[str, Any]) -> bool:
 
 
 def current_role(auth_state: dict[str, Any]) -> str:
-    """Текущая роль: 'guest' если не залогинен, иначе значение из auth_state."""
+    """Текущая роль: 'guest' если не залогинен, иначе реальная роль.
+
+    Защита от рассинхрона: если пользователь залогинен, но в state осталась
+    роль 'guest' (или пусто) — трактуем как 'citizen', иначе header покажет
+    кнопку «Войти» залогиненному пользователю.
+    """
     if is_guest(auth_state):
         return "guest"
-    return str(auth_state.get("role") or "citizen")
+    role = auth_state.get("role")
+    if not role or role == "guest":
+        return "citizen"
+    return str(role)
 
 
 def has_role(auth_state: dict[str, Any], required: str) -> bool:

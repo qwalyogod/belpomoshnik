@@ -794,7 +794,9 @@ def _desktop_home(
     data = dashboard or {}
     profile = user or MOCK_USER
     today = date.today().strftime("%d.%m.%Y")
-    first_name = profile.get("first_name", "пользователь")
+    _fn = profile.get("first_name", "пользователь")
+    first_name = _fn
+    greeting = f"Добрый день, {_fn}" if _fn else "Добрый день"
     search_field = ft.TextField(
         hint_text="паспорт, ЖКХ, налог...",
         expand=True,
@@ -826,7 +828,7 @@ def _desktop_home(
                     controls=[
                         ft.Container(
                             content=ft.Text(
-                                f"Добрый день, {first_name}",
+                                greeting,
                                 size=ts(13),
                                 weight=ft.FontWeight.W_600,
                                 color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
@@ -951,7 +953,9 @@ def _mobile_home(
 ) -> ft.Control:
     data = dashboard or {}
     profile = user or MOCK_USER
-    first_name = profile.get("first_name", "Иван")
+    _fn = profile.get("first_name", "Иван")
+    first_name = _fn
+    greeting = f"Привет, {_fn}!" if _fn else "Добро пожаловать!"
     search_field = ft.TextField(
         hint_text="паспорт, ЖКХ, налог...",
         expand=True,
@@ -978,7 +982,7 @@ def _mobile_home(
             controls=[
                 ft.Container(
                     content=ft.Text(
-                        f"Привет, {first_name}!",
+                        greeting,
                         size=ts(12),
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
@@ -1058,7 +1062,9 @@ def _tablet_home(
     """Single-column wide layout for tablet (sidebar handles left rail)."""
     data = dashboard or {}
     profile = user or MOCK_USER
-    first_name = profile.get("first_name", "пользователь")
+    _fn = profile.get("first_name", "пользователь")
+    first_name = _fn
+    greeting = f"Добрый день, {_fn}" if _fn else "Добрый день"
     search_field = ft.TextField(
         hint_text="паспорт, ЖКХ, налог...",
         expand=True,
@@ -1084,7 +1090,7 @@ def _tablet_home(
             controls=[
                 ft.Container(
                     content=ft.Text(
-                        f"Добрый день, {first_name}",
+                        greeting,
                         size=ts(12),
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
