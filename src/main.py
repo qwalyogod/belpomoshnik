@@ -194,7 +194,9 @@ def main(page: ft.Page) -> None:
         users[MOCK_USER["email"]] = default_users[MOCK_USER["email"]]
     auth_state = stored_state["auth_state"]
     auth_state.setdefault("role", "guest")
-    auth_state.setdefault("_login_in_progress", False)
+    # Транзиентный флаг — всегда сбрасывать на старте (мог сохраниться True
+    # при персисте во время логина и заблокировать повторный вход).
+    auth_state["_login_in_progress"] = False
     if auth_state.get("logged_in") and auth_state.get("email") not in users:
         auth_state["logged_in"] = False
         auth_state["email"] = MOCK_USER["email"]
@@ -1536,6 +1538,7 @@ def main(page: ft.Page) -> None:
         auth_state["logged_in"] = True
         auth_state["email"] = normalized_email
         auth_state["remember"] = bool(remember)
+        auth_state["_login_in_progress"] = False  # сбросить до save, чтобы не персистить True
         # Дефолтная роль из локального профиля или citizen; backend перезапишет точнее.
         auth_state["role"] = profile.get("role") or "citizen"
         if tokens:
