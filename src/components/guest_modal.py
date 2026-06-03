@@ -22,11 +22,8 @@ def build_guest_modal(
     """Создаёт AlertDialog. Открыть через page.open(dialog) (Flet 0.85)."""
 
     def _close(_=None) -> None:
-        try:
-            page.close(dialog)
-        except Exception:
-            dialog.open = False
-            page.update()
+        from components.dialog_util import close_dialog
+        close_dialog(page, dialog)
 
     def _login_clicked(_=None) -> None:
         _close()
@@ -117,9 +114,5 @@ def open_guest_modal(
         on_register=lambda: go_to("/register"),
         description=description,
     )
-    try:
-        page.open(dialog)
-    except Exception:
-        page.dialog = dialog
-        dialog.open = True
-        page.update()
+    from components.dialog_util import open_dialog
+    open_dialog(page, dialog)

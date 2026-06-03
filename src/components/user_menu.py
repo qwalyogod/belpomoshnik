@@ -263,19 +263,12 @@ def build_user_menu(
     )
 
     def _close_menu() -> None:
-        try:
-            page.close(menu_dialog)
-        except Exception:
-            menu_dialog.open = False
-            page.update()
+        from components.dialog_util import close_dialog
+        close_dialog(page, menu_dialog)
 
     def _open_menu(_=None) -> None:
-        try:
-            page.open(menu_dialog)
-        except Exception:
-            page.dialog = menu_dialog
-            menu_dialog.open = True
-            page.update()
+        from components.dialog_util import open_dialog
+        open_dialog(page, menu_dialog)
 
     trigger = ft.Container(
         ink=True,
