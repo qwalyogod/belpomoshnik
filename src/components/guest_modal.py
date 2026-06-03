@@ -9,7 +9,7 @@ from __future__ import annotations
 import flet as ft
 
 from components.buttons import primary_button, secondary_button
-from theme.app_theme import APP_COLORS, border_all, padding_symmetric, ts
+from theme.app_theme import APP_COLORS, CENTER, border_all, padding_symmetric, ts
 
 
 def build_guest_modal(
@@ -55,7 +55,7 @@ def build_guest_modal(
                                 height=42,
                                 bgcolor=APP_COLORS["active"],
                                 border_radius=12,
-                                alignment=ft.alignment.center,
+                                alignment=CENTER,
                                 content=ft.Icon(ft.Icons.LOCK_OUTLINE, color=APP_COLORS["blue"], size=ts(22)),
                             ),
                             ft.Text(title, size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"], expand=True),

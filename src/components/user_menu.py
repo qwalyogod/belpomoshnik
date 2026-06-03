@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from theme.app_theme import APP_COLORS, ANIM_FAST, border_all, padding_symmetric, ts
+from theme.app_theme import APP_COLORS, ANIM_FAST, CENTER, border_all, padding_symmetric, ts
 
 
 def build_user_menu(
@@ -34,7 +34,7 @@ def build_user_menu(
         avatar_ctrl = ft.Container(
             width=size, height=size, border_radius=size // 2,
             bgcolor=APP_COLORS["surface2"],
-            alignment=ft.alignment.center,
+            alignment=CENTER,
             content=ft.Text(initials or "•", size=ts(15), weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
             border=border_all(APP_COLORS["stroke2"]),
         )
@@ -77,7 +77,7 @@ def build_user_menu(
                 ft.Container(
                     width=36, height=36, border_radius=18,
                     bgcolor=APP_COLORS["active"],
-                    alignment=ft.alignment.center,
+                    alignment=CENTER,
                     content=ft.Text(initials or "•", size=ts(14), weight=ft.FontWeight.W_900, color=APP_COLORS["blue"]),
                 ),
                 ft.Column(

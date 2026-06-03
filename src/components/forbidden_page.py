@@ -6,7 +6,7 @@ import flet as ft
 from components.buttons import primary_button, secondary_button
 from components.cards import app_card, icon_circle
 from components.layout import desktop_content
-from theme.app_theme import APP_COLORS, padding_symmetric, ts
+from theme.app_theme import APP_COLORS, CENTER, padding_symmetric, ts
 
 
 def build_forbidden_page(
@@ -42,7 +42,7 @@ def build_forbidden_page(
         ft.Container(
             content=body,
             padding=padding_symmetric(horizontal=28, vertical=36),
-            alignment=ft.alignment.center,
+            alignment=CENTER,
         ),
         width=520 if is_desktop else None,
     )

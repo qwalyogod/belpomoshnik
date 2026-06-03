@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from theme.app_theme import APP_COLORS, ANIM_FAST, border_all, padding_symmetric, ts
+from theme.app_theme import APP_COLORS, ANIM_FAST, CENTER, border_all, padding_symmetric, ts
 
 
 _ROLE_LABELS: dict[str, tuple[str, str]] = {
@@ -57,7 +57,7 @@ def build_role_switcher(
         height=size,
         border_radius=size // 2,
         bgcolor=avatar_color,
-        alignment=ft.alignment.center,
+        alignment=CENTER,
         animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
         animate_scale=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
         content=ft.Text(avatar_letter, size=ts(16), weight=ft.FontWeight.W_900, color=ft.Colors.WHITE),
