@@ -220,7 +220,7 @@ def build_desktop_header(
         tooltip="Уведомления",
     )
 
-    # User area: гость → «Войти», иначе user_menu + role_switcher
+    # User area: гость → кнопка «Войти»; залогинен → один user_menu (avatar + имя + dropdown)
     user_area_controls: list[ft.Control] = []
 
     if is_guest:
@@ -249,9 +249,14 @@ def build_desktop_header(
                 build_user_menu(
                     page=page,
                     user=user,
+                    role=role,
                     on_profile=lambda: go_to("/profile"),
                     on_settings=lambda: go_to("/settings"),
                     on_logout=on_logout if on_logout else (lambda: go_to("/login")),
+                    test_accounts=test_accounts or [],
+                    on_switch_account=on_switch_account,
+                    on_add_account=(lambda: go_to("/register")),
+                    show_name=True,
                     size=40,
                 )
             )
@@ -259,19 +264,6 @@ def build_desktop_header(
             user_area_controls.append(
                 ft.Container(on_click=lambda _: go_to("/profile"), ink=True, content=avatar(radius=20))
             )
-
-    # Role switcher (если есть test accounts)
-    if page is not None and test_accounts:
-        from components.role_switcher import build_role_switcher
-        user_area_controls.append(
-            build_role_switcher(
-                page=page,
-                current_role=role,
-                accounts=test_accounts,
-                on_switch=on_switch_account,
-                size=40,
-            )
-        )
 
     right_controls: list[ft.Control] = []
     if admin_button is not None:
