@@ -267,6 +267,8 @@ export const apiClient = {
     requestJson<T>(`/api/articles${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`, options),
   viewArticle: <T>(id: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/articles/${encodeURIComponent(id)}/view`, { method: "POST", ...options }),
+  getDailyViews: <T>(days = 7, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles/views/daily?days=${days}`, options),
   uploadMedia: async (accessToken: string, file: File): Promise<{ url: string }> => {
     const form = new FormData();
     form.append("file", file);

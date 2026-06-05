@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -22,7 +22,7 @@ from backend import schemas
 from backend.api.auth import get_current_user_email, require_role
 from backend.config import DEFAULT_DB_PATH
 from backend.database import get_db
-from backend.models import Article, BlockedSubmitter, User
+from backend.models import Article, ArticleViewDaily, BlockedSubmitter, User
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
@@ -141,11 +141,29 @@ def upload_media(file: UploadFile = File(...), _: str = Depends(get_current_user
     return {"url": f"/uploads/{name}"}
 
 
+@router.get("/views/daily")
+def daily_views(days: int = 7, db: Session = Depends(get_db)):
+    """Просмотры по дням за последние N дней (для графика дашборда)."""
+    days = max(1, min(days, 90))
+    rows = {r.day: r.count for r in db.scalars(select(ArticleViewDaily)).all()}
+    today = date.today()
+    return [
+        {"date": (today - timedelta(days=i)).isoformat(), "count": rows.get((today - timedelta(days=i)).isoformat(), 0)}
+        for i in range(days - 1, -1, -1)
+    ]
+
+
 @router.post("/{article_id}/view")
 def register_view(article_id: int, db: Session = Depends(get_db)):
     """Публичный счётчик просмотров: +1 при открытии материала читателем."""
     article = _must_get(db, article_id)
     article.views = (article.views or 0) + 1
+    today = date.today().isoformat()
+    row = db.get(ArticleViewDaily, today)
+    if row:
+        row.count += 1
+    else:
+        db.add(ArticleViewDaily(day=today, count=1))
     db.commit()
     return {"id": article.id, "views": article.views}
 

@@ -259,7 +259,7 @@ const SAMPLE_TOP_MATERIALS = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -382,13 +382,22 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   const totalViews = baseMaterials.reduce((s, m) => s + m.views, 0) * viewMul;
   const avgViews = baseMaterials.length ? totalViews / baseMaterials.length : 0;
   const maxTop = topMaterials[0]?.views || 1;
-  const week = WEEK_BASE.map((d) => ({ ...d, v: Math.round(d.v * periodMul) }));
-  const maxWeek = Math.max(...week.map((d) => d.v));
+  const shortWeekday = (iso: string) => {
+    const wd = new Date(`${iso}T00:00:00`).toLocaleDateString("ru-RU", { weekday: "short" });
+    return wd.charAt(0).toUpperCase() + wd.slice(1);
+  };
+  const hasWeekReal = viewsDaily.some((d) => d.count > 0);
+  const week = hasWeekReal
+    ? viewsDaily.map((d) => ({ d: shortWeekday(d.date), v: d.count }))
+    : WEEK_BASE.map((d) => ({ ...d, v: Math.round(d.v * periodMul) }));
+  const maxWeek = Math.max(1, ...week.map((d) => d.v));
   const pubCount = hasReal ? realPublished.length : total ? published : 118;
   const revCount = hasReal ? realReview : total ? review : 17;
-  const analyticsNote = hasReal
-    ? "Просмотры — реальные (счётчик при открытии материала). Дневной график — демонстрационный."
-    : "Демо-данные аналитики до накопления реальных просмотров.";
+  const analyticsNote = hasWeekReal
+    ? "Просмотры и дневной график — реальные (счётчик при открытии материала)."
+    : hasReal
+      ? "Просмотры — реальные. Дневной график — демонстрационный (накапливается по дням)."
+      : "Демо-данные аналитики до накопления реальных просмотров.";
   const dashKpis = [
     { l: hasReal ? "Просмотры всего" : "Просмотры за период", v: fmt(totalViews), d: hasReal ? "по материалам" : period === "30" ? "за 30 дней" : "за 7 дней", icon: <Eye size={15} />, up: hasReal ? "" : "+12%" },
     { l: "Опубликовано", v: String(pubCount), d: "материалов", icon: <Check size={15} />, up: "" },

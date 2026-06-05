@@ -661,3 +661,12 @@ class BlockedSubmitter(Base):
     )
     blocked_by: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class ArticleViewDaily(Base):
+    """Посуточный счётчик просмотров материалов (для графика дашборда)."""
+
+    __tablename__ = "article_view_daily"
+
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)  # yyyy-mm-dd
+    count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

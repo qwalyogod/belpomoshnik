@@ -78,6 +78,7 @@ type Store = {
   toggleBlockedSubmitter: (id: string) => void;
   registerView: (id: string) => void;
   uploadMedia: (file: File) => Promise<string | null>;
+  viewsDaily: { date: string; count: number }[];
   meId: string | null;
 
   favorites: string[];
@@ -387,6 +388,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // moderation queue can see citizen submissions). Global localStorage, not per-user.
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
+  const [viewsDaily, setViewsDaily] = useState<{ date: string; count: number }[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
@@ -494,6 +496,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         if (!signal?.aborted) setBlockedSubmitters(blocked.map(String));
       } catch { /* keep local block-list */ }
     }
+    try {
+      const daily = await apiClient.getDailyViews<{ date: string; count: number }[]>(7, { signal });
+      if (!signal?.aborted) setViewsDaily(daily);
+    } catch { /* graph falls back to demo */ }
   }, [authSession?.access_token, role]);
 
   useEffect(() => {
@@ -1036,6 +1042,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const registerView: Store["registerView"] = useCallback((id) => {
     setArticles(prev => prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a));
+    const today = new Date().toISOString().slice(0, 10);
+    setViewsDaily(prev => {
+      if (prev.some(d => d.date === today)) return prev.map(d => d.date === today ? { ...d, count: d.count + 1 } : d);
+      return [...prev, { date: today, count: 1 }];
+    });
     if (/^\d+$/.test(id)) apiClient.viewArticle(id).catch(() => { /* offline: local bump only */ });
   }, []);
 
@@ -1199,7 +1210,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
     articles, addArticle, updateArticle, removeArticle,
-    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, meId,
+    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
@@ -1209,7 +1220,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
-    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, meId, loadArticles,
+    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
     addDocument, updateDocument, deleteDocument, toggleFavorite,
