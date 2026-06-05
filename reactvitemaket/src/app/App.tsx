@@ -25,7 +25,7 @@ import {
    ============================================================ */
 type Page =
   | "home" | "situations" | "situation" | "documents" | "legal" | "notifications"
-  | "profile" | "catalog" | "scenario" | "mysituation" | "settings" | "learning" | "admin" | "finance" | "news";
+  | "profile" | "catalog" | "scenario" | "mysituation" | "settings" | "learning" | "admin" | "finance" | "news" | "sources";
 
 /* ============================================================
    MOBILE APP
@@ -651,6 +651,7 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
   { id: "notifications", icon: <Bell size={16} />, label: "Уведомления", badge: "5" },
   { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
   { id: "legal", icon: <BookOpen size={16} />, label: "Важное" },
+  { id: "sources", icon: <Shield size={16} />, label: "Источники" },
   { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
 ];
 
@@ -835,6 +836,7 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
         {item("notifications", <Bell size={16} />, "Уведомления", "5")}
         {item("news", <Newspaper size={16} />, "Новости")}
         {item("legal", <BookOpen size={16} />, "Важное для вас")}
+        {item("sources", <Shield size={16} />, "Источники")}
       </nav>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>

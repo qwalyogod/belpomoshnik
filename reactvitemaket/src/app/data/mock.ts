@@ -224,17 +224,17 @@ export const INITIAL_SITUATIONS: UserSituation[] = [
 ];
 
 export const INITIAL_DOCUMENTS: UserDocument[] = [
-  { id: "doc-1", type: "passport", title: "Паспорт гражданина РБ", number: "MP1234567824821", issuedAt: "2021-03-12", expiresAt: "2031-03-12", status: "active" },
-  { id: "doc-2", type: "medical", title: "Медицинская книжка", number: "MK000123", issuedAt: "2022-08-12", expiresAt: "2027-08-12", status: "active" },
-  { id: "doc-3", type: "driver", title: "Водительское удостоверение", number: "BA0099887", issuedAt: "2016-06-20", expiresAt: "2026-12-01", status: "expiring" },
-  { id: "doc-4", type: "birth", title: "Свидетельство о рождении ребёнка", number: "I-АА 003344", issuedAt: "2019-04-04", status: "active" },
+  { id: "passport", type: "passport", title: "Паспорт", number: "КН 1234567", issuedAt: "2020-04-12", expiresAt: "2030-04-12", status: "active" },
+  { id: "med", type: "medical", title: "Медкнижка", number: "МК 882134", issuedAt: "2025-06-15", expiresAt: "2026-06-15", status: "expiring" },
+  { id: "auto", type: "driver", title: "Автомобильные документы", number: "AB 654321", issuedAt: "2021-03-10", expiresAt: "2031-03-10", status: "active" },
+  { id: "utility", type: "housing", title: "ЖКХ / Лицевой счёт", number: "ЛС 00124578", status: "active" },
 ];
 
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  { id: "n1", kind: "task_due", title: "Срок оплаты налога — через 14 дней", body: "Налог на недвижимость", createdAt: "2026-06-03T09:00:00Z", read: false },
-  { id: "n2", kind: "legal_update", title: "Опубликовано новое правовое обновление", body: "Налоги · касается вас", createdAt: "2026-06-03T08:20:00Z", read: false, link: { page: "legal" } },
-  { id: "n3", kind: "step_done", title: "Шаг выполнен: справка получена", body: "Восстановление паспорта", createdAt: "2026-06-02T11:10:00Z", read: false },
-  { id: "n4", kind: "document_expiring", title: "Срок действия водительского — 6 месяцев", body: "Документы", createdAt: "2026-06-02T10:00:00Z", read: true },
+  { id: "n1", kind: "document_expiring", title: "Медкнижка истекает", body: "Срок действия медкнижки истекает через 30 дней.", createdAt: "2026-06-05T09:00:00Z", read: false },
+  { id: "n2", kind: "task_due", title: "Оплата ЖКХ", body: "Передать показания ЖКХ до 25 числа.", createdAt: "2026-06-04T09:00:00Z", read: false, link: { page: "finance" } },
+  { id: "n3", kind: "document_expiring", title: "Паспорт истекает", body: "Паспорт истекает через 120 дней.", createdAt: "2026-06-02T09:00:00Z", read: true },
+  { id: "n4", kind: "legal_update", title: "Проверить налоги", body: "Проверьте начисления налогов в личном кабинете.", createdAt: "2026-05-31T09:00:00Z", read: true, link: { page: "legal" } },
 ];
 
 export const LEGAL_UPDATES: LegalUpdate[] = [
@@ -459,4 +459,17 @@ export const PROBLEMS: Problem[] = [
     institutions: ["ЕРСЦ", "Ваш банк"],
     mistakes: ["Ждать квитанцию и пропустить срок оплаты"]
   }
+];
+
+// Официальные источники (перенесено из Flet OFFICIAL_SOURCES).
+export const OFFICIAL_SOURCES: { id: string; title: string; url: string; type: string; description: string; lastChecked: string }[] = [
+  { id: "source-pravo", title: "Национальный правовой Интернет-портал Республики Беларусь", url: "https://pravo.by/", type: "law", description: "Официальный источник нормативных правовых актов Республики Беларусь.", lastChecked: "2026-05-24" },
+  { id: "source-portal-gov", title: "Единый портал электронных услуг", url: "https://portal.gov.by/", type: "government_portal", description: "Государственный портал административных процедур и электронных услуг.", lastChecked: "2026-05-24" },
+  { id: "source-mintrud", title: "Министерство труда и социальной защиты", url: "https://mintrud.gov.by/", type: "ministry", description: "Официальная информация по пособиям, социальной поддержке и трудовым вопросам.", lastChecked: "2026-05-24" },
+  { id: "source-nalog", title: "Министерство по налогам и сборам", url: "https://nalog.gov.by/", type: "tax", description: "Официальный источник по налогам, ИП и налоговым сервисам Республики Беларусь.", lastChecked: "2026-05-24" },
+  { id: "source-minjust", title: "Министерство юстиции", url: "https://minjust.gov.by/", type: "registry", description: "Официальный источник по ЗАГС, регистрации актов гражданского состояния и правовой информации.", lastChecked: "2026-05-24" },
+  { id: "source-mvd", title: "Министерство внутренних дел — ОГиМ", url: "https://mvd.gov.by/ru/structure/departament/departament-grazhdanstva-i-migratsii", type: "government_portal", description: "Информация о паспортах, гражданстве и регистрации по месту жительства.", lastChecked: "2026-05-24" },
+  { id: "source-gibdd", title: "ГАИ МВД Республики Беларусь", url: "https://mvd.gov.by/ru/structure/gai", type: "government_portal", description: "Регистрация транспортных средств, техосмотр, водительские удостоверения.", lastChecked: "2026-05-24" },
+  { id: "source-court", title: "Верховный Суд Республики Беларусь", url: "https://court.gov.by/", type: "registry", description: "Информация о судебных процедурах, алиментах и семейных спорах.", lastChecked: "2026-05-24" },
+  { id: "source-nbki", title: "Государственный реестр недвижимого имущества", url: "https://portal.gov.by/", type: "registry", description: "Сведения о регистрации права собственности на недвижимость.", lastChecked: "2026-05-24" },
 ];

@@ -11,6 +11,7 @@ import {
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
 import { UserDocument } from "./data/types";
+import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed } from "./components/extra-screens";
 
@@ -543,6 +544,51 @@ export function NewsPage() {
       <div className="mt-6"><ProposeButton kind="news" /></div>
       <div className="mt-8"><EditorialFeed kind="news" title="Новости редакции" /></div>
       {empty}
+    </div>
+  );
+}
+
+const SOURCE_TYPE_LABEL: Record<string, string> = { law: "Закон", government_portal: "Госпортал", ministry: "Министерство", tax: "Налоги", registry: "Реестр" };
+
+export function SourcesPage() {
+  const { isMobile } = useContext(ShellContext);
+  const navigate = useNavigate();
+  const grid = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {OFFICIAL_SOURCES.map((s) => (
+        <a key={s.id} href={s.url} target="_blank" rel="noreferrer" className="block">
+          <Card interactive className="flex h-full flex-col p-4">
+            <div className="flex items-center justify-between gap-2">
+              <Pill tone="lavender">{SOURCE_TYPE_LABEL[s.type] ?? s.type}</Pill>
+              <span className="inline-flex items-center gap-1 text-[11px] tracking-tight text-emerald-600 dark:text-emerald-400"><Check size={11} /> проверен {s.lastChecked}</span>
+            </div>
+            <div className="mt-2.5 tracking-tight text-black dark:text-white" style={{ fontSize: 15, lineHeight: 1.25 }}>{s.title}</div>
+            <div className="mt-1 line-clamp-2 text-[13px] tracking-tight text-black/55 dark:text-white/55">{s.description}</div>
+            <div className="mt-auto pt-3 inline-flex items-center gap-1.5 text-[12px] tracking-tight text-[#0056FF]"><ArrowUpRight size={13} /> {s.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</div>
+          </Card>
+        </a>
+      ))}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
+        <MobileTopBar title="Источники" onBack={() => navigate(-1)} />
+        <div className="px-5 space-y-3">
+          <p className="text-[13px] tracking-tight text-black/55 dark:text-white/55">Официальные источники, на которые опирается приложение.</p>
+          {grid}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Справочно</div>
+      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Официальные источники</div>
+      <p className="mt-2 max-w-[600px] tracking-tight text-black/60 dark:text-white/60">Государственные порталы и ведомства, на данные которых опирается «Белпомощник». Перед подачей документов уточняйте актуальные требования на официальных ресурсах.</p>
+      <div className="mt-8">{grid}</div>
     </div>
   );
 }
