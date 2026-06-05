@@ -608,3 +608,56 @@ class AuditLog(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="demo")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Article(Base, TimestampMixin):
+    """Editorial / UGC publication (news, situation, problem) — K-этап.
+
+    Local-first на фронте; здесь — серверный источник правды. Авторство хранит
+    и автора-редактора (author_name), и предложившего пользователя (proposer).
+    """
+
+    __tablename__ = "articles"
+    __table_args__ = (
+        Index("ix_articles_status", "status"),
+        Index("ix_articles_kind_status", "kind", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(16), default="news", nullable=False)  # news|scenario|problem
+    title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    cover: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    video: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    gallery: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list of urls
+    tags: Mapped[str] = mapped_column(Text, default="[]", nullable=False)     # JSON list of strings
+    category: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    specialization: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    audience: Mapped[str] = mapped_column(String(64), default="all", nullable=False)
+    source: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    source_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="draft", nullable=False)  # draft|review|published|rejected
+    # authorship
+    author_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    author_role: Mapped[str] = mapped_column(String(32), default="editor", nullable=False)
+    proposed_by: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    proposer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    anonymous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reported: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    publish_date: Mapped[str] = mapped_column(String(32), default="", nullable=False)  # yyyy-mm-dd
+    views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class BlockedSubmitter(Base):
+    """Пользователь, которому администрация запретила предлагать контент."""
+
+    __tablename__ = "blocked_submitters"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    blocked_by: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

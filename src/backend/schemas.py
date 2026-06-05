@@ -455,3 +455,81 @@ class ReorderPayload(BaseModel):
 
 class ScenarioVerifyNotesPayload(BaseModel):
     notes: str = ""
+
+
+# ---------------------------------------------------------------------------
+# K-этап: публикации (редакторские + UGC) и модерация
+# ---------------------------------------------------------------------------
+
+class ArticleAuthorOut(BaseModel):
+    name: str = ""
+    role: str = "editor"
+    proposed_by: str = ""
+    proposer_id: int | None = None
+    anonymous: bool = False
+
+
+class ArticleOut(BaseModel):
+    id: int
+    kind: str
+    title: str
+    summary: str
+    body_html: str
+    cover: str
+    video: str
+    gallery: list[str]
+    tags: list[str]
+    category: str
+    specialization: str
+    audience: str
+    source: str
+    source_url: str
+    status: str
+    author: ArticleAuthorOut
+    reported: bool
+    date: str
+    views: int
+    updated_at: datetime
+
+
+class ArticleCreate(BaseModel):
+    kind: str = Field(default="news")
+    title: str = Field(default="", max_length=255)
+    summary: str = Field(default="", max_length=2000)
+    body_html: str = ""
+    cover: str = Field(default="", max_length=1000)
+    video: str = Field(default="", max_length=1000)
+    gallery: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    category: str = Field(default="", max_length=255)
+    specialization: str = Field(default="", max_length=255)
+    audience: str = Field(default="all", max_length=64)
+    source: str = Field(default="", max_length=255)
+    source_url: str = Field(default="", max_length=1000)
+    status: str = Field(default="draft")
+    date: str = Field(default="", max_length=32)
+    anonymous: bool = False
+    as_proposal: bool = False  # пользовательское предложение (UGC)
+
+
+class ArticleUpdate(BaseModel):
+    kind: str | None = None
+    title: str | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=2000)
+    body_html: str | None = None
+    cover: str | None = Field(default=None, max_length=1000)
+    video: str | None = Field(default=None, max_length=1000)
+    gallery: list[str] | None = None
+    tags: list[str] | None = None
+    category: str | None = Field(default=None, max_length=255)
+    specialization: str | None = Field(default=None, max_length=255)
+    audience: str | None = Field(default=None, max_length=64)
+    source: str | None = Field(default=None, max_length=255)
+    source_url: str | None = Field(default=None, max_length=1000)
+    status: str | None = None
+    date: str | None = Field(default=None, max_length=32)
+    reported: bool | None = None
+
+
+class ArticleModerate(BaseModel):
+    action: str  # publish | reject | report | unreport

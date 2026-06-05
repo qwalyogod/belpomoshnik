@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.admin import router as admin_router
+from backend.api.articles import router as articles_router
 from backend.api.assistant import router as assistant_router
 from backend.api.auth import router as auth_router
 from backend.api.public import router as public_router
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(user_router)
     app.include_router(situations_router)
     app.include_router(trackers_router)
+    app.include_router(articles_router)
     app.include_router(assistant_router)
 
     @app.get("/api/health", tags=["system"])
