@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { motion } from "motion/react";
+import { REGION_NAMES, districtsForRegion, cityForDistrict } from "../data/geo";
 
 export const COLORS = {
   royal: "#0056FF",
@@ -52,6 +53,53 @@ export function Card({ children, className = "", interactive = false }: { childr
       className={`relative rounded-3xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.02),0_24px_48px_-32px_rgba(15,23,42,0.18)] dark:border-white/[0.06] dark:bg-[#0F1117] dark:shadow-[0_1px_0_rgba(255,255,255,0.02),0_24px_48px_-24px_rgba(0,0,0,0.6)] ${interactive ? "transition-all hover:-translate-y-[2px] hover:shadow-[0_1px_0_rgba(0,0,0,0.02),0_32px_60px_-28px_rgba(15,23,42,0.28)]" : ""} ${className}`}
     >
       {children}
+    </div>
+  );
+}
+
+export function LocationPicker({
+  value,
+  onChange,
+  className = "",
+}: {
+  value: { region: string; district?: string; city: string };
+  onChange: (v: { region: string; district: string; city: string }) => void;
+  className?: string;
+}) {
+  const districts = districtsForRegion(value.region);
+  const fieldCls =
+    "w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight text-black outline-none transition-colors focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white";
+  const labelCls = "mb-1.5 block text-[11px] uppercase tracking-[0.12em] text-black/45 dark:text-white/45";
+
+  const onRegion = (region: string) => {
+    const ds = districtsForRegion(region);
+    const district = ds[0]?.name ?? "";
+    onChange({ region, district, city: cityForDistrict(region, district) });
+  };
+  const onDistrict = (district: string) => {
+    onChange({ region: value.region, district, city: cityForDistrict(value.region, district) });
+  };
+
+  return (
+    <div className={`grid gap-3 sm:grid-cols-3 ${className}`}>
+      <div>
+        <label className={labelCls}>Регион</label>
+        <select value={value.region} onChange={(e) => onRegion(e.target.value)} className={fieldCls}>
+          {!REGION_NAMES.includes(value.region) && <option value={value.region}>{value.region || "Выберите регион"}</option>}
+          {REGION_NAMES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Район</label>
+        <select value={value.district ?? ""} onChange={(e) => onDistrict(e.target.value)} disabled={districts.length === 0} className={`${fieldCls} disabled:opacity-50`}>
+          {districts.length === 0 && <option value="">Нет данных</option>}
+          {districts.map((d) => <option key={d.name} value={d.name}>{d.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Город</label>
+        <input value={value.city} onChange={(e) => onChange({ region: value.region, district: value.district ?? "", city: e.target.value })} placeholder="Город" className={fieldCls} />
+      </div>
     </div>
   );
 }

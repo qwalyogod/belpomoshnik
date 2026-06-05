@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
   Bell, ChevronLeft, Edit3, Newspaper
 } from "lucide-react";
-import { Card, Pill, PrimaryButton, GhostButton, Logo } from "./components/belp-ui";
+import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
 import { UserDocument } from "./data/types";
 import { matchesQuery } from "./services/search";
@@ -965,8 +965,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
-  const [region, setRegion] = useState("Минская область");
-  const [city, setCity] = useState("Минск");
+  const [loc, setLoc] = useState({ region: "Минская область", district: "Минский район", city: "Минск" });
   const [error, setError] = useState("");
 
   const handleRegister = () => {
@@ -979,7 +978,7 @@ export function RegisterPage() {
       setError("Пароли не совпадают.");
       return;
     }
-    registerUser({ name, email, password, region, city });
+    registerUser({ name, email, password, region: loc.region, city: loc.city });
     navigate("/");
   };
 
@@ -1003,10 +1002,8 @@ export function RegisterPage() {
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
             <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
             <input type="password" placeholder="Повтор пароля" value={repeat} onChange={(e) => setRepeat(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
-            <div className="flex gap-4">
-              <input type="text" placeholder="Регион" value={region} onChange={(e) => setRegion(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
-              <input type="text" placeholder="Город" value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
-            </div>
+            <LocationPicker value={loc} onChange={setLoc} className="!grid-cols-1" />
+            <p className="text-[11px] tracking-tight text-black/40 dark:text-white/40">Регион и город нужны, чтобы подсказывать ближайшие учреждения.</p>
             {error && <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700 dark:bg-red-500/10 dark:text-red-200">{error}</div>}
             
             <PrimaryButton onClick={handleRegister} className="w-full py-3.5 text-[15px] mt-2">Создать аккаунт</PrimaryButton>

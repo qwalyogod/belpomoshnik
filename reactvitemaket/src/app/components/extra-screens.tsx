@@ -5,7 +5,7 @@ import {
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
   Award, BookOpen, Sparkles, Clock, MapPin,
 } from "lucide-react";
-import { Card, Pill, PrimaryButton, GhostButton } from "./belp-ui";
+import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
 import { useNavigate } from "react-router";
 import { useStore, maskDocumentNumber, DOC_TYPE_LABEL } from "../data/store";
@@ -722,14 +722,8 @@ export function ProfileEditModal({ open, onClose }: { open: boolean; onClose: ()
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5 [&::-webkit-scrollbar]:hidden">
           <ProfileField label="Имя и фамилия" value={form.name} onChange={(v) => set({ name: v })} />
-          <div className="grid grid-cols-2 gap-3">
-            <ProfileField label="Область / регион" value={form.region} onChange={(v) => set({ region: v })} />
-            <ProfileField label="Город" value={form.city} onChange={(v) => set({ city: v })} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <ProfileField label="Район" value={form.district} onChange={(v) => set({ district: v })} />
-            <ProfileField label="Адрес" value={form.address ?? ""} onChange={(v) => set({ address: v })} />
-          </div>
+          <LocationPicker value={{ region: form.region, district: form.district, city: form.city }} onChange={(v) => set(v)} />
+          <ProfileField label="Адрес" value={form.address ?? ""} onChange={(v) => set({ address: v })} />
 
           <div>
             <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Статус занятости</span>
