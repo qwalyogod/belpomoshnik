@@ -5,7 +5,7 @@ import { ShellContext, RootLayout } from "./App";
 import { MobileHome, DesktopHome } from "./App";
 import { AdminPanel } from "./components/desktop";
 import { ScenarioDetail, MySituationDetail, SettingsPage, LearningPage } from "./components/extra-screens";
-import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage } from "./pages";
+import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage, OnboardingPage } from "./pages";
 
 function ResponsivePage({ mobile: MobileComp, desktop: DesktopComp }: { mobile: React.ElementType; desktop: React.ElementType }) {
   const { isMobile, dark, setDark } = React.useContext(ShellContext);
@@ -155,6 +155,7 @@ export const router = createBrowserRouter([
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "about", element: <AboutPage /> },
+      { path: "onboarding", element: <OnboardingPage /> },
       { path: "problems", element: <ProblemsPage /> },
       { path: "admin", element: <AdminPageWrapper /> },
       { path: "editor", element: <EditorPageWrapper /> }

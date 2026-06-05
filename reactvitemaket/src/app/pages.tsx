@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
   Bell, ChevronLeft, Edit3, Newspaper
 } from "lucide-react";
-import { Card, Pill, PrimaryButton, GhostButton } from "./components/belp-ui";
+import { Card, Pill, PrimaryButton, GhostButton, Logo } from "./components/belp-ui";
 import { motion } from "motion/react";
 import { UserDocument } from "./data/types";
 import { matchesQuery } from "./services/search";
@@ -446,6 +446,61 @@ export function LegalPage() {
             </Card>
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+const ONBOARDING_STEPS = [
+  { icon: <Search size={22} />, badge: "01", title: "Найдите проблему", desc: "Опишите ситуацию или выберите готовую категорию." },
+  { icon: <Check size={22} />, badge: "02", title: "Получите план", desc: "Белпомощник соберёт шаги, документы, сроки и куда обращаться." },
+  { icon: <Bell size={22} />, badge: "03", title: "Следите за сроками", desc: "Напоминания помогут не пропустить задачи и документы." },
+  { icon: <Award size={22} />, badge: "04", title: "Ведите прогресс", desc: "Отмечайте выполненное и смотрите, как ситуация движется к завершению." },
+];
+
+export function OnboardingPage() {
+  const navigate = useNavigate();
+  const finish = (to: string) => {
+    try { localStorage.setItem("belp.onboarded", "1"); } catch { /* ignore */ }
+    navigate(to);
+  };
+  return (
+    <div className="relative min-h-[100dvh] overflow-hidden">
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0056FF]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-40 h-80 w-80 rounded-full bg-[#2277FF]/10 blur-3xl" />
+      <div className="relative mx-auto flex min-h-[100dvh] max-w-[1100px] flex-col justify-center px-5 py-12 sm:px-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="flex items-center justify-between">
+            <Logo size={30} />
+            <span className="rounded-full bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">mobile-first · РБ</span>
+          </div>
+          <h1 className="mt-10 max-w-[16ch] text-[34px] font-medium leading-[1.05] tracking-tight text-black dark:text-white sm:text-[52px]">
+            Помощник, который превращает проблему в понятный план
+          </h1>
+          <p className="mt-4 max-w-[60ch] text-[15px] leading-relaxed tracking-tight text-black/60 dark:text-white/60 sm:text-[17px]">
+            Найдите жизненную ситуацию, получите чек-лист, сроки, документы и напоминания без канцелярита. Паспорт, ЖКХ, налоги, прописка — по шагам.
+          </p>
+        </motion.div>
+
+        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {ONBOARDING_STEPS.map((s, i) => (
+            <motion.div key={s.badge} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.1 + i * 0.08 }}>
+              <Card className="flex h-full flex-col p-5">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{s.icon}</span>
+                  <span className="text-[18px] font-semibold tracking-tight text-black/15 dark:text-white/20">{s.badge}</span>
+                </div>
+                <div className="mt-4 tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>{s.title}</div>
+                <div className="mt-1 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">{s.desc}</div>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.45 }} className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <PrimaryButton onClick={() => finish("/")} className="px-7 sm:w-auto">Начать</PrimaryButton>
+          <GhostButton onClick={() => finish("/login")} className="px-7">У меня уже есть аккаунт</GhostButton>
+        </motion.div>
       </div>
     </div>
   );

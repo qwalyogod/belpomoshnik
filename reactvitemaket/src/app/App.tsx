@@ -1552,6 +1552,20 @@ function AssistantFab() {
   );
 }
 
+// First-run welcome: send brand-new guests to /onboarding once.
+function OnboardingGate() {
+  const { role } = useStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    if (role !== "guest") return;
+    let onboarded = true;
+    try { onboarded = !!localStorage.getItem("belp.onboarded"); } catch { /* ignore */ }
+    if (!onboarded && location.pathname === "/") navigate("/onboarding", { replace: true });
+  }, [role, location.pathname, navigate]);
+  return null;
+}
+
 export function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     try { return (localStorage.getItem("themeMode") as ThemeMode) || "system"; } catch { return "system"; }
@@ -1596,6 +1610,7 @@ export function RootLayout() {
   return (
     <AppStoreProvider>
       <ShellContext.Provider value={{ isMobile, dark, setDark, themeMode, setThemeMode, openAssistant: () => setAssistantOpen(true), adminOpen, adminSignal, openAdmin: () => { setAdminOpen(true); setAdminSignal(s => s + 1); }, closeAdmin: () => setAdminOpen(false) }}>
+        <OnboardingGate />
         <div className={dark ? "dark" : ""}>
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
             {layout === "mobile" ? <MobileShell dark={dark} setDark={setDark} />
