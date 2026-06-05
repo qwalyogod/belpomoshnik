@@ -12,7 +12,7 @@ import { Card, Pill, PrimaryButton, GhostButton } from "./components/belp-ui";
 import { motion } from "motion/react";
 import { UserDocument } from "./data/types";
 import { matchesQuery } from "./services/search";
-import { ProfileEditModal, ProposeButton, MyContributions } from "./components/extra-screens";
+import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed } from "./components/extra-screens";
 
 function PageSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -139,6 +139,7 @@ export function CatalogPage() {
         ))}
       </div>
       
+      <div className="mt-8"><EditorialFeed kind="scenario" title="Ситуации от редакции и пользователей" /></div>
       {filtered.length === 0 && <div className="mt-10 text-[14px] text-black/55 dark:text-white/55">Сценарии не найдены. Попробуйте изменить запрос или категорию.</div>}
       
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -396,6 +397,7 @@ export function LegalPage() {
         <div className="px-5 space-y-3">
           <PageSearch value={query} onChange={setQuery} placeholder="Поиск по новостям" />
           <ProposeButton kind="news" className="w-full justify-center" />
+          <EditorialFeed kind="news" />
           {filtered.map((it) => (
             <button key={it.id} onClick={() => navigate(`/law-detail/${it.id}`)} className="block w-full text-left">
               <Card interactive className="p-4">
@@ -426,6 +428,7 @@ export function LegalPage() {
         <div className="flex-1"><PageSearch value={query} onChange={setQuery} placeholder="Поиск по новостям" /></div>
         <ProposeButton kind="news" className="shrink-0" />
       </div>
+      <div className="mt-8"><EditorialFeed kind="news" /></div>
       {filtered.length === 0 && <div className="mt-8 text-[14px] text-black/55 dark:text-white/55">Ничего не найдено.</div>}
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((it) => (
@@ -1065,8 +1068,9 @@ export function ProblemsPage() {
         ))}
       </div>
       
+      <div className="mt-8"><EditorialFeed kind="problem" title="Проблемы от редакции и пользователей" /></div>
       {filtered.length === 0 && <div className="mt-10 text-[14px] text-black/55 dark:text-white/55">Ничего не найдено. Попробуйте изменить запрос.</div>}
-      
+
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((s, i) => (
           <button key={s.id} className="text-left" onClick={() => navigate(`/problem-detail/${s.id}`)}>

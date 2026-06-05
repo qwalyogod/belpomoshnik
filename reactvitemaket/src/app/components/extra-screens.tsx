@@ -13,7 +13,7 @@ import { apiClient } from "../services/api";
 import { buildSuggestions, getRecentSearches, addRecentSearch, POPULAR_QUERIES, SuggestionItem } from "../services/search";
 import { matchInstitutions, hasProfileLocation } from "../services/institutions";
 import { LEARNING_QUIZ, LEARNING_CATEGORIES } from "../data/mock";
-import { Scenario, UserDocumentType, Lang, Article } from "../data/types";
+import { Scenario, UserDocumentType, Lang, Article, ArticleKind } from "../data/types";
 
 /* ---------------- DISCLAIMER ---------------- */
 export function SourcesDisclaimer() {
@@ -1087,6 +1087,114 @@ function Input({ value, onChange, placeholder }: { value: string; onChange: (v: 
 /* ---------------- helpers for usage in App ---------------- */
 export function formatDocumentNumber(num: string, masked: boolean) {
   return maskDocumentNumber(num, !masked);
+}
+
+/* ---------------- Reader-facing editorial content ---------------- */
+function articleAuthorLabel(a: Article) {
+  const m = a.author;
+  if (m.proposedBy) {
+    const who = m.anonymous ? "Аноним" : m.proposedBy;
+    return m.name && m.name !== m.proposedBy ? `Предложено: ${who} · при поддержке ${m.name}` : `Предложено: ${who}`;
+  }
+  return `Автор: ${m.name || "Редакция"}`;
+}
+function articleToDraft(a: Article): Partial<ContentDraft> {
+  return {
+    kind: a.kind, title: a.title, summary: a.summary, bodyHtml: a.bodyHtml, cover: a.cover,
+    video: a.video, gallery: a.gallery, tags: a.tags, category: a.category,
+    specialization: a.specialization, audience: a.audience, source: a.source,
+    sourceUrl: a.sourceUrl, date: a.date, author: a.author.name,
+  };
+}
+const ARTICLE_KIND_LABEL: Record<string, string> = { news: "Новость", scenario: "Ситуация", problem: "Проблема" };
+
+function ArticleReaderModal({ article, onClose, onEdit }: { article: Article; onClose: () => void; onEdit?: (a: Article) => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 p-0 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="h-[100dvh] w-full overflow-y-auto bg-white dark:bg-[#0B0D13] sm:h-auto sm:max-h-[90vh] sm:max-w-[760px] sm:rounded-2xl [&::-webkit-scrollbar]:hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/[0.06] bg-white/80 px-4 py-2.5 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/80">
+          <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{ARTICLE_KIND_LABEL[article.kind]}</span>
+          <div className="flex items-center gap-1.5">
+            {onEdit && <button onClick={() => onEdit(article)} className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-[12px] tracking-tight text-[#0056FF] hover:bg-[#0056FF]/[0.06] dark:border-white/12 dark:text-[#7FA8FF]"><Edit3 size={13} /> Изменить</button>}
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-black/55 hover:bg-black/[0.05] dark:text-white/55 dark:hover:bg-white/[0.07]"><X size={16} /></button>
+          </div>
+        </div>
+        <article className="px-5 py-6 sm:px-8">
+          {article.cover && <img src={article.cover} alt="" className="mb-5 aspect-[16/9] w-full rounded-2xl object-cover" />}
+          <div className="text-[12px] uppercase tracking-[0.12em] text-[#0056FF]">{article.category}</div>
+          <h1 className="mt-2 text-[26px] font-medium leading-tight tracking-tight text-black dark:text-white sm:text-[30px]">{article.title}</h1>
+          <div className="mt-2 text-[13px] tracking-tight text-black/45 dark:text-white/45">{articleAuthorLabel(article)} · {article.date}</div>
+          {article.summary && <p className="mt-4 text-[15px] leading-relaxed tracking-tight text-black/70 dark:text-white/70">{article.summary}</p>}
+          <div className="mt-4 text-[15px] leading-relaxed tracking-tight text-black/85 [&_a]:text-[#0056FF] [&_a]:underline dark:text-white/85" dangerouslySetInnerHTML={{ __html: article.bodyHtml || "" }} />
+          {article.tags.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {article.tags.map((t) => <span key={t} className="rounded-full bg-black/[0.05] px-2.5 py-1 text-[12px] tracking-tight text-black/55 dark:bg-white/[0.06] dark:text-white/55">#{t}</span>)}
+            </div>
+          )}
+          {article.sourceUrl && <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-1.5 text-[13px] tracking-tight text-[#0056FF]"><Globe size={13} /> {article.source || "Источник"}</a>}
+        </article>
+      </div>
+    </div>
+  );
+}
+
+function ArticleEditModal({ article, onClose }: { article: Article; onClose: () => void }) {
+  const { updateArticle, profile } = useStore();
+  const submit = (draft: ContentDraft, action: "publish" | "draft" | "submit") => {
+    updateArticle(article.id, {
+      kind: draft.kind, title: draft.title.trim(), summary: draft.summary, bodyHtml: draft.bodyHtml,
+      cover: draft.cover, video: draft.video, gallery: draft.gallery, tags: draft.tags,
+      category: draft.category, specialization: draft.specialization, audience: draft.audience,
+      source: draft.source, sourceUrl: draft.sourceUrl, date: draft.date,
+      status: action === "draft" ? "draft" : "published",
+    });
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-[110] grid place-items-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
+      <div className="h-[100dvh] w-full overflow-hidden bg-white shadow-2xl dark:bg-[#0B0D13] sm:h-[88vh] sm:max-w-[1000px] sm:rounded-2xl">
+        <ContentEditor kind={article.kind} mode="edit" initial={articleToDraft(article)} authorName={profile.name} onClose={onClose} onSubmit={submit} />
+      </div>
+    </div>
+  );
+}
+
+export function EditorialFeed({ kind, title = "Материалы редакции" }: { kind?: ArticleKind; title?: string }) {
+  const { articles, role } = useStore();
+  const [reader, setReader] = useState<Article | null>(null);
+  const [editArt, setEditArt] = useState<Article | null>(null);
+  const list = articles.filter((a) => a.status === "published" && (!kind || a.kind === kind));
+  if (list.length === 0) return null;
+  const isStaff = role === "editor" || role === "admin";
+
+  return (
+    <div className="mb-8">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles size={16} className="text-[#0056FF]" />
+        <span className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>{title}</span>
+        <span className="rounded-full bg-[#E3E7FC] px-2 py-0.5 text-[11px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{list.length}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {list.map((a) => (
+          <button key={a.id} onClick={() => setReader(a)} className="text-left">
+            <Card interactive className="flex h-full flex-col overflow-hidden p-0">
+              {a.cover
+                ? <img src={a.cover} alt="" className="aspect-[16/9] w-full object-cover" />
+                : <div className="aspect-[16/9] w-full bg-gradient-to-br from-[#0056FF] to-[#2277FF]" />}
+              <div className="flex flex-1 flex-col p-4">
+                <div className="text-[11px] uppercase tracking-[0.1em] text-[#0056FF]">{a.category}</div>
+                <div className="mt-1.5 line-clamp-2 tracking-tight text-black dark:text-white" style={{ fontSize: 15, lineHeight: 1.25 }}>{a.title}</div>
+                {a.summary && <div className="mt-1 line-clamp-2 text-[13px] tracking-tight text-black/55 dark:text-white/55">{a.summary}</div>}
+                <div className="mt-auto pt-3 text-[12px] tracking-tight text-black/45 dark:text-white/45">{articleAuthorLabel(a)} · {a.date}</div>
+              </div>
+            </Card>
+          </button>
+        ))}
+      </div>
+      {reader && <ArticleReaderModal article={reader} onClose={() => setReader(null)} onEdit={isStaff ? (a) => { setReader(null); setEditArt(a); } : undefined} />}
+      {editArt && <ArticleEditModal article={editArt} onClose={() => setEditArt(null)} />}
+    </div>
+  );
 }
 
 /* ---------------- UGC: предложить контент ---------------- */
