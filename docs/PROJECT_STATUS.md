@@ -1,11 +1,23 @@
 # Текущее состояние проекта
 
 Дата создания: 2026-05-13.
-Дата последнего обновления: 2026-06-04 (React/Vite backend bridge для ситуаций и задач).
+Дата последнего обновления: 2026-06-06 (удалён нативный Flet-UI; продукт = React/Vite + FastAPI).
 
 Версия: First Beta / первая бета.
 
-## Текущий курс UI
+## Архитектура (актуально на 2026-06-06)
+
+- **Продукт:** React/Vite frontend (`reactvitemaket/`) + FastAPI backend (`src/backend/`, SQLite MVP).
+- **Нативный Flet-UI удалён** (ветка `cleanup/remove-legacy-flet-ui`): `src/main.py`,
+  `src/pages/`, `src/components/`, `src/theme/`, `src/data/`, `src/services/` и их Flet-тесты
+  (`test_dashboard`, `test_security`, `test_user_sync`) больше не существуют.
+- **`src/mobile_webview.py`** — единственный оставшийся Flet-файл: нативная WebView-оболочка,
+  показывающая тот же React-сайт на телефоне (демо кроссплатформенности, APK/iOS).
+- Backend-сьют: 60 тестов проходят после удаления легаси.
+- Разделы ниже («Текущий курс UI», «Что уже сделано» и т.д.) описывают историю Flet-этапа
+  и сохранены как справка — они НЕ отражают текущую архитектуру.
+
+## Текущий курс UI (исторический раздел — Flet-этап)
 
 - Рабочий baseline проекта остаётся на Flet/Python.
 - Папка `reactvitemaket/` принята как frontend-кандидат для постепенного переноса UI на Vite/React/TypeScript.

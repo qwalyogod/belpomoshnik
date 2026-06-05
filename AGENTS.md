@@ -13,23 +13,22 @@
 
 ## Границы проекта
 
-- Рабочая версия проекта сейчас остаётся на Flet/Python.
-- Новый пользовательский frontend постепенно переносится в `reactvitemaket/` на Vite/React/TypeScript.
-- До достижения функционального parity React/Vite-версии не удалять и не ломать Flet UI.
-- Для новых Flet-экранов использовать Flet; для задач миграции UI работать внутри `reactvitemaket/`.
-- Приложение должно запускаться командой:
-
-```bash
-flet run src/main.py
-```
-
-- Пока использовать моковые данные для мобильного UI там, где еще нет интеграции.
-- Моковые данные хранить в `src/data/mock_data.py`.
-- Backend-основа уже добавлена в `src/backend` (FastAPI + SQLAlchemy + SQLite MVP).
+- Продукт = React/Vite frontend (`reactvitemaket/`) + FastAPI backend (`src/backend/`).
+- Нативный Flet-UI удалён (ветка `cleanup/remove-legacy-flet-ui`). `src/main.py`,
+  `src/pages/`, `src/components/`, `src/theme/`, `src/data/`, `src/services/` больше не существуют.
+- `src/mobile_webview.py` — единственный оставшийся Flet-файл: тонкая нативная
+  WebView-оболочка, которая открывает тот же React-сайт. Это «обманка» для демонстрации
+  кроссплатформенного приложения (APK/iOS). Своего UI у неё нет — не наращивать.
+- Frontend трогать только в `reactvitemaket/` (Vite/React/TypeScript).
+- Backend трогать только в `src/backend/` (FastAPI + SQLAlchemy + SQLite MVP),
+  разделение `models / schemas / api / service / migrations / seeds` сохранять.
+- Запуск frontend:           `cd reactvitemaket && pnpm dev`
+- Запуск backend:            `PYTHONPATH=src uvicorn backend.app:app --host 127.0.0.1 --port 8060`
+- WebView-обманка на телефоне: `.venv/bin/flet run --android src/mobile_webview.py`
+  (поднять React по LAN: `cd reactvitemaket && pnpm dev:lan`).
 - Без отдельной задачи не переписывать backend-стек и не ломать API-контракты.
-- Полноценную авторизацию и RBAC не добавлять без отдельной задачи.
 - `docs/TZ_COMPLETION_ROADMAP.md` является рабочим планом развития после First Beta.
-- `docs/REACT_MIGRATION_PLAN.md` является рабочим планом постепенного переноса UI на React/Vite.
+- `docs/REACT_MIGRATION_PLAN.md` описывает завершённый переход UI на React/Vite.
 
 ## Поведение AI-агента
 

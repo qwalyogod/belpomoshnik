@@ -1,14 +1,16 @@
 [project]
 name = "belpomoshnik"
 version = "0.1.0"
-description = "Diploma mobile application prototype built with Flet and Python."
+description = "Belpomoshnik — React/Vite frontend + FastAPI backend; Flet ships the same web app as a native WebView shell (Android/iOS/desktop)."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    # Flet is used ONLY as a native WebView shell (src/mobile_webview.py) that
+    # loads the React/Vite app — the native Flet UI was removed. flet-web is not
+    # needed (WebView does not run in Flutter Web).
     "flet==0.85.2",
     "flet-cli==0.85.2",
     "flet-desktop==0.85.2",
-    "flet-web==0.85.2",
     "flet-webview==0.85.2",
     "fastapi==0.116.1",
     "uvicorn==0.35.0",

@@ -1,7 +1,8 @@
+# Flet = native WebView shell only (src/mobile_webview.py loads the React app).
+# flet-web dropped: WebView does not run in Flutter Web.
 flet==0.85.2
 flet-cli==0.85.2
 flet-desktop==0.85.2
-flet-web==0.85.2
 flet-webview==0.85.2
 fastapi==0.116.1
 uvicorn==0.35.0
