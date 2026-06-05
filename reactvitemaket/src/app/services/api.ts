@@ -261,4 +261,47 @@ export const apiClient = {
       body: JSON.stringify(payload),
       ...options,
     }),
+
+  // K-этап: публикации (редакторские + UGC) + модерация + блок-лист.
+  getArticles: <T>(kind?: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`, options),
+  getAllArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/articles/all", { headers: authHeaders(accessToken), ...options }),
+  getMyArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/articles/mine", { headers: authHeaders(accessToken), ...options }),
+  createArticle: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/articles", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateArticleApi: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  moderateArticle: <T>(accessToken: string, id: string, action: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles/${encodeURIComponent(id)}/moderate`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ action }),
+      ...options,
+    }),
+  deleteArticleApi: (accessToken: string, id: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/articles/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  getBlockedSubmitters: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/articles/blocked", { headers: authHeaders(accessToken), ...options }),
+  toggleBlockedSubmitterApi: <T>(accessToken: string, userId: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles/blocked/${encodeURIComponent(userId)}`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
 };

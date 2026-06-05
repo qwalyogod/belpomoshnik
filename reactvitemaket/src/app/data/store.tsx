@@ -9,7 +9,7 @@ import {
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
+import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
 import { apiClient, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 
@@ -76,6 +76,7 @@ type Store = {
   blockedSubmitters: string[];
   isSubmitterBlocked: (id: string) => boolean;
   toggleBlockedSubmitter: (id: string) => void;
+  meId: string | null;
 
   favorites: string[];
   toggleFavorite: (scenarioId: string) => void;
@@ -384,6 +385,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // moderation queue can see citizen submissions). Global localStorage, not per-user.
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
+  const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
@@ -449,9 +451,54 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, [currentUser.id, documents, favorites, hydratedUserId, notifications, profile, settings, situations, utilityAccounts, taxes]);
 
-  // Platform-wide content + moderation block-list (shared across all users).
+  // Platform-wide content + moderation block-list (cached locally for offline).
   useEffect(() => { safeWrite(ARTICLES_KEY, articles); }, [articles]);
   useEffect(() => { safeWrite(BLOCKED_SUBMITTERS_KEY, blockedSubmitters); }, [blockedSubmitters]);
+
+  // Resolve the backend numeric user id (for proposer matching + block targeting).
+  useEffect(() => {
+    const token = authSession?.access_token;
+    if (!token) { setMeId(null); return; }
+    const ctrl = new AbortController();
+    apiClient.getMe<{ id: number | string }>(token, { signal: ctrl.signal })
+      .then(me => { if (!ctrl.signal.aborted && me?.id != null) setMeId(String(me.id)); })
+      .catch(() => { /* offline: keep local identity */ });
+    return () => ctrl.abort();
+  }, [authSession?.access_token]);
+
+  // Pull platform content (and the block-list for staff) from the backend.
+  // Server is the source of truth when reachable; otherwise the local cache stays.
+  const loadArticles = useCallback(async (signal?: AbortSignal) => {
+    const token = authSession?.access_token;
+    const staff = role === "editor" || role === "admin";
+    try {
+      if (staff && token) {
+        const raw = await apiClient.getAllArticles<Record<string, unknown>[]>(token, { signal });
+        setArticles(raw.map(adaptArticle));
+      } else {
+        const published = await apiClient.getArticles<Record<string, unknown>[]>(undefined, { signal });
+        let mine: Record<string, unknown>[] = [];
+        if (token) mine = await apiClient.getMyArticles<Record<string, unknown>[]>(token, { signal }).catch(() => []);
+        const byId = new Map<string, Article>();
+        [...mine, ...published].map(adaptArticle).forEach(a => byId.set(a.id, a));
+        setArticles(Array.from(byId.values()));
+      }
+    } catch (error) {
+      if (!signal?.aborted) console.warn("Articles API unavailable; React keeps the local cache.", error);
+    }
+    if (staff && token) {
+      try {
+        const blocked = await apiClient.getBlockedSubmitters<(number | string)[]>(token, { signal });
+        if (!signal?.aborted) setBlockedSubmitters(blocked.map(String));
+      } catch { /* keep local block-list */ }
+    }
+  }, [authSession?.access_token, role]);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    loadArticles(ctrl.signal);
+    return () => ctrl.abort();
+  }, [loadArticles]);
 
   useEffect(() => {
     if (currentUser.role === "guest" || !authSession?.access_token) return;
@@ -921,6 +968,27 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   // --- Editor / UGC publications (local-first; backend persistence later) ---
+  const articleToServer = (a: Partial<Article>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    if (a.kind !== undefined) out.kind = a.kind;
+    if (a.title !== undefined) out.title = a.title;
+    if (a.summary !== undefined) out.summary = a.summary;
+    if (a.bodyHtml !== undefined) out.body_html = a.bodyHtml;
+    if (a.cover !== undefined) out.cover = a.cover;
+    if (a.video !== undefined) out.video = a.video;
+    if (a.gallery !== undefined) out.gallery = a.gallery;
+    if (a.tags !== undefined) out.tags = a.tags;
+    if (a.category !== undefined) out.category = a.category;
+    if (a.specialization !== undefined) out.specialization = a.specialization;
+    if (a.audience !== undefined) out.audience = a.audience;
+    if (a.source !== undefined) out.source = a.source;
+    if (a.sourceUrl !== undefined) out.source_url = a.sourceUrl;
+    if (a.status !== undefined) out.status = a.status;
+    if (a.date !== undefined) out.date = a.date;
+    if (a.reported !== undefined) out.reported = a.reported;
+    return out;
+  };
+
   const addArticle: Store["addArticle"] = useCallback((article) => {
     const full: Article = {
       views: 0,
@@ -929,22 +997,53 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date().toISOString(),
     };
     setArticles(prev => [full, ...prev]);
+    const token = authSession?.access_token;
+    if (token) {
+      apiClient.createArticle(token, {
+        ...articleToServer(full),
+        anonymous: full.author?.anonymous ?? false,
+        as_proposal: full.author?.role === "citizen",
+      })
+        .then(() => loadArticles())
+        .catch(error => console.warn("Article created locally; backend create failed.", error));
+    }
     return full;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSession?.access_token, loadArticles]);
 
   const updateArticle: Store["updateArticle"] = useCallback((id, patch) => {
     setArticles(prev => prev.map(a => a.id === id ? { ...a, ...patch, updatedAt: new Date().toISOString() } : a));
-  }, []);
+    const token = authSession?.access_token;
+    if (token && /^\d+$/.test(id)) {
+      apiClient.updateArticleApi(token, id, articleToServer(patch))
+        .then(() => loadArticles())
+        .catch(error => console.warn("Article updated locally; backend update failed.", error));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSession?.access_token, loadArticles]);
 
   const removeArticle: Store["removeArticle"] = useCallback((id) => {
     setArticles(prev => prev.filter(a => a.id !== id));
-  }, []);
+    const token = authSession?.access_token;
+    if (token && /^\d+$/.test(id)) {
+      apiClient.deleteArticleApi(token, id)
+        .catch(error => console.warn("Article removed locally; backend delete failed.", error));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSession?.access_token]);
 
   const isSubmitterBlocked: Store["isSubmitterBlocked"] = useCallback((id) => blockedSubmitters.includes(id), [blockedSubmitters]);
   const toggleBlockedSubmitter: Store["toggleBlockedSubmitter"] = useCallback((id) => {
     if (!id) return;
     setBlockedSubmitters(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }, []);
+    const token = authSession?.access_token;
+    if (token && /^\d+$/.test(id)) {
+      apiClient.toggleBlockedSubmitterApi<(number | string)[]>(token, id)
+        .then(list => setBlockedSubmitters(list.map(String)))
+        .catch(error => console.warn("Block toggled locally; backend toggle failed.", error));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSession?.access_token]);
 
   // --- Utility / ЖКХ (ТЗ §18) ---
   const addUtilityAccount: Store["addUtilityAccount"] = useCallback((account) => {
@@ -1081,7 +1180,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
     articles, addArticle, updateArticle, removeArticle,
-    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter,
+    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, meId,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
@@ -1091,7 +1190,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
-    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter,
+    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
     addDocument, updateDocument, deleteDocument, toggleFavorite,

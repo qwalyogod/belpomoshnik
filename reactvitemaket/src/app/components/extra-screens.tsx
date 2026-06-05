@@ -1214,9 +1214,9 @@ export function ProposeButton({ kind, label, className = "" }: { kind: ContentKi
 }
 
 export function ProposeContentModal({ open, kind = "scenario", initial, editId, onClose }: { open: boolean; kind?: ContentKind; initial?: Partial<ContentDraft>; editId?: string; onClose: () => void }) {
-  const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked } = useStore();
+  const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked, meId } = useStore();
   if (!open) return null;
-  const blocked = isSubmitterBlocked(currentUser.id);
+  const blocked = isSubmitterBlocked(meId ?? currentUser.id);
 
   const submit = (draft: ContentDraft, action: "publish" | "draft" | "submit") => {
     const fields = {
@@ -1254,9 +1254,9 @@ export function ProposeContentModal({ open, kind = "scenario", initial, editId, 
 
 // «Мои предложения» — citizen sees own submissions + can resume drafts.
 export function MyContributions() {
-  const { articles, currentUser } = useStore();
+  const { articles, currentUser, meId } = useStore();
   const [resume, setResume] = useState<Article | null>(null);
-  const mine = articles.filter((a) => a.author.proposerId === currentUser.id);
+  const mine = articles.filter((a) => a.author.proposerId === meId || a.author.proposerId === currentUser.id);
   if (currentUser.role === "guest" || mine.length === 0) return null;
 
   const kindLabel = (k: string) => (k === "news" ? "Новость" : k === "problem" ? "Проблема" : "Ситуация");

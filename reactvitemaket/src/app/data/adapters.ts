@@ -21,6 +21,9 @@ import type {
   TaxObligation,
   UtilityAccount,
   UtilityPayment,
+  Article,
+  ArticleKind,
+  ArticleStatus,
 } from "./types";
 
 type LooseRecord = Record<string, unknown>;
@@ -467,5 +470,41 @@ export function adaptLegalUpdate(input: LooseRecord): LegalUpdate {
     source: source(input.source || { url: input.source_url }),
     priority: bool(input.priority),
     matchesProfile: bool(input.matchesProfile || input.matches_profile),
+  };
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((x): x is string => typeof x === "string") : [];
+}
+
+export function adaptArticle(raw: LooseRecord): Article {
+  const author = (raw.author ?? {}) as LooseRecord;
+  return {
+    id: identifier(raw.id),
+    kind: (text(raw.kind, "news") as ArticleKind),
+    title: text(raw.title),
+    summary: text(raw.summary),
+    bodyHtml: text(raw.body_html),
+    cover: text(raw.cover),
+    video: text(raw.video),
+    gallery: stringArray(raw.gallery),
+    tags: stringArray(raw.tags),
+    category: text(raw.category),
+    specialization: text(raw.specialization),
+    audience: text(raw.audience, "all"),
+    source: text(raw.source),
+    sourceUrl: text(raw.source_url),
+    status: (text(raw.status, "draft") as ArticleStatus),
+    author: {
+      name: text(author.name),
+      role: (text(author.role, "editor") as Article["author"]["role"]),
+      proposedBy: text(author.proposed_by) || undefined,
+      proposerId: author.proposer_id != null ? identifier(author.proposer_id) : undefined,
+      anonymous: bool(author.anonymous),
+    },
+    date: text(raw.date),
+    views: numberValue(raw.views),
+    updatedAt: text(raw.updated_at) || new Date().toISOString(),
+    reported: bool(raw.reported),
   };
 }
