@@ -312,6 +312,8 @@ export const LEARNING_CATEGORIES: { id: string; name: string; progress: number }
   { id: "housing", name: "ЖКХ", progress: 40 },
   { id: "taxes", name: "Налоги", progress: 25 },
   { id: "family", name: "Семья", progress: 50 },
+  { id: "work", name: "Работа", progress: 30 },
+  { id: "health", name: "Здоровье", progress: 15 },
 ];
 
 export const LEARNING_QUIZ: { topic: string; questions: { q: string; options: string[]; answer: number }[] } = {
