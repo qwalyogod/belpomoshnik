@@ -78,7 +78,7 @@ const inputCls =
   "w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-[14px] tracking-tight text-black outline-none transition-colors placeholder:text-black/35 focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/30";
 
 export function ContentEditor({
-  kind: kindProp, mode = "create", initial, authorName, mobile = false, propose = false, onClose, onSubmit,
+  kind: kindProp, mode = "create", initial, authorName, mobile = false, propose = false, uploadFile, onClose, onSubmit,
 }: {
   kind: ContentKind;
   mode?: "create" | "edit";
@@ -86,6 +86,7 @@ export function ContentEditor({
   authorName: string;
   mobile?: boolean;
   propose?: boolean;
+  uploadFile?: (file: File) => Promise<string | null>;
   onClose: () => void;
   onSubmit: (draft: ContentDraft, action: "publish" | "draft" | "submit") => void;
 }) {
@@ -156,11 +157,16 @@ export function ContentEditor({
     setTagInput("");
   };
   const pickFiles = (ref: React.RefObject<HTMLInputElement>) => ref.current?.click();
-  const onCover = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) set("cover", URL.createObjectURL(f)); };
-  const onVideo = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) set("video", URL.createObjectURL(f)); };
-  const onGallery = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload to the server when available (persists across reloads); otherwise a
+  // local object URL keeps the editor usable offline.
+  const resolveUrl = async (f: File) => (uploadFile ? (await uploadFile(f)) ?? URL.createObjectURL(f) : URL.createObjectURL(f));
+  const onCover = async (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) set("cover", await resolveUrl(f)); };
+  const onVideo = async (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) set("video", await resolveUrl(f)); };
+  const onGallery = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (files.length) set("gallery", [...d.gallery, ...files.map((f) => URL.createObjectURL(f))]);
+    if (!files.length) return;
+    const urls = await Promise.all(files.map(resolveUrl));
+    set("gallery", [...d.gallery, ...urls]);
   };
 
   const chars = bodyText.length;

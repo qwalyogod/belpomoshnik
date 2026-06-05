@@ -7,6 +7,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.api.admin import router as admin_router
 from backend.api.articles import router as articles_router
@@ -55,6 +56,10 @@ def create_app() -> FastAPI:
     app.include_router(trackers_router)
     app.include_router(articles_router)
     app.include_router(assistant_router)
+
+    from backend.api.articles import UPLOAD_DIR
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR), check_dir=False), name="uploads")
 
     @app.get("/api/health", tags=["system"])
     def health():

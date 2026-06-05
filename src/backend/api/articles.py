@@ -9,18 +9,26 @@ Local-first на фронте, здесь серверный источник п
 from __future__ import annotations
 
 import json
+import os
+import uuid
 from datetime import date
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend import schemas
 from backend.api.auth import get_current_user_email, require_role
+from backend.config import DEFAULT_DB_PATH
 from backend.database import get_db
 from backend.models import Article, BlockedSubmitter, User
 
 router = APIRouter(prefix="/api/articles", tags=["articles"])
+
+UPLOAD_DIR = Path(DEFAULT_DB_PATH).parent / "uploads"
+_MAX_UPLOAD = 15 * 1024 * 1024  # 15 MB
+_ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".ogg"}
 
 _STAFF_ROLES = {"content_editor", "platform_admin"}
 _VALID_STATUS = {"draft", "review", "published", "rejected"}
@@ -116,6 +124,21 @@ def list_mine(email: str = Depends(get_current_user_email), db: Session = Depend
 @router.get("/blocked", response_model=list[int])
 def list_blocked(_: str = Depends(require_role("content_editor")), db: Session = Depends(get_db)):
     return [row.user_id for row in db.scalars(select(BlockedSubmitter)).all()]
+
+
+@router.post("/upload")
+def upload_media(file: UploadFile = File(...), _: str = Depends(get_current_user_email)):
+    """Загрузка обложки / видео / фото на сервер (вместо локального object URL)."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in _ALLOWED_EXT:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Недопустимый тип файла.")
+    data = file.file.read()
+    if len(data) > _MAX_UPLOAD:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Файл больше 15 МБ.")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (UPLOAD_DIR / name).write_bytes(data)
+    return {"url": f"/uploads/{name}"}
 
 
 @router.post("/{article_id}/view")

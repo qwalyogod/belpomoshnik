@@ -259,7 +259,7 @@ const SAMPLE_TOP_MATERIALS = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -683,6 +683,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
           mode={editing.mode}
           initial={editing.initial}
           authorName={profile.name}
+          uploadFile={uploadMedia}
           mobile={mobile}
           onClose={() => setEditing(null)}
           onSubmit={handleSubmit}

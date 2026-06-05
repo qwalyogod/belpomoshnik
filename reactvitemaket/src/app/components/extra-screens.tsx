@@ -1141,7 +1141,7 @@ function ArticleReaderModal({ article, onClose, onEdit }: { article: Article; on
 }
 
 function ArticleEditModal({ article, onClose }: { article: Article; onClose: () => void }) {
-  const { updateArticle, profile } = useStore();
+  const { updateArticle, profile, uploadMedia } = useStore();
   const submit = (draft: ContentDraft, action: "publish" | "draft" | "submit") => {
     updateArticle(article.id, {
       kind: draft.kind, title: draft.title.trim(), summary: draft.summary, bodyHtml: draft.bodyHtml,
@@ -1155,7 +1155,7 @@ function ArticleEditModal({ article, onClose }: { article: Article; onClose: () 
   return (
     <div className="fixed inset-0 z-[110] grid place-items-center bg-black/40 p-0 backdrop-blur-sm sm:p-4">
       <div className="h-[100dvh] w-full overflow-hidden bg-white shadow-2xl dark:bg-[#0B0D13] sm:h-[88vh] sm:max-w-[1000px] sm:rounded-2xl">
-        <ContentEditor kind={article.kind} mode="edit" initial={articleToDraft(article)} authorName={profile.name} onClose={onClose} onSubmit={submit} />
+        <ContentEditor kind={article.kind} mode="edit" initial={articleToDraft(article)} authorName={profile.name} uploadFile={uploadMedia} onClose={onClose} onSubmit={submit} />
       </div>
     </div>
   );
@@ -1216,7 +1216,7 @@ export function ProposeButton({ kind, label, className = "" }: { kind: ContentKi
 }
 
 export function ProposeContentModal({ open, kind = "scenario", initial, editId, onClose }: { open: boolean; kind?: ContentKind; initial?: Partial<ContentDraft>; editId?: string; onClose: () => void }) {
-  const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked, meId } = useStore();
+  const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked, meId, uploadMedia } = useStore();
   if (!open) return null;
   const blocked = isSubmitterBlocked(meId ?? currentUser.id);
 
@@ -1247,7 +1247,7 @@ export function ProposeContentModal({ open, kind = "scenario", initial, editId, 
         </Card>
       ) : (
         <div className="h-[100dvh] w-full overflow-hidden bg-white shadow-2xl dark:bg-[#0B0D13] sm:h-[88vh] sm:max-w-[1000px] sm:rounded-2xl">
-          <ContentEditor kind={kind} propose initial={initial} authorName={profile.name} onClose={onClose} onSubmit={submit} />
+          <ContentEditor kind={kind} propose initial={initial} authorName={profile.name} uploadFile={uploadMedia} onClose={onClose} onSubmit={submit} />
         </div>
       )}
     </div>

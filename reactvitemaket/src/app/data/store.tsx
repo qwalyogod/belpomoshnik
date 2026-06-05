@@ -10,7 +10,7 @@ import {
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
 import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
-import { apiClient, type AuthTokens } from "../services/api";
+import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 
 function uid(prefix: string) {
@@ -77,6 +77,7 @@ type Store = {
   isSubmitterBlocked: (id: string) => boolean;
   toggleBlockedSubmitter: (id: string) => void;
   registerView: (id: string) => void;
+  uploadMedia: (file: File) => Promise<string | null>;
   meId: string | null;
 
   favorites: string[];
@@ -1038,6 +1039,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (/^\d+$/.test(id)) apiClient.viewArticle(id).catch(() => { /* offline: local bump only */ });
   }, []);
 
+  const uploadMedia: Store["uploadMedia"] = useCallback(async (file) => {
+    const token = authSession?.access_token;
+    if (!token) return null;
+    try {
+      const { url } = await apiClient.uploadMedia(token, file);
+      return `${API_BASE_URL}${url}`;
+    } catch (error) {
+      console.warn("Media upload failed; falling back to local preview.", error);
+      return null;
+    }
+  }, [authSession?.access_token]);
+
   const isSubmitterBlocked: Store["isSubmitterBlocked"] = useCallback((id) => blockedSubmitters.includes(id), [blockedSubmitters]);
   const toggleBlockedSubmitter: Store["toggleBlockedSubmitter"] = useCallback((id) => {
     if (!id) return;
@@ -1186,7 +1199,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
     articles, addArticle, updateArticle, removeArticle,
-    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, meId,
+    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, meId,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
@@ -1196,7 +1209,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
-    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, meId, loadArticles,
+    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
     addDocument, updateDocument, deleteDocument, toggleFavorite,

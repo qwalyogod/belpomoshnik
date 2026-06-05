@@ -17,6 +17,7 @@ data/app_state.json
 data/app_state.backup.json
 data/private_uploads/
 data/exports/
+data/uploads/
 
 # Stray / personal artefacts (keep out of the code repo)
 /package-lock.json

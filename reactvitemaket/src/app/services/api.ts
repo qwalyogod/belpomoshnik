@@ -267,6 +267,17 @@ export const apiClient = {
     requestJson<T>(`/api/articles${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`, options),
   viewArticle: <T>(id: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/articles/${encodeURIComponent(id)}/view`, { method: "POST", ...options }),
+  uploadMedia: async (accessToken: string, file: File): Promise<{ url: string }> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/api/articles/upload`, {
+      method: "POST",
+      headers: authHeaders(accessToken), // no Content-Type: browser sets multipart boundary
+      body: form,
+    });
+    if (!res.ok) throw new Error((await res.text().catch(() => "")) || `Upload failed: ${res.status}`);
+    return res.json() as Promise<{ url: string }>;
+  },
   getAllArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/articles/all", { headers: authHeaders(accessToken), ...options }),
   getMyArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>
