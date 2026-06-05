@@ -135,7 +135,8 @@ def seed_full_content(db: Session) -> dict[str, int]:
     # ---- Scenarios with stages/steps/docs/authorities/sources ----------------
     for tpl in m.SCENARIO_TEMPLATES:
         slug = tpl["id"]
-        if db.query(Scenario).filter(Scenario.slug == slug).first():
+        # Skip by slug OR title to avoid duplicating the MVP «Рождение ребёнка».
+        if db.query(Scenario).filter((Scenario.slug == slug) | (Scenario.title == tpl.get("title"))).first():
             continue
         category = tpl.get("category", "")
         problem = _problem_for(category)

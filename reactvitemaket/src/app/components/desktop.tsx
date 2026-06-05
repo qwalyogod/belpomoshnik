@@ -12,6 +12,7 @@ import { ContentEditor, type ContentKind, type ContentDraft } from "./content-ed
 import { useStore } from "../data/store";
 import type { Article } from "../data/types";
 import { CATEGORIES } from "../data/mock";
+import { REGION_NAMES, districtsForRegion } from "../data/geo";
 
 function NavItem({ icon, label, active, badge, onClick }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; onClick?: () => void }) {
   return (
@@ -259,7 +260,7 @@ const SAMPLE_TOP_MATERIALS = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, authorities } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -514,8 +515,8 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
               </tr>
             </thead>
             <tbody className="text-[13px] tracking-tight text-black dark:text-white">
-              {rows.map((r) => (
-                <tr key={r.t} className="border-t border-black/[0.05] dark:border-white/[0.05]">
+              {rows.map((r, ri) => (
+                <tr key={`${r.t}-${ri}`} className="border-t border-black/[0.05] dark:border-white/[0.05]">
                   <td className="px-5 py-3.5"><Pill tone="lavender">{r.c}</Pill></td>
                   <td className="py-3.5">{r.t}</td>
                   <td className="py-3.5"><Pill tone={tone(r.st) as any}>{r.st === "Опубликовано" && <Check size={11} />}{r.st}</Pill></td>
@@ -651,6 +652,123 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     )
   );
 
+  // ---- Admin reference sections (real data) ----
+  const roleLabel = (r: string) => ({ citizen: "Гражданин", content_editor: "Редактор", platform_admin: "Администратор", editor: "Редактор", admin: "Администратор", guest: "Гость" } as Record<string, string>)[r] ?? r;
+  const fmtDateTime = (v: string) => { const d = new Date(v); return isNaN(d.getTime()) ? v : d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); };
+  const sectionEmpty = (icon: React.ReactNode, title: string, note: string) => (
+    <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
+      <div>
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{icon}</div>
+        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>{title}</div>
+        <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">{note}</div>
+      </div>
+    </div>
+  );
+
+  const categoriesBody = (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {categories.map((c) => {
+        const cnt = admin.scenarios.filter((s) => catLabel(s.category) === c.name).length + articles.filter((a) => a.category === c.name).length;
+        return (
+          <Card key={c.id} className="p-4">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><LayoutGrid size={16} /></div>
+            <div className="mt-3 tracking-tight text-black dark:text-white">{c.name}</div>
+            <div className="mt-0.5 text-[12px] tracking-tight text-black/45 dark:text-white/45">{cnt} материалов</div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const authoritiesBody = authorities.length === 0 ? sectionEmpty(<Building2 size={20} />, "Учреждения загружаются", "Справочник госучреждений появится из API.") : (
+    <Card className="p-0">
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <table className="w-full min-w-[640px]">
+          <thead><tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40"><th className="px-5 py-3">Учреждение</th><th className="py-3">Город</th><th className="py-3">Телефон</th><th className="py-3 pr-5">Адрес</th></tr></thead>
+          <tbody className="text-[13px] tracking-tight text-black dark:text-white">
+            {authorities.map((a) => (
+              <tr key={a.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
+                <td className="px-5 py-3.5">{a.name}</td>
+                <td className="py-3.5 text-black/65 dark:text-white/65">{a.city || "—"}</td>
+                <td className="py-3.5 text-black/55 dark:text-white/55">{a.phone || "—"}</td>
+                <td className="max-w-[260px] truncate py-3.5 pr-5 text-black/50 dark:text-white/50">{a.address || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+
+  const regionsBody = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {REGION_NAMES.map((r) => {
+        const ds = districtsForRegion(r);
+        return (
+          <Card key={r} className="p-4">
+            <div className="flex items-center gap-2"><MapPin size={15} className="text-[#0056FF]" /><span className="tracking-tight text-black dark:text-white">{r}</span></div>
+            <div className="mt-1 text-[12px] tracking-tight text-black/45 dark:text-white/45">{ds.length} районов</div>
+            <div className="mt-2 line-clamp-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">{ds.slice(0, 4).map((d) => d.center || d.name).join(", ")}{ds.length > 4 ? "…" : ""}</div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const usersBody = admin.users.length === 0 ? sectionEmpty(<Users size={20} />, "Доступно администратору", "Список пользователей и ролей виден только администратору платформы.") : (
+    <Card className="p-0">
+      <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <table className="w-full min-w-[560px]">
+          <thead><tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40"><th className="px-5 py-3">Имя</th><th className="py-3">Email</th><th className="py-3">Роль</th><th className="py-3 pr-5">Статус</th></tr></thead>
+          <tbody className="text-[13px] tracking-tight text-black dark:text-white">
+            {admin.users.map((u) => (
+              <tr key={u.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
+                <td className="px-5 py-3.5">{u.name || "—"}</td>
+                <td className="py-3.5 text-black/55 dark:text-white/55">{u.email}</td>
+                <td className="py-3.5"><Pill tone="lavender">{roleLabel(u.role)}</Pill></td>
+                <td className="py-3.5 pr-5"><Pill tone={u.isActive ? "ok" : "ghost"}>{u.isActive ? "Активен" : "Заблокирован"}</Pill></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+
+  const auditBody = admin.auditLogs.length === 0 ? sectionEmpty(<Clock size={20} />, "Журнал пуст", "Действия редакторов и админов будут записываться здесь.") : (
+    <div className="space-y-2.5">
+      {admin.auditLogs.map((e) => (
+        <Card key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Pill tone={e.eventType === "delete" ? "warn" : e.eventType === "create" ? "ok" : "lavender"}>{e.eventType || "действие"}</Pill>
+              <span className="truncate tracking-tight text-black dark:text-white">{e.action}</span>
+            </div>
+            <div className="mt-1 text-[12px] tracking-tight text-black/45 dark:text-white/45">{e.actor} · {roleLabel(e.roleId)}</div>
+          </div>
+          <span className="shrink-0 text-[12px] tabular-nums tracking-tight text-black/45 dark:text-white/45">{fmtDateTime(e.createdAt)}</span>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const RULE_TYPES = [
+    { l: "Истечение срока документа", d: "Напоминание за 60 и 14 дней до окончания срока." },
+    { l: "Срок уплаты налога", d: "Уведомление о приближении срока уплаты." },
+    { l: "Показания счётчиков ЖКХ", d: "Ежемесячное напоминание о передаче показаний." },
+    { l: "Дедлайн по ситуации", d: "Напоминание о незавершённых задачах сценария." },
+  ];
+  const rulesBody = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {RULE_TYPES.map((r) => (
+        <Card key={r.l} className="flex items-start gap-3 p-4">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><Bell size={16} /></div>
+          <div><div className="tracking-tight text-black dark:text-white">{r.l}</div><div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">{r.d}</div></div>
+        </Card>
+      ))}
+    </div>
+  );
+
   const content = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-white/70 px-5 py-3.5 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/70 sm:px-7">
@@ -679,7 +797,17 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden sm:p-7">
-        {section === "dashboard" ? dashboardBody : section === "publications" ? publicationsBody : section === "moderation" ? moderationBody : section === "scenarios" ? scenariosBody : placeholderBody}
+        {section === "dashboard" ? dashboardBody
+          : section === "publications" ? publicationsBody
+          : section === "moderation" ? moderationBody
+          : section === "scenarios" ? scenariosBody
+          : section === "categories" ? categoriesBody
+          : section === "authorities" ? authoritiesBody
+          : section === "regions" ? regionsBody
+          : section === "users" ? usersBody
+          : section === "audit" ? auditBody
+          : section === "rules" ? rulesBody
+          : placeholderBody}
       </div>
     </div>
   );

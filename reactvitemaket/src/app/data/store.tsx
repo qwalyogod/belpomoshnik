@@ -17,6 +17,9 @@ function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export interface AdminUserRow { id: string; email: string; name: string; role: string; isActive: boolean; city: string; region: string }
+export interface AuditLogRow { id: string; actor: string; roleId: string; eventType: string; action: string; status: string; createdAt: string }
+
 type Store = {
   role: Role;
   setRole: (r: Role) => void;
@@ -42,6 +45,8 @@ type Store = {
   admin: {
     scenarios: AdminScenarioRow[];
     status: "loading" | "api" | "fallback";
+    users: AdminUserRow[];
+    auditLogs: AuditLogRow[];
   };
 
   situations: UserSituation[];
@@ -398,6 +403,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [authSession, setAuthSession] = useState<AuthTokens | null>(null);
   const [adminScenarios, setAdminScenarios] = useState<AdminScenarioRow[]>([]);
   const [adminStatus, setAdminStatus] = useState<"loading" | "api" | "fallback">("fallback");
+  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
 
   useEffect(() => {
     safeWrite(CURRENT_USER_KEY, currentUser.id);
@@ -603,15 +610,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   // Editor/admin content: pull the scenario catalog from the protected admin API.
   useEffect(() => {
-    if (!authSession?.access_token || (currentUser.role !== "admin" && currentUser.role !== "editor")) {
+    const token = authSession?.access_token;
+    if (!token || (currentUser.role !== "admin" && currentUser.role !== "editor")) {
       setAdminScenarios([]);
       setAdminStatus("fallback");
+      setAdminUsers([]);
+      setAuditLogs([]);
       return;
     }
     const controller = new AbortController();
     setAdminStatus("loading");
 
-    apiClient.getAdminScenarios<Record<string, unknown>[]>(authSession.access_token, { signal: controller.signal })
+    apiClient.getAdminScenarios<Record<string, unknown>[]>(token, { signal: controller.signal })
       .then(items => {
         if (controller.signal.aborted) return;
         if (Array.isArray(items)) {
@@ -625,6 +635,30 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           setAdminStatus("fallback");
         }
       });
+
+    apiClient.getAuditLogs<Record<string, unknown>[]>(token, { signal: controller.signal })
+      .then(rows => {
+        if (controller.signal.aborted || !Array.isArray(rows)) return;
+        setAuditLogs(rows.map(r => ({
+          id: String(r.id), actor: String(r.actor ?? ""), roleId: String(r.role_id ?? ""),
+          eventType: String(r.event_type ?? ""), action: String(r.action ?? ""),
+          status: String(r.status ?? ""), createdAt: String(r.created_at ?? ""),
+        })));
+      })
+      .catch(() => { /* keep empty */ });
+
+    if (currentUser.role === "admin") {
+      apiClient.getAdminUsers<Record<string, unknown>[]>(token, { signal: controller.signal })
+        .then(rows => {
+          if (controller.signal.aborted || !Array.isArray(rows)) return;
+          setAdminUsers(rows.map(u => ({
+            id: String(u.id), email: String(u.email ?? ""), name: String(u.name ?? ""),
+            role: String(u.role_id ?? ""), isActive: Boolean(u.is_active),
+            city: String(u.city ?? ""), region: String(u.region ?? ""),
+          })));
+        })
+        .catch(() => { /* keep empty */ });
+    }
 
     return () => controller.abort();
   }, [authSession?.access_token, currentUser.role]);
@@ -1204,7 +1238,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
     categories: CATEGORIES, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
-    admin: { scenarios: adminScenarios, status: adminStatus },
+    admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
     documents, addDocument, updateDocument, deleteDocument,
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
@@ -1218,7 +1252,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
   }), [
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
-    adminScenarios, adminStatus,
+    adminScenarios, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
     addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,

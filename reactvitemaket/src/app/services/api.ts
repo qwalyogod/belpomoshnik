@@ -252,6 +252,10 @@ export const apiClient = {
 
   getAdminScenarios: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/scenarios", { headers: authHeaders(accessToken), ...options }),
+  getAdminUsers: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/users", { headers: authHeaders(accessToken), ...options }),
+  getAuditLogs: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/audit-logs", { headers: authHeaders(accessToken), ...options }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/problems", { headers: authHeaders(accessToken), ...options }),
   updateAdminScenario: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
