@@ -18,6 +18,12 @@
       "runtimeExecutable": ".venv/bin/flet",
       "runtimeArgs": ["run", "-w", "src/main.py", "--host", "127.0.0.1", "-p", "8550"],
       "port": 8550
+    },
+    {
+      "name": "belpomoshnik-mobile",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "reactvitemaket", "exec", "vite", "--open", "/mobile.html"],
+      "port": 8560
     }
   ]
 }
