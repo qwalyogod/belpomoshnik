@@ -316,6 +316,15 @@ export const LEARNING_CATEGORIES: { id: string; name: string; progress: number }
   { id: "health", name: "Здоровье", progress: 15 },
 ];
 
+export const ACHIEVEMENTS_CATALOG: { id: string; title: string; desc: string; earned: boolean }[] = [
+  { id: "first-step", title: "Первый шаг", desc: "Открыта первая карточка проблемы.", earned: true },
+  { id: "docs-control", title: "Документы под контролем", desc: "Пройден тест по документам.", earned: true },
+  { id: "utility", title: "Разбираюсь в ЖКХ", desc: "Изучены материалы по ЖКХ.", earned: false },
+  { id: "law-aware", title: "Закон в курсе", desc: "Прочитан закон-апдейт.", earned: true },
+  { id: "moving", title: "Готов к переезду", desc: "Изучен план переезда.", earned: false },
+  { id: "calm", title: "Без паники", desc: "Пройден микро-тест без ошибок.", earned: true },
+];
+
 export const LEARNING_QUIZ: { topic: string; questions: { q: string; options: string[]; answer: number }[] } = {
   topic: "Потеря паспорта",
   questions: [

@@ -12,7 +12,7 @@ import { useStore, maskDocumentNumber, DOC_TYPE_LABEL } from "../data/store";
 import { apiClient } from "../services/api";
 import { buildSuggestions, getRecentSearches, addRecentSearch, POPULAR_QUERIES, SuggestionItem } from "../services/search";
 import { matchInstitutions, hasProfileLocation } from "../services/institutions";
-import { LEARNING_QUIZ, LEARNING_CATEGORIES } from "../data/mock";
+import { LEARNING_QUIZ, LEARNING_CATEGORIES, ACHIEVEMENTS_CATALOG } from "../data/mock";
 import { Scenario, UserDocumentType, Lang, Article, ArticleKind } from "../data/types";
 
 /* ---------------- DISCLAIMER ---------------- */
@@ -556,18 +556,23 @@ export function LearningPage() {
 
       <LearningQuiz />
 
-      {profile?.achievements?.length > 0 && (
-        <Card className="p-5">
-          <div className="tracking-tight text-black dark:text-white">Достижения</div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {profile?.achievements?.map(a => (
-              <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#E3E7FC] px-3.5 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                <Award size={12} /> {a.title}
-              </span>
-            ))}
-          </div>
-        </Card>
-      )}
+      <Card className="p-5">
+        <div className="tracking-tight text-black dark:text-white">Достижения</div>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {ACHIEVEMENTS_CATALOG.map(a => {
+            const earned = a.earned || !!profile?.achievements?.some(pa => (pa as { id?: string; title?: string }).id === a.id || (pa as { title?: string }).title === a.title);
+            return (
+              <div key={a.id} className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 ${earned ? "bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "bg-black/[0.03] opacity-70 dark:bg-white/[0.04]"}`}>
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${earned ? "bg-white text-[#0056FF] dark:bg-[#0B0D13] dark:text-[#7FA8FF]" : "bg-black/[0.05] text-black/30 dark:bg-white/[0.06] dark:text-white/30"}`}>{earned ? <Award size={16} /> : <Lock size={14} />}</span>
+                <div className="min-w-0">
+                  <div className="text-[13px] tracking-tight text-black dark:text-white">{a.title}</div>
+                  <div className="truncate text-[11px] tracking-tight text-black/50 dark:text-white/50">{a.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
     </div>
   );
 }
