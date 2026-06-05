@@ -382,6 +382,11 @@ class ScenarioPublicSummary(ORMModel):
     verification_notes: str = ""
 
 
+class ProblemStepOut(BaseModel):
+    id: str = ""
+    title: str = ""
+
+
 class ProblemPublicOut(ORMModel):
     id: int
     title: str
@@ -391,6 +396,12 @@ class ProblemPublicOut(ORMModel):
     icon: str
     category: str
     status: ContentStatus
+    what_to_do_now: str = ""
+    steps: list[ProblemStepOut] = Field(default_factory=list)
+    documents: list[str] = Field(default_factory=list)
+    deadlines: list[str] = Field(default_factory=list)
+    institutions: list[str] = Field(default_factory=list)
+    mistakes: list[str] = Field(default_factory=list)
 
 
 class ProblemWithScenariosOut(ProblemPublicOut):

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -57,27 +58,35 @@ def seed_full_content(db: Session) -> dict[str, int]:
     m = _load_mock_data()
     counts = {"problems": 0, "scenarios": 0, "stages": 0, "steps": 0, "documents": 0, "authorities": 0, "sources": 0, "law": 0}
 
-    # ---- Problems (catalogue) -------------------------------------------------
+    # ---- Problems (catalogue + rich «what to do») ----------------------------
+    problem_detail = getattr(m, "PROBLEM_DETAIL", {})
     problems_by_category: dict[str, Problem] = {}
     for p in m.PROBLEMS:
         slug = p["id"]
-        existing = db.query(Problem).filter(Problem.slug == slug).first()
-        if existing:
-            problems_by_category.setdefault(existing.category, existing)
-            continue
-        problem = Problem(
-            title=p.get("title", "Проблема"),
-            slug=slug,
-            short_description=(p.get("description", "")[:500]),
-            description=p.get("description", ""),
-            icon="HELP_OUTLINE",
-            category=p.get("category_name", ""),
-            status=ContentStatus.PUBLISHED,
-        )
-        db.add(problem)
-        db.flush()
+        problem = db.query(Problem).filter(Problem.slug == slug).first()
+        if not problem:
+            problem = Problem(
+                title=p.get("title", "Проблема"),
+                slug=slug,
+                short_description=(p.get("description", "")[:500]),
+                description=p.get("description", ""),
+                icon="HELP_OUTLINE",
+                category=p.get("category_name", ""),
+                status=ContentStatus.PUBLISHED,
+            )
+            db.add(problem)
+            db.flush()
+            counts["problems"] += 1
+        # Rich «что делать» (idempotent: re-applied on every run).
+        detail = problem_detail.get(slug)
+        if detail:
+            problem.what_to_do_now = "\n".join(detail.get("immediate", []))
+            problem.steps_json = json.dumps([{"id": f"s{i + 1}", "title": s} for i, s in enumerate(detail.get("steps", []))], ensure_ascii=False)
+            problem.documents_json = json.dumps(detail.get("documents", []), ensure_ascii=False)
+            problem.deadlines_json = json.dumps(detail.get("terms", []), ensure_ascii=False)
+            problem.institutions_json = json.dumps(detail.get("contacts", []), ensure_ascii=False)
+            problem.mistakes_json = json.dumps(detail.get("errors", []), ensure_ascii=False)
         problems_by_category.setdefault(problem.category, problem)
-        counts["problems"] += 1
 
     def _problem_for(category_name: str) -> Problem:
         if category_name in problems_by_category:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -35,6 +36,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _json_list(raw: str) -> list:
+    try:
+        value = json.loads(raw or "[]")
+        return value if isinstance(value, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -68,12 +77,39 @@ class Problem(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     icon: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     category: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    # Rich «what to do» content (ported from the Flet PROBLEM_DETAIL set).
+    what_to_do_now: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    steps_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    documents_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    deadlines_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    institutions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    mistakes_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     status: Mapped[ContentStatus] = mapped_column(
         SQLEnum(ContentStatus, name="problem_status"),
         default=ContentStatus.DRAFT,
         nullable=False,
         index=True,
     )
+
+    @property
+    def steps(self) -> list:
+        return _json_list(self.steps_json)
+
+    @property
+    def documents(self) -> list:
+        return _json_list(self.documents_json)
+
+    @property
+    def deadlines(self) -> list:
+        return _json_list(self.deadlines_json)
+
+    @property
+    def institutions(self) -> list:
+        return _json_list(self.institutions_json)
+
+    @property
+    def mistakes(self) -> list:
+        return _json_list(self.mistakes_json)
 
     scenarios: Mapped[list[Scenario]] = relationship(
         back_populates="problem",
