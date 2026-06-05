@@ -6,7 +6,7 @@ import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3
+  Bell, ChevronLeft, Edit3, Newspaper
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton } from "./components/belp-ui";
 import { motion } from "motion/react";
@@ -447,6 +447,47 @@ export function LegalPage() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+export function NewsPage() {
+  const { isMobile } = useContext(ShellContext);
+  const navigate = useNavigate();
+  const { articles } = useStore();
+  const hasNews = articles.some((a) => a.status === "published" && a.kind === "news");
+
+  const empty = !hasNews && (
+    <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
+      <div>
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><Newspaper size={20} /></div>
+        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>Пока нет новостей</div>
+        <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">Материалы редакции появятся здесь. Можно предложить свою новость.</div>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
+        <MobileTopBar title="Новости" onBack={() => navigate(-1)} />
+        <div className="px-5 space-y-4">
+          <ProposeButton kind="news" className="w-full justify-center" />
+          <EditorialFeed kind="news" title="Новости редакции" />
+          {empty}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Материалы</div>
+      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Новости и публикации</div>
+      <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Материалы редакции: адаптация, трудоустройство, правовые источники и работа с организациями.</p>
+      <div className="mt-6"><ProposeButton kind="news" /></div>
+      <div className="mt-8"><EditorialFeed kind="news" title="Новости редакции" /></div>
+      {empty}
     </div>
   );
 }

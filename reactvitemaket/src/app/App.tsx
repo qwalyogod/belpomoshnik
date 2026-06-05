@@ -6,7 +6,7 @@ import {
   Sun, Moon, Search, FileText, Home, Bell, User, Shield, Wallet, Heart, Briefcase, Hammer,
   ArrowRight, ChevronRight, Check, Lock, AlertCircle, CalendarClock, MapPin, Sparkles,
   Plus, ScanLine, EyeOff, Building2, Clock, Bookmark, ArrowUpRight, Settings,
-  Users, BookOpen, LayoutGrid, Baby, ChevronLeft, X, LogOut, UserPlus,
+  Users, BookOpen, LayoutGrid, Baby, ChevronLeft, X, LogOut, UserPlus, Newspaper,
 } from "lucide-react";
 import { Logo, Pill, Card, PrimaryButton, GhostButton } from "./components/belp-ui";
 import { AppStoreProvider, useStore } from "./data/store";
@@ -25,7 +25,7 @@ import {
    ============================================================ */
 type Page =
   | "home" | "situations" | "situation" | "documents" | "legal" | "notifications"
-  | "profile" | "catalog" | "scenario" | "mysituation" | "settings" | "learning" | "admin" | "finance";
+  | "profile" | "catalog" | "scenario" | "mysituation" | "settings" | "learning" | "admin" | "finance" | "news";
 
 /* ============================================================
    MOBILE APP
@@ -133,7 +133,7 @@ function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => vo
     { i: <Wallet size={20} />, n: "Налоги", r: "finance" },
     { i: <Heart size={20} />, n: "Семья", r: "catalog" },
     { i: <Briefcase size={20} />, n: "Работа", r: "catalog" },
-    { i: <Hammer size={20} />, n: "Здоровье", r: "catalog" },
+    { i: <Newspaper size={20} />, n: "Новости", r: "news" },
   ];
   const navigate = useNavigate();
   const { situations, scenarioById, situationProgress, documents, utilityAccounts, taxes, settings, legal, currentUser } = useStore();
@@ -649,6 +649,7 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
   { id: "documents", icon: <Shield size={16} />, label: "Документы" },
   { id: "finance", icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
   { id: "notifications", icon: <Bell size={16} />, label: "Уведомления", badge: "5" },
+  { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
   { id: "legal", icon: <BookOpen size={16} />, label: "Важное" },
   { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
 ];
@@ -832,6 +833,7 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
         {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
         {item("documents", <Shield size={16} />, "Документы")}
         {item("notifications", <Bell size={16} />, "Уведомления", "5")}
+        {item("news", <Newspaper size={16} />, "Новости")}
         {item("legal", <BookOpen size={16} />, "Важное для вас")}
       </nav>
       <nav className="mt-6 space-y-1">
