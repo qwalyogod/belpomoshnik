@@ -6,6 +6,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
+    "dev:lan": "vite --host",
     "mobile": "vite --open /mobile.html"
   },
   "dependencies": {
