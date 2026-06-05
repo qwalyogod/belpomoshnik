@@ -442,6 +442,17 @@ class AuditLogOut(ORMModel):
     created_at: datetime
 
 
+class UserAdminOut(BaseModel):
+    """H5 — пользователь для раздела «Пользователи и роли»."""
+    id: int
+    email: str
+    name: str
+    role_id: str
+    is_active: bool
+    city: str = ""
+    region: str = ""
+
+
 class EmailNotificationOut(ORMModel):
     """I2/I5 — Схема записи в журнале email-уведомлений."""
     id: int

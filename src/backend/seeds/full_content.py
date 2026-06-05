@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from backend.enums import ContentStatus, DifficultyLevel
 from backend.models import (
+    AuditLog,
     Authority,
     Document,
     LawUpdate,
@@ -56,7 +57,7 @@ def _parse_date(value: str) -> datetime:
 
 def seed_full_content(db: Session) -> dict[str, int]:
     m = _load_mock_data()
-    counts = {"problems": 0, "scenarios": 0, "stages": 0, "steps": 0, "documents": 0, "authorities": 0, "sources": 0, "law": 0}
+    counts = {"problems": 0, "scenarios": 0, "stages": 0, "steps": 0, "documents": 0, "authorities": 0, "sources": 0, "law": 0, "audit": 0}
 
     # ---- Problems (catalogue + rich «what to do») ----------------------------
     problem_detail = getattr(m, "PROBLEM_DETAIL", {})
@@ -254,6 +255,20 @@ def seed_full_content(db: Session) -> dict[str, int]:
             status="applied",  # публичный список показывает только applied
         ))
         counts["law"] += 1
+
+    # ---- Audit log (демо-записи журнала действий) ----------------------------
+    for entry in getattr(m, "ADMIN_AUDIT_LOGS", []):
+        action = entry.get("action", "Действие")
+        if db.query(AuditLog).filter(AuditLog.action == action).first():
+            continue
+        db.add(AuditLog(
+            actor=entry.get("actor", "Система"),
+            role_id=entry.get("role_id", "content_editor"),
+            event_type="update",
+            action=action,
+            status=entry.get("status", "recorded"),
+        ))
+        counts["audit"] += 1
 
     db.commit()
     return counts

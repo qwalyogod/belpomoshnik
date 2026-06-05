@@ -6,6 +6,8 @@ from backend.schemas import ReorderPayload, ScenarioVerifyNotesPayload
 from backend.api.auth import get_current_user_email, require_role
 from backend.database import get_db
 from backend.enums import ContentStatus
+from sqlalchemy import select
+
 from backend.models import (
     Authority,
     Deadline,
@@ -19,6 +21,7 @@ from backend.models import (
     ScenarioStage,
     ScenarioStep,
     SourceReference,
+    User,
 )
 from backend.service import (
     create_entity,
@@ -499,3 +502,22 @@ def admin_flush_email_queue(db: Session = Depends(get_db)):
     from backend.email_service import send_pending_emails
     result = send_pending_emails(db)
     return result
+
+
+@router.get("/audit-logs", response_model=list[schemas.AuditLogOut])
+def admin_audit_logs(_: str = Depends(require_role("content_editor")), db: Session = Depends(get_db)):
+    """H9 — Журнал действий (последние записи аудита)."""
+    return [schemas.AuditLogOut.model_validate(x) for x in list_audit_logs(db)]
+
+
+@router.get("/users", response_model=list[schemas.UserAdminOut])
+def admin_users(_: str = Depends(require_role("platform_admin")), db: Session = Depends(get_db)):
+    """H5 — Пользователи и роли."""
+    users = db.scalars(select(User).order_by(User.id.asc())).all()
+    return [
+        schemas.UserAdminOut(
+            id=u.id, email=u.email, name=u.name, role_id=u.role_id,
+            is_active=u.is_active, city=u.city, region=u.region,
+        )
+        for u in users
+    ]
