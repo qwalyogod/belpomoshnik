@@ -76,6 +76,7 @@ type Store = {
   blockedSubmitters: string[];
   isSubmitterBlocked: (id: string) => boolean;
   toggleBlockedSubmitter: (id: string) => void;
+  registerView: (id: string) => void;
   meId: string | null;
 
   favorites: string[];
@@ -1032,6 +1033,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authSession?.access_token]);
 
+  const registerView: Store["registerView"] = useCallback((id) => {
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, views: a.views + 1 } : a));
+    if (/^\d+$/.test(id)) apiClient.viewArticle(id).catch(() => { /* offline: local bump only */ });
+  }, []);
+
   const isSubmitterBlocked: Store["isSubmitterBlocked"] = useCallback((id) => blockedSubmitters.includes(id), [blockedSubmitters]);
   const toggleBlockedSubmitter: Store["toggleBlockedSubmitter"] = useCallback((id) => {
     if (!id) return;
@@ -1180,7 +1186,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
     articles, addArticle, updateArticle, removeArticle,
-    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, meId,
+    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, meId,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
@@ -1190,7 +1196,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
-    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, meId, loadArticles,
+    addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
     addDocument, updateDocument, deleteDocument, toggleFavorite,

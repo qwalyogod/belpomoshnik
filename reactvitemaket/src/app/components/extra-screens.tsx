@@ -1109,6 +1109,8 @@ function articleToDraft(a: Article): Partial<ContentDraft> {
 const ARTICLE_KIND_LABEL: Record<string, string> = { news: "Новость", scenario: "Ситуация", problem: "Проблема" };
 
 function ArticleReaderModal({ article, onClose, onEdit }: { article: Article; onClose: () => void; onEdit?: (a: Article) => void }) {
+  const { registerView } = useStore();
+  useEffect(() => { registerView(article.id); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [article.id]);
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 p-0 backdrop-blur-sm sm:p-4" onClick={onClose}>
       <div className="h-[100dvh] w-full overflow-y-auto bg-white dark:bg-[#0B0D13] sm:h-auto sm:max-h-[90vh] sm:max-w-[760px] sm:rounded-2xl [&::-webkit-scrollbar]:hidden" onClick={(e) => e.stopPropagation()}>

@@ -265,6 +265,8 @@ export const apiClient = {
   // K-этап: публикации (редакторские + UGC) + модерация + блок-лист.
   getArticles: <T>(kind?: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/articles${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`, options),
+  viewArticle: <T>(id: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/articles/${encodeURIComponent(id)}/view`, { method: "POST", ...options }),
   getAllArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/articles/all", { headers: authHeaders(accessToken), ...options }),
   getMyArticles: <T>(accessToken: string, options?: ApiRequestOptions) =>

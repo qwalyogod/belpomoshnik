@@ -361,26 +361,36 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   const fmt = (n: number) => Math.round(n).toLocaleString("ru-RU");
   const todayLabel = new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
   const periodMul = period === "30" ? 4.3 : 1;
-  const baseMaterials = admin.scenarios.length
-    ? admin.scenarios.map((s, i) => ({
-        title: s.title,
-        status: statusLabel(s.status),
-        views: 280 + ((s.title.length * 137 + i * 911) % 3600),
-      }))
-    : SAMPLE_TOP_MATERIALS;
+  // Real article views once content exists; representative demo numbers until then.
+  const realPublished = articles.filter((a) => a.status === "published");
+  const realReview = articles.filter((a) => a.status === "review").length;
+  const hasReal = realPublished.length > 0;
+  const baseMaterials = hasReal
+    ? realPublished.map((a) => ({ title: a.title, status: "Опубликовано", views: a.views }))
+    : admin.scenarios.length
+      ? admin.scenarios.map((s, i) => ({
+          title: s.title,
+          status: statusLabel(s.status),
+          views: 280 + ((s.title.length * 137 + i * 911) % 3600),
+        }))
+      : SAMPLE_TOP_MATERIALS;
+  const viewMul = hasReal ? 1 : periodMul; // real views are cumulative, not per-period
   const topMaterials = [...baseMaterials]
     .sort((a, b) => b.views - a.views)
     .slice(0, 5)
-    .map((m) => ({ ...m, views: Math.round(m.views * periodMul) }));
-  const totalViews = baseMaterials.reduce((s, m) => s + m.views, 0) * periodMul;
+    .map((m) => ({ ...m, views: Math.round(m.views * viewMul) }));
+  const totalViews = baseMaterials.reduce((s, m) => s + m.views, 0) * viewMul;
   const avgViews = baseMaterials.length ? totalViews / baseMaterials.length : 0;
   const maxTop = topMaterials[0]?.views || 1;
   const week = WEEK_BASE.map((d) => ({ ...d, v: Math.round(d.v * periodMul) }));
   const maxWeek = Math.max(...week.map((d) => d.v));
-  const pubCount = total ? published : 118;
-  const revCount = total ? review : 17;
+  const pubCount = hasReal ? realPublished.length : total ? published : 118;
+  const revCount = hasReal ? realReview : total ? review : 17;
+  const analyticsNote = hasReal
+    ? "Просмотры — реальные (счётчик при открытии материала). Дневной график — демонстрационный."
+    : "Демо-данные аналитики до накопления реальных просмотров.";
   const dashKpis = [
-    { l: "Просмотры за период", v: fmt(totalViews), d: period === "30" ? "за 30 дней" : "за 7 дней", icon: <Eye size={15} />, up: "+12%" },
+    { l: hasReal ? "Просмотры всего" : "Просмотры за период", v: fmt(totalViews), d: hasReal ? "по материалам" : period === "30" ? "за 30 дней" : "за 7 дней", icon: <Eye size={15} />, up: hasReal ? "" : "+12%" },
     { l: "Опубликовано", v: String(pubCount), d: "материалов", icon: <Check size={15} />, up: "" },
     { l: "На модерации", v: String(revCount), d: "ждут вас", icon: <Clock size={15} />, up: "" },
     { l: "Средний охват", v: fmt(avgViews), d: "на материал", icon: <BarChart3 size={15} />, up: "" },
@@ -457,7 +467,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
         </Card>
       </div>
 
-      <div className="mt-3 text-[11px] tracking-tight text-black/35 dark:text-white/35">Демо-данные аналитики до подключения трекинга просмотров.</div>
+      <div className="mt-3 text-[11px] tracking-tight text-black/35 dark:text-white/35">{analyticsNote}</div>
     </>
   );
 

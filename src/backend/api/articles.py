@@ -118,6 +118,15 @@ def list_blocked(_: str = Depends(require_role("content_editor")), db: Session =
     return [row.user_id for row in db.scalars(select(BlockedSubmitter)).all()]
 
 
+@router.post("/{article_id}/view")
+def register_view(article_id: int, db: Session = Depends(get_db)):
+    """Публичный счётчик просмотров: +1 при открытии материала читателем."""
+    article = _must_get(db, article_id)
+    article.views = (article.views or 0) + 1
+    db.commit()
+    return {"id": article.id, "views": article.views}
+
+
 # ---------------------------------------------------------------------------
 # Write
 # ---------------------------------------------------------------------------
