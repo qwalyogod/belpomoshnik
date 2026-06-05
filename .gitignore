@@ -1,4 +1,6 @@
 .venv/
+node_modules/
+**/node_modules/
 __pycache__/
 *.py[cod]
 .DS_Store
@@ -15,3 +17,8 @@ data/app_state.json
 data/app_state.backup.json
 data/private_uploads/
 data/exports/
+
+# Stray / personal artefacts (keep out of the code repo)
+/package-lock.json
+documents/
+*.zip

@@ -15,6 +15,8 @@ from theme.app_theme import (
     APP_COLORS,
     APP_RADIUS,
     CENTER,
+    DOCUMENT_COLOR_PALETTE,
+    DOCUMENT_TYPE_COLOR_MAP,
     GRADIENT_MIDNIGHT_SURGE,
     border_all,
 )
@@ -49,6 +51,24 @@ def _status_color(status: str) -> str:
     if status == "Истекает скоро":
         return APP_COLORS["orange"]
     return APP_COLORS["red"]
+
+
+def _palette_color(color_id: str | None) -> str:
+    value = (color_id or "").strip()
+    if value.startswith("#"):
+        return value
+    for item in DOCUMENT_COLOR_PALETTE:
+        if item["id"] == value:
+            return item["color"]
+    return DOCUMENT_COLOR_PALETTE[0]["color"]
+
+
+def _document_accent(doc: dict) -> str:
+    explicit = doc.get("color")
+    if explicit:
+        return _palette_color(explicit)
+    fallback_id = DOCUMENT_TYPE_COLOR_MAP.get(doc.get("document_type", "Другое"), "blue")
+    return _palette_color(fallback_id)
 
 
 def _mask_number(value: str) -> str:
@@ -121,11 +141,11 @@ def _security_banner() -> ft.Container:
                 ft.Column(
                     spacing=2, expand=True,
                     controls=[
-                        ft.Text("Защищено биометрией", size=ts(14), weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
-                        ft.Text("Сканы хранятся локально на устройстве и шифруются ключом МСИ.", size=ts(12), color=APP_COLORS["muted"]),
+                        ft.Text("Локальная защита документов", size=ts(14), weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
+                        ft.Text("Сканы сохраняются в локальном хранилище приложения.", size=ts(12), color=APP_COLORS["muted"]),
                     ],
                 ),
-                ft.Icon(ft.Icons.FINGERPRINT, size=ts(28), color=APP_COLORS["blue_text"]),
+                ft.Icon(ft.Icons.LOCK_OUTLINE, size=ts(28), color=APP_COLORS["blue_text"]),
             ],
         ),
     )
@@ -139,6 +159,7 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
     """Big gradient passport-style card."""
     status = doc.get("_status", "Активен")
     user_name = MOCK_USER.get("name", "Климович А.В.")
+    accent = _document_accent(doc)
 
     number = _mask_number(doc.get("document_number") or "") if not show_number else (doc.get("document_number") or "Не указан")
 
@@ -169,13 +190,13 @@ def _hero_card(doc: dict, show_number: bool = True) -> ft.Container:
         gradient=ft.LinearGradient(
             begin=ft.Alignment(-1, -0.5),
             end=ft.Alignment(1, 1),
-            colors=GRADIENT_MIDNIGHT_SURGE,
+            colors=[GRADIENT_MIDNIGHT_SURGE[0], accent],
         ),
         shadow=[
             ft.BoxShadow(
                 blur_radius=24,
                 offset=ft.Offset(0, 12),
-                color=ft.Colors.with_opacity(0.18, APP_COLORS["blue"]),
+                color=ft.Colors.with_opacity(0.18, accent),
             )
         ],
         padding=ft.Padding(left=28, top=24, right=28, bottom=28),
@@ -311,6 +332,7 @@ def _doc_list_item(
     status = doc.get("_status", "Активен")
     days = doc.get("_days")
     color = _status_color(status)
+    accent = _document_accent(doc)
 
     # Validity subtitle
     if status == "Истёк":
@@ -335,7 +357,7 @@ def _doc_list_item(
         border_radius=14,
         padding=ft.Padding(left=12, top=10, right=12, bottom=10),
         bgcolor=APP_COLORS["active"] if selected else None,
-        border=border_all(APP_COLORS["blue"] if selected else APP_COLORS["stroke2"], 2 if selected else 1),
+        border=border_all(accent if selected else APP_COLORS["stroke2"], 2 if selected else 1),
         animate=ft.Animation(ANIM_FAST, ft.AnimationCurve.EASE_OUT),
         on_click=lambda _: on_select(doc["id"]),
         content=ft.Column(
@@ -347,9 +369,9 @@ def _doc_list_item(
                     controls=[
                         ft.Container(
                             width=32, height=32, border_radius=10,
-                            bgcolor=APP_COLORS["surface2"],
+                            bgcolor=ft.Colors.with_opacity(0.12, accent),
                             alignment=CENTER,
-                            content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=ts(16), color=APP_COLORS["blue"]),
+                            content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=ts(16), color=accent),
                         ),
                         ft.Column(
                             spacing=1, expand=True,
@@ -511,6 +533,40 @@ def _build_layout(
 
     _rebuild_doc_list(do_update=False)
 
+    def _selected_id() -> str:
+        return str(selected_state["id"])
+
+    def _open_selected_scan(_=None) -> None:
+        if on_open_scan:
+            on_open_scan(_selected_id())
+
+    def _edit_selected(_=None) -> None:
+        if on_edit_document:
+            on_edit_document(_selected_id())
+
+    def _delete_selected(_=None) -> None:
+        if on_delete_document:
+            on_delete_document(_selected_id())
+
+    selected_action_controls = [
+        ft.Container(expand=True, content=_action_button(
+            "Открыть скан" if is_desktop else "Скан",
+            ft.Icons.LOCK_OPEN_OUTLINED,
+            on_click=_open_selected_scan,
+        )),
+        ft.Container(expand=True, content=_action_button(
+            "Редактировать" if is_desktop else "Править",
+            ft.Icons.EDIT_OUTLINED,
+            on_click=_edit_selected,
+        )),
+        ft.Container(expand=True, content=_action_button(
+            "Удалить",
+            ft.Icons.DELETE_OUTLINE,
+            on_click=_delete_selected,
+        )),
+    ]
+    selected_actions = ft.Row(spacing=10, controls=selected_action_controls)
+
     # "Показать реквизиты" toggle
     reveal_btn = ft.Container(
         ink=True,
@@ -542,7 +598,7 @@ def _build_layout(
                                 spacing=4,
                                 controls=[
                                     ft.Text("Мои документы", size=ts(38), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                                    ft.Text("Локальное хранилище. Защищено биометрией.", size=ts(15), color=APP_COLORS["muted"]),
+                                    ft.Text("Локальное хранилище с маскированием реквизитов.", size=ts(15), color=APP_COLORS["muted"]),
                                 ],
                             ),
                             reveal_btn,
@@ -570,7 +626,8 @@ def _build_layout(
                         ],
                     ),
                     # Action bar
-                    _scan_button(on_click=on_open_scan or on_add_document),
+                    _scan_button(on_click=_open_selected_scan),
+                    selected_actions,
                     ft.Row(
                         spacing=12,
                         controls=[
@@ -604,7 +661,7 @@ def _build_layout(
                         spacing=2,
                         controls=[
                             ft.Text("Мои документы", size=ts(28), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                            ft.Text("Защищено биометрией.", size=ts(13), color=APP_COLORS["muted"]),
+                            ft.Text("Реквизиты скрыты по умолчанию.", size=ts(13), color=APP_COLORS["muted"]),
                         ],
                     ),
                     reveal_btn,
@@ -617,7 +674,8 @@ def _build_layout(
             # Doc list
             doc_list_col,
             # Action bar
-            _scan_button(on_click=on_open_scan or on_add_document),
+            _scan_button(on_click=_open_selected_scan),
+            selected_actions,
             ft.Row(
                 spacing=10,
                 controls=[

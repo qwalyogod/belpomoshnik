@@ -70,7 +70,16 @@ from services.public_api import PublicAPIClient, PublicAPIError
 from services.user_api import UserAPIClient, UserAPIError
 from services import role_guard, user_sync
 from components.guest_modal import open_guest_modal as _open_guest_modal_dialog
-from theme.app_theme import APP_COLORS, border_all, build_theme, padding_symmetric, set_large_text, set_theme_mode
+from theme.app_theme import (
+    APP_COLORS,
+    DOCUMENT_COLOR_PALETTE,
+    DOCUMENT_TYPE_COLOR_MAP,
+    border_all,
+    build_theme,
+    padding_symmetric,
+    set_large_text,
+    set_theme_mode,
+)
 
 
 NAV_ROUTES = {
@@ -110,6 +119,23 @@ def main(page: ft.Page) -> None:
             "profile": MOCK_USER.copy(),
         }
     }
+    default_test_accounts = [
+        {
+            "email": "citizen@test.local",
+            "name": "Тестовый гражданин",
+            "role": "citizen",
+        },
+        {
+            "email": "editor@test.local",
+            "name": "Тестовый редактор",
+            "role": "content_editor",
+        },
+        {
+            "email": "admin@test.local",
+            "name": "Тестовый администратор",
+            "role": "platform_admin",
+        },
+    ]
     default_profile = MOCK_USER.copy()
     default_profile["interests"] = list(MOCK_USER.get("interests", []))
     default_settings = {
@@ -134,6 +160,7 @@ def main(page: ft.Page) -> None:
     }
     default_state = {
         "users": copy.deepcopy(default_users),
+        "quick_accounts": [],
         "auth_state": {
             "logged_in": False,
             "email": MOCK_USER["email"],
@@ -192,6 +219,25 @@ def main(page: ft.Page) -> None:
     users = stored_state["users"]
     if MOCK_USER["email"] not in users:
         users[MOCK_USER["email"]] = default_users[MOCK_USER["email"]]
+    for account in default_test_accounts:
+        email = account["email"]
+        users.setdefault(
+            email,
+            {
+                "password": "Test12345!",
+                "profile": {
+                    "name": account["name"],
+                    "first_name": account["name"].split()[1] if len(account["name"].split()) > 1 else account["name"],
+                    "email": email,
+                    "region": "Минская область",
+                    "city": "Минск",
+                    "avatar_url": MOCK_USER["avatar_url"],
+                    "interests": [],
+                    "learning_mode": True,
+                    "role": account["role"],
+                },
+            },
+        )
     auth_state = stored_state["auth_state"]
     auth_state.setdefault("role", "guest")
     # Транзиентный флаг — всегда сбрасывать на старте (мог сохраниться True
@@ -202,6 +248,9 @@ def main(page: ft.Page) -> None:
         auth_state["email"] = MOCK_USER["email"]
     # Тестовые аккаунты — загружаются с backend ниже после инициализации auth_api.
     test_accounts_state: dict[str, list[dict]] = {"items": []}
+    quick_accounts_state: dict[str, list[dict]] = {
+        "items": list(stored_state.get("quick_accounts", []) or [])
+    }
     app_user = stored_state["app_user"]
     app_user["interests"] = list(app_user.get("interests", []))
     for _profile_key, _profile_default in MOCK_USER.items():
@@ -305,6 +354,10 @@ def main(page: ft.Page) -> None:
         test_accounts_state["items"] = auth_api.list_test_accounts()
     except Exception:
         test_accounts_state["items"] = []
+    if not test_accounts_state["items"]:
+        test_accounts_state["items"] = copy.deepcopy(default_test_accounts)
+
+    account_flow = {"adding_user": False}
 
     def _user_api_ready() -> UserAPIClient | None:
         """Вернуть авторизованный UserAPIClient, если есть токен и backend жив.
@@ -816,7 +869,7 @@ def main(page: ft.Page) -> None:
         Производит запись в очередь email-уведомлений; рассылка по cron.
         """
         if app_settings.get("email_notifications", True):
-            _show_message("[Demo] Email о документе «" + doc.get("title", "") + "» готов к отправке.")
+            _show_message("Email о документе «" + doc.get("title", "") + "» готов к отправке.")
 
     def save_current_state() -> None:
         sync_task_notifications()
@@ -832,6 +885,7 @@ def main(page: ft.Page) -> None:
             save_app_state(
                 {
                     "users": users,
+                    "quick_accounts": quick_accounts_state["items"],
                     "auth_state": persisted_auth,
                     "app_user": profile_snapshot,
                     "app_settings": app_settings,
@@ -1071,6 +1125,7 @@ def main(page: ft.Page) -> None:
             "scan_path": relative_path,
             "status": "Активен",
             "icon": _document_icon("Другое"),
+            "color": _document_color("Другое"),
         }
         payload["details"] = _document_details(payload)
         documents_state.insert(0, payload)
@@ -1119,6 +1174,13 @@ def main(page: ft.Page) -> None:
             "Квитанция / подтверждение оплаты": "RECEIPT_LONG_OUTLINED",
         }.get(document_type, "ARTICLE_OUTLINED")
 
+    def _document_color(document_type: str, current: str | None = None) -> str:
+        current_value = (current or "").strip()
+        palette_ids = {item["id"] for item in DOCUMENT_COLOR_PALETTE}
+        if current_value in palette_ids or current_value.startswith("#"):
+            return current_value
+        return DOCUMENT_TYPE_COLOR_MAP.get(document_type or "Другое", "blue")
+
     def _document_status(expiry_date: str | None, fallback: str = "Активен") -> str:
         parsed = parse_due_date(expiry_date)
         if not parsed:
@@ -1148,6 +1210,7 @@ def main(page: ft.Page) -> None:
         document.setdefault("issuer", "")
         document.setdefault("comment", "")
         document.setdefault("scan_path", "")
+        document.setdefault("color", _document_color(document.get("document_type", "Другое"), document.get("color")))
         document["status"] = _document_status(document.get("expiry_date"), document.get("status", "Активен"))
         document["icon"] = _document_icon(document.get("document_type", "Другое"))
         document["details"] = _document_details(document)
@@ -1534,6 +1597,52 @@ def main(page: ft.Page) -> None:
             public_state["error"] = str(exc)
             return None
 
+    def _account_known(email: str, accounts: list[dict]) -> bool:
+        normalized = (email or "").strip().lower()
+        return any((account.get("email", "").strip().lower() == normalized) for account in accounts)
+
+    def _add_quick_account(email: str, name: str, role: str = "citizen") -> None:
+        normalized = (email or "").strip().lower()
+        if not normalized:
+            return
+        if _account_known(normalized, default_test_accounts):
+            return
+        if _account_known(normalized, quick_accounts_state["items"]):
+            return
+        quick_accounts_state["items"].append({
+            "email": normalized,
+            "name": name or normalized.split("@")[0].title(),
+            "role": role or "citizen",
+        })
+
+    def _quick_accounts_for_menu() -> list[dict]:
+        merged: list[dict] = []
+        seen: set[str] = set()
+        for account in [*test_accounts_state["items"], *quick_accounts_state["items"]]:
+            email = (account.get("email", "") or "").strip().lower()
+            if not email or email in seen:
+                continue
+            seen.add(email)
+            merged.append(account)
+        return merged
+
+    def _enter_guest_mode(message: str | None = None) -> None:
+        previous_email = auth_state.get("email")
+        if previous_email in users:
+            users[previous_email]["profile"] = app_user.copy()
+        auth_state["logged_in"] = False
+        auth_state["email"] = ""
+        auth_state["remember"] = False
+        auth_state["access_token"] = ""
+        auth_state["refresh_token"] = ""
+        auth_state["role"] = "guest"
+        auth_state["_login_in_progress"] = False
+        account_flow["adding_user"] = False
+        save_current_state()
+        if message:
+            _show_message(message)
+        page.run_task(page.push_route, "/")
+
     def _apply_login(normalized_email: str, profile: dict, remember: bool, tokens: dict | None = None) -> None:
         auth_state["logged_in"] = True
         auth_state["email"] = normalized_email
@@ -1560,6 +1669,7 @@ def main(page: ft.Page) -> None:
         app_user["interests"] = list(app_user.get("interests", []))
         app_settings["learning_mode"] = bool(app_user.get("learning_mode", app_settings["learning_mode"]))
         learning_state["enabled"] = app_settings["learning_mode"]
+        account_flow["adding_user"] = False
         save_current_state()
         page.run_task(page.push_route, "/")
 
@@ -1694,6 +1804,7 @@ def main(page: ft.Page) -> None:
             "avatar_url": MOCK_USER["avatar_url"],
             "interests": [],
             "learning_mode": True,
+            "role": "citizen",
         }
         users[normalized_email] = {"password": password, "profile": profile}
 
@@ -1708,24 +1819,42 @@ def main(page: ft.Page) -> None:
                 return
             tokens = None
 
+        was_account_addition = bool(account_flow.get("adding_user"))
+        _add_quick_account(normalized_email, normalized_name, "citizen")
         _apply_login(normalized_email, profile, True, tokens)
-        _show_message("Аккаунт создан (API)." if tokens else "Аккаунт создан.")
+        _show_message("Пользователь добавлен и выбран." if was_account_addition else "Аккаунт создан.")
 
     def logout_user(_=None) -> None:
-        auth_state["logged_in"] = False
-        auth_state["access_token"] = ""
-        auth_state["refresh_token"] = ""
-        auth_state["role"] = "guest"
-        save_current_state()
-        _show_message("Вы вышли из профиля.")
-        page.run_task(page.push_route, "/")  # гостевой режим — на главную, не на /login
+        _enter_guest_mode("Вы перешли в гостевой режим.")
+
+    def logout_all_accounts(_=None) -> None:
+        quick_accounts_state["items"].clear()
+        _enter_guest_mode("Все быстрые пользовательские входы очищены. Открыт гостевой режим.")
+
+    def start_add_account(_=None) -> None:
+        account_flow["adding_user"] = True
+        page.run_task(page.push_route, "/register")
 
     def switch_test_account(email: str, name: str = "", role: str = "") -> None:
-        """Быстрый login через переключатель тестовых аккаунтов."""
-        if not email:
+        """Быстрый вход через меню пользователя.
+
+        Стандартные тестовые аккаунты и добавленные через форму пользователи
+        уже есть в локальном состоянии, поэтому их можно выбирать без повторного
+        ввода пароля. Если локального профиля нет, остаётся fallback на
+        dev-пароль тестовых аккаунтов.
+        """
+        normalized_email = (email or "").strip().lower()
+        if not normalized_email:
             return
-        # Используем стандартный login_user — backend проверит пароль
-        login_user(email, "Test12345!", remember=True)
+        local_user = users.get(normalized_email)
+        if local_user:
+            profile = local_user.get("profile", {}).copy()
+            if role and not profile.get("role"):
+                profile["role"] = role
+            _apply_login(normalized_email, profile, True)
+            _show_message("Пользователь выбран.")
+            return
+        login_user(normalized_email, "Test12345!", remember=True)
 
     def go_to(route: str) -> None:
         page.run_task(page.push_route, route)
@@ -1746,7 +1875,7 @@ def main(page: ft.Page) -> None:
     def complete_onboarding(_=None) -> None:
         app_settings["onboarding_completed"] = True
         save_current_state()
-        page.run_task(page.push_route, "/" if auth_state.get("logged_in") else "/login")
+        page.run_task(page.push_route, "/")
 
     def toggle_favorite_scenario(template_id: str) -> None:
         if template_id in favorite_scenario_ids:
@@ -1940,6 +2069,13 @@ def main(page: ft.Page) -> None:
         search_filters["filter"] = filter_key or "all"
         route_change()
 
+    def reset_search(_: object | None = None) -> None:
+        search_filters["query"] = ""
+        search_filters["pending_query"] = ""
+        search_filters["filter"] = "all"
+        search_debounce["token"] += 1
+        route_change()
+
     def open_problem_category(category_id: str) -> None:
         problem_filters["query"] = ""
         problem_filters["category"] = category_id or "all"
@@ -2030,6 +2166,107 @@ def main(page: ft.Page) -> None:
     def go_back_to_laws(_=None) -> None:
         page.run_task(page.push_route, "/legal-updates")
 
+    def _iso_date_value(raw: str | None) -> str:
+        parsed = parse_due_date(raw or "")
+        return parsed.isoformat() if parsed else (raw or "")
+
+    def _open_document_date_picker(field: ft.TextField, title: str) -> None:
+        parsed = parse_due_date(field.value or "")
+        picker = ft.DatePicker(
+            value=parsed or date.today(),
+            first_date=date(1950, 1, 1),
+            last_date=date(2100, 12, 31),
+            entry_mode=ft.DatePickerEntryMode.CALENDAR_ONLY,
+            date_picker_mode=ft.DatePickerMode.DAY,
+            help_text=title,
+            cancel_text="Отмена",
+            confirm_text="Выбрать",
+            error_format_text="Выберите дату в календаре",
+            error_invalid_text="Дата вне допустимого диапазона",
+            barrier_color=ft.Colors.with_opacity(0.45, ft.Colors.BLACK),
+        )
+
+        def _apply_date(_=None) -> None:
+            value = picker.value
+            if value:
+                selected = value.date() if isinstance(value, datetime) else value
+                field.value = selected.isoformat()
+                field.error_text = None
+                try:
+                    field.update()
+                except Exception:
+                    page.update()
+            _close(picker)
+
+        picker.on_change = _apply_date
+        picker.on_dismiss = lambda _: _close(picker)
+        _open_control(picker)
+
+    def _calendar_field(label: str, value: str = "") -> ft.TextField:
+        field = ft.TextField(
+            label=label,
+            value=_iso_date_value(value),
+            hint_text="Выберите дату",
+            read_only=True,
+            show_cursor=False,
+            suffix_icon=ft.Icons.CALENDAR_MONTH_OUTLINED,
+            border_radius=14,
+            filled=True,
+            bgcolor=APP_COLORS["surface"],
+            border_color=APP_COLORS["stroke2"],
+            focused_border_color=APP_COLORS["blue"],
+            text_size=14,
+            content_padding=ft.Padding(left=14, top=10, right=14, bottom=10),
+            on_click=lambda _: _open_document_date_picker(field, label),
+        )
+        return field
+
+    def _document_color_selector(value_field: ft.TextField) -> ft.Control:
+        swatches: list[ft.Container] = []
+
+        def _repaint() -> None:
+            selected = (value_field.value or "blue").strip()
+            for swatch, item in zip(swatches, DOCUMENT_COLOR_PALETTE, strict=False):
+                is_selected = selected == item["id"]
+                swatch.border = border_all(APP_COLORS["blue"] if is_selected else APP_COLORS["stroke2"], 3 if is_selected else 1)
+                swatch.content = ft.Icon(
+                    ft.Icons.CHECK,
+                    size=16,
+                    color=ft.Colors.WHITE,
+                ) if is_selected else None
+
+        def _select(color_id: str) -> None:
+            value_field.value = color_id
+            _repaint()
+            for swatch in swatches:
+                try:
+                    swatch.update()
+                except Exception:
+                    pass
+
+        for item in DOCUMENT_COLOR_PALETTE:
+            swatch = ft.Container(
+                width=38,
+                height=38,
+                border_radius=19,
+                bgcolor=item["color"],
+                alignment=ft.Alignment(0, 0),
+                tooltip=item["label"],
+                ink=True,
+                on_click=lambda _, color_id=item["id"]: _select(color_id),
+            )
+            swatches.append(swatch)
+        _repaint()
+        return ft.ResponsiveRow(
+            columns=12,
+            spacing=8,
+            run_spacing=8,
+            controls=[
+                ft.Container(col={"xs": 2, "sm": 1}, content=swatch)
+                for swatch in swatches
+            ],
+        )
+
     def _document_form_fields(document: dict | None = None) -> dict[str, ft.Control]:
         data = document or {}
         field_padding = ft.Padding(left=14, top=10, right=14, bottom=10)
@@ -2079,14 +2316,14 @@ def main(page: ft.Page) -> None:
             "title": text_field("Название документа", data.get("title", ""), "Например: Паспорт"),
             "document_type": dropdown("Тип документа", data.get("document_type", DOCUMENT_TYPES[0]), DOCUMENT_TYPES),
             "document_number": text_field("Серия / номер", data.get("document_number", ""), "Например: MP1234567"),
-            "issue_date": text_field("Дата выдачи", data.get("issue_date", ""), "Например: 2024-05-20 или 20.05.2024"),
-            "expiry_date": text_field("Срок действия", data.get("expiry_date", ""), "Например: 2030-05-20 или 20.05.2030"),
+            "issue_date": _calendar_field("Дата выдачи", data.get("issue_date", "")),
+            "expiry_date": _calendar_field("Срок действия", data.get("expiry_date", "")),
             "issuer": text_field("Организация выдачи", data.get("issuer", ""), "Например: ОГиМ"),
             "scan_path": text_field(
                 "Файл / скан",
                 data.get("scan_path", ""),
-                "Например: data/private_uploads/passport.pdf",
-                helper="Файл хранится локально. В production потребуется шифрование.",
+                "Выберите файл скана",
+                helper="После выбора файл сохраняется в локальном защищённом хранилище.",
             ),
             "comment": text_field(
                 "Комментарий",
@@ -2097,6 +2334,11 @@ def main(page: ft.Page) -> None:
                 max_lines=4,
             ),
         }
+        fields["color"] = ft.TextField(
+            value=_document_color(fields["document_type"].value or "Другое", data.get("color")),
+            visible=False,
+        )
+        fields["color_selector"] = _document_color_selector(fields["color"])
         fields["scan_pick"] = ft.OutlinedButton(
             "Выбрать файл скана",
             icon=ft.Icons.UPLOAD_FILE_OUTLINED,
@@ -2177,6 +2419,13 @@ def main(page: ft.Page) -> None:
                 [
                     _responsive_fields(fields["title"], fields["document_type"]),
                     fields["document_number"],
+                    ft.Column(
+                        spacing=8,
+                        controls=[
+                            ft.Text("Цвет карточки", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["muted"]),
+                            fields["color_selector"],
+                        ],
+                    ),
                 ],
             ),
             _dialog_section(
@@ -2209,8 +2458,8 @@ def main(page: ft.Page) -> None:
             return None
         issue_date = _due_date_value(fields["issue_date"])
         expiry_date = _due_date_value(fields["expiry_date"])
-        if issue_date == "" or expiry_date == "":
-            _show_message("Введите дату в формате 2026-06-01 или 01.06.2026.", APP_COLORS["warning"])
+        if issue_date in (None, "") or expiry_date in (None, ""):
+            _show_message("Выберите даты документа через календарь.", APP_COLORS["warning"])
             return None
         document_type = fields["document_type"].value or "Другое"
         payload = {
@@ -2224,6 +2473,7 @@ def main(page: ft.Page) -> None:
             "scan_path": _text_value(fields["scan_path"]),
             "status": _document_status(expiry_date, fallback_status),
             "icon": _document_icon(document_type),
+            "color": _document_color(document_type, _text_value(fields["color"])),
         }
         payload["details"] = _document_details(payload)
         return payload
@@ -3644,7 +3894,7 @@ def main(page: ft.Page) -> None:
                 "action": action,
                 "event_type": event_type,
                 "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "status": "demo",
+                "status": "recorded",
             },
         )
         del admin_audit_logs_state[20:]
@@ -5243,6 +5493,7 @@ def main(page: ft.Page) -> None:
                 selected_filter=search_filters["filter"],
                 on_query_change=update_search_query,
                 on_filter_change=update_search_filter,
+                on_reset=reset_search,
                 go_to=go_to,
                 open_problem=open_problem,
                 open_scenario=open_scenario_template,
@@ -5251,6 +5502,7 @@ def main(page: ft.Page) -> None:
                 documents=documents_state,
                 laws=_normalized_published_laws(),
                 institutions=institutions_state,
+                user_profile=app_user,
             ), "search")
         if screen_key == "problems":
             return _with_offline_banner(build_problems_page(
@@ -5444,7 +5696,7 @@ def main(page: ft.Page) -> None:
             def _close_email_preview(_=None):
                 page.run_task(page.push_route, "/notifications")
             def _send_email_demo(_=None):
-                _show_message("[Demo] Письмо «отправлено» — в production здесь будет SMTP-запрос.")
+                _show_message("Письмо подготовлено к отправке. После подключения почтового сервиса здесь будет реальная отправка.")
                 _close_email_preview()
             return build_email_preview_page(
                 email_data=email_preview_data or None,
@@ -5562,7 +5814,7 @@ def main(page: ft.Page) -> None:
     ai_chat_messages: list[dict] = [
         {
             "role": "assistant",
-            "text": "Здравствуйте! Я ИИ-помощник Белпомощника.\n\nЗадайте вопрос о правах, документах или жизненных ситуациях.",
+            "text": "Здравствуйте! Я ИИ-помощник Белпомощника.\n\nНапишите, что хотите найти или сделать, а я подскажу подходящий раздел.",
         }
     ]
     ai_chat_state: dict = {"visible": False, "mode": "mini", "docked": False}
@@ -5575,6 +5827,11 @@ def main(page: ft.Page) -> None:
         ai_chat_state["visible"] = False
         ai_chat_state["docked"] = False
         route_change()
+
+    def open_ai_section(route: str) -> None:
+        ai_chat_state["visible"] = False
+        ai_chat_state["docked"] = False
+        go_to(route)
 
     def toggle_ai_fullscreen(_e=None) -> None:
         ai_chat_state["mode"] = "mini" if ai_chat_state["mode"] == "fullscreen" else "fullscreen"
@@ -5611,7 +5868,7 @@ def main(page: ft.Page) -> None:
             intro_screen = True
             auth_screen = False
         elif intro_screen and app_settings.get("onboarding_completed", False):
-            page.route = "/" if auth_state.get("logged_in") else "/login"
+            page.route = "/"
             screen_key = route_to_screen(page.route)
             auth_screen = screen_key in {"login", "register"}
             intro_screen = False
@@ -5625,7 +5882,7 @@ def main(page: ft.Page) -> None:
                 page.route = "/login"
                 screen_key = "login"
                 auth_screen = True
-        elif auth_state["logged_in"] and auth_screen:
+        elif auth_state["logged_in"] and auth_screen and not account_flow.get("adding_user"):
             page.route = "/"
             screen_key = "home"
             auth_screen = False
@@ -5651,6 +5908,8 @@ def main(page: ft.Page) -> None:
         screen_content = build_content(screen_key, is_wide, is_tablet=is_tablet)
 
         unread_count = sum(1 for n in notifications_state if not n.get("is_read", False))
+        current_role = role_guard.current_role(auth_state)
+        is_current_guest = role_guard.is_guest(auth_state)
 
         page.controls.clear()
         content_area: ft.Container | None = None
@@ -5688,6 +5947,41 @@ def main(page: ft.Page) -> None:
                 bgcolor=APP_COLORS["screen"],
             )
             content_area = desktop_body
+            desktop_body_area: ft.Control = desktop_body
+            if screen_key == "home" and not ai_chat_state["visible"]:
+                desktop_body_area = ft.Stack(
+                    expand=True,
+                    controls=[
+                        desktop_body,
+                        ft.Container(
+                            content=build_ai_chat_fab(open_ai_chat),
+                            right=28,
+                            bottom=28,
+                        ),
+                    ],
+                )
+
+            desktop_main_area: ft.Control = desktop_body_area
+            if ai_chat_state["visible"] and ai_chat_state["docked"]:
+                desktop_main_area = ft.Row(
+                    expand=True,
+                    spacing=0,
+                    controls=[
+                        desktop_body_area,
+                        build_ai_chat_overlay(
+                            ai_chat_messages,
+                            on_close=close_ai_chat,
+                            on_toggle_fullscreen=toggle_ai_fullscreen,
+                            on_toggle_dock=toggle_ai_dock,
+                            fullscreen=False,
+                            docked=True,
+                            desktop=True,
+                            role=current_role,
+                            is_guest=is_current_guest,
+                            on_section_click=open_ai_section,
+                        ),
+                    ],
+                )
             page.add(
                 ft.Column(
                     expand=True,
@@ -5699,13 +5993,16 @@ def main(page: ft.Page) -> None:
                             chrome_width,
                             page=page,
                             user=app_user,
-                            role=role_guard.current_role(auth_state),
-                            test_accounts=test_accounts_state["items"],
+                            role=current_role,
+                            test_accounts=_quick_accounts_for_menu(),
                             on_logout=logout_user,
+                            on_logout_all=logout_all_accounts,
                             on_switch_account=switch_test_account,
+                            on_guest=lambda: _enter_guest_mode("Открыт гостевой режим."),
+                            on_add_account=start_add_account,
                             on_login=lambda: go_to("/login"),
                         ),
-                        desktop_body,
+                        desktop_main_area,
                         build_desktop_footer(go_to, min(1120, chrome_width)),
                     ],
                 )
@@ -5734,7 +6031,7 @@ def main(page: ft.Page) -> None:
                 tablet=True,
                 on_open_ai_chat=open_ai_chat,
                 notification_count=unread_count,
-                role=role_guard.current_role(auth_state),
+                role=current_role,
             )
 
             row_controls: list[ft.Control] = [sidebar, content_area]
@@ -5748,6 +6045,9 @@ def main(page: ft.Page) -> None:
                     fullscreen=False,
                     docked=True,
                     desktop=False,
+                    role=current_role,
+                    is_guest=is_current_guest,
+                    on_section_click=open_ai_section,
                 )
                 row_controls.append(docked_panel)
 
@@ -5805,7 +6105,7 @@ def main(page: ft.Page) -> None:
             )
 
         # Floating AI chat overlay (mini or fullscreen, non-docked)
-        if ai_chat_state["visible"] and not (ai_chat_state["docked"] and is_desktop):
+        if ai_chat_state["visible"] and not (ai_chat_state["docked"] and (is_desktop or is_tablet)):
             fullscreen_mode = ai_chat_state["mode"] == "fullscreen" or is_mobile or is_tablet
             chat_overlay = build_ai_chat_overlay(
                 ai_chat_messages,
@@ -5815,6 +6115,9 @@ def main(page: ft.Page) -> None:
                 fullscreen=fullscreen_mode,
                 docked=False,
                 desktop=is_desktop,
+                role=current_role,
+                is_guest=is_current_guest,
+                on_section_click=open_ai_section,
             )
             page.overlay.clear()
             page.overlay.append(chat_overlay)

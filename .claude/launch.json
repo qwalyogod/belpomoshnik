@@ -2,6 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "belpomoshnik-react",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "reactvitemaket", "dev"],
+      "port": 8560
+    },
+    {
+      "name": "belpomoshnik-api",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "--app-dir", "src", "backend.app:app", "--host", "127.0.0.1", "--port", "8060"],
+      "port": 8060
+    },
+    {
       "name": "belpomoshnik-web",
       "runtimeExecutable": ".venv/bin/flet",
       "runtimeArgs": ["run", "-w", "src/main.py", "--host", "127.0.0.1", "-p", "8550"],

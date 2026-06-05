@@ -13,6 +13,8 @@ from data.mock_data import (
     SCENARIO_TEMPLATES,
     SITUATIONS,
 )
+from services.institutions import has_profile_location, match_nearby_institutions
+from services.search_suggestions import build_search_suggestions
 from theme.app_theme import APP_COLORS, APP_RADIUS, SPACING, border_all, padding_symmetric, ts
 
 
@@ -24,6 +26,7 @@ FILTERS = [
     ("documents", "Документы"),
     ("laws", "Закон-апдейты"),
     ("institutions", "Учреждения"),
+    ("nearby", "Рядом"),
 ]
 
 RECENT_SEARCHES = ["Замена паспорта", "Переезд", "Медкнижка"]
@@ -172,14 +175,14 @@ def _popular_requests(go_to, desktop: bool) -> ft.Control:
 
 
 _QUICK_FILTER_ACTIONS = [
-    ("institutions", ""),
+    ("nearby", ""),
     ("laws", ""),
     ("laws", ""),
     ("institutions", "онлайн"),
 ]
 
 
-def _quick_filters(on_filter_change=None, on_query_change=None) -> ft.Control:
+def _quick_filters(selected_filter: str = "all", on_filter_change=None, on_query_change=None) -> ft.Control:
     def make_handler(filter_key: str, query: str):
         def handle(_):
             if query and on_query_change:
@@ -188,35 +191,41 @@ def _quick_filters(on_filter_change=None, on_query_change=None) -> ft.Control:
                 on_filter_change(filter_key)
         return handle
 
+    cards: list[ft.Control] = []
+    for (title, subtitle, icon), (fk, fq) in zip(QUICK_FILTERS, _QUICK_FILTER_ACTIONS):
+        selected = selected_filter == fk
+        cards.append(
+            ft.Container(
+                ink=True,
+                border_radius=16,
+                padding=padding_symmetric(horizontal=10, vertical=10),
+                bgcolor=APP_COLORS["active"] if selected else None,
+                border=border_all(APP_COLORS["blue"] if selected else APP_COLORS["stroke2"]),
+                on_click=make_handler(fk, fq),
+                content=ft.Row(
+                    spacing=10,
+                    controls=[
+                        ft.Icon(icon, size=ts(19), color=APP_COLORS["blue"]),
+                        ft.Column(
+                            spacing=2,
+                            expand=True,
+                            controls=[
+                                ft.Text(title, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
+                                ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
+                            ],
+                        ),
+                        ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["blue"] if selected else APP_COLORS["muted2"]),
+                    ],
+                ),
+            )
+        )
+
     return app_card(
         ft.Column(
             spacing=8,
             controls=[
                 ft.Text("Быстрые фильтры", size=ts(16), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                *[
-                    ft.Container(
-                        ink=True,
-                        border_radius=16,
-                        padding=padding_symmetric(horizontal=10, vertical=10),
-                        on_click=make_handler(fk, fq),
-                        content=ft.Row(
-                            spacing=10,
-                            controls=[
-                                ft.Icon(icon, size=ts(19), color=APP_COLORS["blue"]),
-                                ft.Column(
-                                    spacing=2,
-                                    expand=True,
-                                    controls=[
-                                        ft.Text(title, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"]),
-                                        ft.Text(subtitle, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
-                                    ],
-                                ),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=ts(18), color=APP_COLORS["muted2"]),
-                            ],
-                        ),
-                    )
-                    for (title, subtitle, icon), (fk, fq) in zip(QUICK_FILTERS, _QUICK_FILTER_ACTIONS)
-                ],
+                *cards,
             ],
         ),
         padding=16,
@@ -312,6 +321,10 @@ def _institutions(query: str, institutions: list[dict]) -> list[dict]:
     ][:5]
 
 
+def _nearby_institutions(query: str, institutions: list[dict], user_profile: dict | None) -> list[dict]:
+    return match_nearby_institutions(institutions or INSTITUTIONS, user_profile or {}, query=query, limit=8)
+
+
 def _result_card(
     *,
     title: str,
@@ -357,31 +370,33 @@ def _section(
     show_all_route: str | None,
     go_to,
     desktop: bool,
-) -> ft.Control:
+) -> ft.Control | None:
     if not items:
-        return ft.Container()
+        return None
+    title_controls: list[ft.Control] = [
+        ft.Row(
+            spacing=9,
+            controls=[
+                ft.Container(
+                    width=26,
+                    height=26,
+                    border_radius=9,
+                    bgcolor=APP_COLORS["active"],
+                    alignment=ft.Alignment(0, 0),
+                    content=ft.Icon(icon, size=ts(16), color=APP_COLORS["blue"]),
+                ),
+                ft.Text(title, size=ts(18) if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+            ],
+        )
+    ]
+    if show_all_route:
+        title_controls.append(
+            ghost_button("Смотреть все", height=36, on_click=lambda _: go_to(show_all_route) if go_to else None)
+        )
     title_row = ft.Row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Row(
-                spacing=9,
-                controls=[
-                    ft.Container(
-                        width=26,
-                        height=26,
-                        border_radius=9,
-                        bgcolor=APP_COLORS["active"],
-                        alignment=ft.Alignment(0, 0),
-                        content=ft.Icon(icon, size=ts(16), color=APP_COLORS["blue"]),
-                    ),
-                    ft.Text(title, size=ts(18) if desktop else 16, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-                ],
-            ),
-            ghost_button("Смотреть все", height=36, on_click=lambda _: go_to(show_all_route) if go_to and show_all_route else None)
-            if show_all_route
-            else ft.Container(),
-        ],
+        controls=title_controls,
     )
     return ft.Column(
         spacing=12,
@@ -403,10 +418,54 @@ def _build_sections(
     documents: list[dict],
     laws: list[dict],
     institutions: list[dict],
+    user_profile: dict | None,
     desktop: bool,
+    on_query_change=None,
+    on_filter_change=None,
 ) -> list[ft.Control]:
     selected = selected_filter if selected_filter in {item[0] for item in FILTERS} else "all"
     controls: list[ft.Control] = []
+
+    if selected == "nearby":
+        if not has_profile_location(user_profile or {}):
+            controls.append(
+                empty_state_card(
+                    "Адрес не указан",
+                    "Добавьте населённый пункт или адрес в профиле, чтобы искать учреждения рядом.",
+                    action_text="Открыть профиль",
+                    on_action=lambda _: go_to("/profile") if go_to else None,
+                    icon=ft.Icons.LOCATION_OFF_OUTLINED,
+                )
+            )
+            return controls
+
+        nearby_items = [
+            _result_card(
+                title=item.get("short_name") or item.get("title", "Учреждение"),
+                subtitle=item.get("address") or item.get("full_name", ""),
+                meta=item.get("match_location") or item.get("institution_type", "рядом"),
+                icon=ft.Icons.LOCATION_ON_OUTLINED,
+                tone="blue",
+                on_click=None,
+                desktop=desktop,
+            )
+            for item in _nearby_institutions(query, institutions, user_profile)
+        ]
+        if nearby_items:
+            section = _section("Учреждения рядом", ft.Icons.LOCATION_ON_OUTLINED, nearby_items, None, go_to, desktop)
+            if section is not None:
+                controls.append(section)
+            return controls
+        controls.append(
+            empty_state_card(
+                "Рядом ничего не найдено",
+                "Попробуйте изменить запрос или проверьте адреса в профиле.",
+                action_text="Сбросить поиск",
+                on_action=lambda _: on_query_change("") if on_query_change else None,
+                icon=ft.Icons.TRAVEL_EXPLORE_OUTLINED,
+            )
+        )
+        return controls
 
     if selected in {"all", "problems"}:
         items = [
@@ -498,7 +557,7 @@ def _build_sections(
         ]
         controls.append(_section("Учреждения", ft.Icons.ACCOUNT_BALANCE_OUTLINED, items, None, go_to, desktop))
 
-    return [control for control in controls if not isinstance(control, ft.Container)]
+    return [control for control in controls if control is not None]
 
 
 def _empty_search_state(query: str, on_query_change) -> ft.Control:
@@ -519,24 +578,130 @@ def _empty_search_state(query: str, on_query_change) -> ft.Control:
     )
 
 
-def _header(query: str, selected_filter: str, on_query_change, on_filter_change, desktop: bool) -> ft.Control:
+def _suggestions_block(
+    query: str,
+    on_query_change,
+    *,
+    situations: list[dict],
+    documents: list[dict],
+    laws: list[dict],
+    institutions: list[dict],
+    desktop: bool,
+) -> ft.Control | None:
+    suggestions = build_search_suggestions(
+        query,
+        problems=PROBLEMS,
+        scenarios=SCENARIO_TEMPLATES,
+        situations=situations,
+        documents=documents,
+        laws=laws,
+        institutions=institutions,
+        limit=10,
+    )
+    if not suggestions:
+        return None
+
+    controls: list[ft.Control] = []
+    for suggestion in suggestions:
+        controls.append(
+            ft.Container(
+                ink=True,
+                border_radius=14,
+                padding=ft.Padding(left=12, top=9, right=12, bottom=9),
+                on_click=lambda _, value=suggestion.title: on_query_change(value) if on_query_change else None,
+                content=ft.Row(
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Icon(ft.Icons.SEARCH_ROUNDED, size=ts(17), color=APP_COLORS["muted2"]),
+                        ft.Column(
+                            spacing=1,
+                            expand=True,
+                            controls=[
+                                ft.Text(suggestion.title, size=ts(13), weight=ft.FontWeight.W_800, color=APP_COLORS["text"], max_lines=1),
+                                ft.Text(suggestion.source, size=ts(11), color=APP_COLORS["muted"], max_lines=1),
+                            ],
+                        ),
+                        ft.Icon(ft.Icons.NORTH_WEST_ROUNDED, size=ts(15), color=APP_COLORS["muted2"]),
+                    ],
+                ),
+            )
+        )
+
+    return ft.Container(
+        bgcolor=APP_COLORS["surface"],
+        border=border_all(APP_COLORS["stroke2"]),
+        border_radius=APP_RADIUS["card"],
+        padding=ft.Padding(left=6, top=6, right=6, bottom=6),
+        width=760 if desktop else None,
+        content=ft.Column(spacing=2, controls=controls),
+    )
+
+
+def _header(
+    query: str,
+    selected_filter: str,
+    on_query_change,
+    on_filter_change,
+    on_reset,
+    desktop: bool,
+    *,
+    situations: list[dict],
+    documents: list[dict],
+    laws: list[dict],
+    institutions: list[dict],
+) -> ft.Control:
+    reset_needed = bool((query or "").strip()) or selected_filter != "all"
+    helper_text = ft.Text(
+        "Например: замена паспорта, ЖКХ, рождение ребёнка",
+        size=ts(12),
+        color=APP_COLORS["muted2"],
+        expand=True,
+    )
+    helper_control: ft.Control = helper_text
+    if reset_needed:
+        helper_control = ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=8,
+            controls=[
+                helper_text,
+                ghost_button(
+                    "Сбросить",
+                    icon=ft.Icons.CLOSE,
+                    height=34,
+                    on_click=lambda _: on_reset() if on_reset else None,
+                ),
+            ],
+        )
+    controls: list[ft.Control] = [
+        ft.Text("Глобальный поиск", size=ts(36) if desktop else 22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
+        search_box(
+            value=query,
+            hint="Поиск по проблемам, сценариям, документам, законам...",
+            on_change=lambda event: on_query_change(event.control.value) if on_query_change else None,
+            on_submit=lambda event: on_query_change(event.control.value) if on_query_change else None,
+        ),
+    ]
+    suggestions = _suggestions_block(
+        query,
+        on_query_change,
+        situations=situations,
+        documents=documents,
+        laws=laws,
+        institutions=institutions,
+        desktop=desktop,
+    )
+    if suggestions is not None:
+        controls.append(suggestions)
+    controls.extend([
+        helper_control,
+        _filter_chips(selected_filter, on_filter_change),
+    ])
+
     return ft.Column(
         spacing=12,
-        controls=[
-            ft.Text("Глобальный поиск", size=ts(36) if desktop else 22, weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
-            search_box(
-                value=query,
-                hint="Поиск по проблемам, сценариям, документам, законам...",
-                on_change=lambda event: on_query_change(event.control.value) if on_query_change else None,
-                on_submit=lambda event: on_query_change(event.control.value) if on_query_change else None,
-            ),
-            ft.Text(
-                "Например: замена паспорта, ЖКХ, рождение ребёнка",
-                size=ts(12),
-                color=APP_COLORS["muted2"],
-            ),
-            _filter_chips(selected_filter, on_filter_change),
-        ],
+        controls=controls,
     )
 
 
@@ -545,6 +710,7 @@ def _desktop_search(
     selected_filter: str,
     on_query_change,
     on_filter_change,
+    on_reset,
     go_to,
     open_problem,
     open_scenario,
@@ -553,6 +719,7 @@ def _desktop_search(
     documents: list[dict],
     laws: list[dict],
     institutions: list[dict],
+    user_profile: dict | None,
 ) -> ft.Control:
     sections = _build_sections(
         query,
@@ -565,7 +732,10 @@ def _desktop_search(
         documents,
         laws,
         institutions,
+        user_profile,
         True,
+        on_query_change,
+        on_filter_change,
     )
     result_controls: list[ft.Control] = []
     if sections:
@@ -583,7 +753,18 @@ def _desktop_search(
     )
 
     content_controls: list[ft.Control] = [
-        _header(query, selected_filter, on_query_change, on_filter_change, True),
+        _header(
+            query,
+            selected_filter,
+            on_query_change,
+            on_filter_change,
+            on_reset,
+            True,
+            situations=situations,
+            documents=documents,
+            laws=laws,
+            institutions=institutions,
+        ),
         ft.Row(
             spacing=18,
             vertical_alignment=ft.CrossAxisAlignment.START,
@@ -599,7 +780,7 @@ def _desktop_search(
                     padding=16,
                     width=760,
                 ),
-                ft.Container(width=320, content=_quick_filters(on_filter_change=on_filter_change, on_query_change=on_query_change)),
+                ft.Container(width=320, content=_quick_filters(selected_filter, on_filter_change=on_filter_change, on_query_change=on_query_change)),
             ],
         ),
         ft.Text("Результаты поиска", size=ts(22), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
@@ -617,6 +798,7 @@ def _mobile_search(
     selected_filter: str,
     on_query_change,
     on_filter_change,
+    on_reset,
     go_to,
     open_problem,
     open_scenario,
@@ -625,6 +807,7 @@ def _mobile_search(
     documents: list[dict],
     laws: list[dict],
     institutions: list[dict],
+    user_profile: dict | None,
 ) -> ft.Control:
     sections = _build_sections(
         query,
@@ -637,7 +820,10 @@ def _mobile_search(
         documents,
         laws,
         institutions,
+        user_profile,
         False,
+        on_query_change,
+        on_filter_change,
     )
     result_controls: list[ft.Control] = []
     if sections:
@@ -675,13 +861,40 @@ def _mobile_search(
             on_change=lambda event: on_query_change(event.control.value) if on_query_change else None,
             on_submit=lambda event: on_query_change(event.control.value) if on_query_change else None,
         ),
-        ft.Text("Например: замена паспорта, ЖКХ, рождение ребёнка", size=ts(11), color=APP_COLORS["muted2"]),
+    ]
+    suggestions = _suggestions_block(
+        query,
+        on_query_change,
+        situations=situations,
+        documents=documents,
+        laws=laws,
+        institutions=institutions,
+        desktop=False,
+    )
+    if suggestions is not None:
+        controls.append(suggestions)
+    controls.append(ft.Text("Например: замена паспорта, ЖКХ, рождение ребёнка", size=ts(11), color=APP_COLORS["muted2"]))
+    if (query or "").strip() or selected_filter != "all":
+        controls.append(
+            ft.Row(
+                alignment=ft.MainAxisAlignment.START,
+                controls=[
+                    ghost_button(
+                        "Сбросить поиск",
+                        icon=ft.Icons.CLOSE,
+                        height=38,
+                        on_click=lambda _: on_reset() if on_reset else None,
+                    )
+                ],
+            )
+        )
+    controls.extend([
         _filter_chips(selected_filter, on_filter_change),
         _recent_searches(on_query_change),
         _popular_requests(go_to, False),
         ft.Text("Результаты поиска", size=ts(18), weight=ft.FontWeight.W_900, color=APP_COLORS["text"]),
         results_switcher,
-    ]
+    ])
     return ft.Container(
         width=340,
         content=ft.Column(spacing=18, controls=controls),
@@ -695,6 +908,7 @@ def build_search_page(
     selected_filter: str = "all",
     on_query_change=None,
     on_filter_change=None,
+    on_reset=None,
     go_to=None,
     open_problem=None,
     open_scenario=None,
@@ -703,6 +917,7 @@ def build_search_page(
     documents: list[dict] | None = None,
     laws: list[dict] | None = None,
     institutions: list[dict] | None = None,
+    user_profile: dict | None = None,
 ) -> ft.Control:
     selected = selected_filter if selected_filter in {item[0] for item in FILTERS} else "all"
     common_args = (
@@ -710,6 +925,7 @@ def build_search_page(
         selected,
         on_query_change,
         on_filter_change,
+        on_reset,
         go_to,
         open_problem,
         open_scenario,
@@ -718,6 +934,7 @@ def build_search_page(
         documents or DOCUMENTS,
         laws or LEGAL_UPDATES,
         institutions or INSTITUTIONS,
+        user_profile or {},
     )
     if is_desktop:
         return _desktop_search(*common_args)

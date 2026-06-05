@@ -126,7 +126,7 @@ ADMIN_AUDIT_LOGS = [
         "role_id": "content_editor",
         "action": "Обновлён сценарий «Рождение ребёнка»",
         "created_at": "2026-05-20 16:10",
-        "status": "demo",
+        "status": "recorded",
     },
     {
         "id": "audit-2",
@@ -134,7 +134,7 @@ ADMIN_AUDIT_LOGS = [
         "role_id": "platform_admin",
         "action": "Добавлен справочник госучреждений",
         "created_at": "2026-05-20 16:40",
-        "status": "demo",
+        "status": "recorded",
     },
     {
         "id": "audit-3",
@@ -142,7 +142,7 @@ ADMIN_AUDIT_LOGS = [
         "role_id": "platform_admin",
         "action": "Зафиксирован roadmap полного закрытия ТЗ",
         "created_at": "2026-05-20 17:00",
-        "status": "demo",
+        "status": "recorded",
     },
 ]
 
@@ -1157,7 +1157,7 @@ SCENARIO_TEMPLATES = [
     {
         "id": "childbirth",
         "title": "Рождение ребёнка",
-        "short_description": "Главный демо-сценарий: документы, регистрация, пособия и медицинское прикрепление ребёнка.",
+        "short_description": "Полный сценарий: документы, регистрация, пособия и медицинское прикрепление ребёнка.",
         "description": "Пошаговый маршрут от получения медицинских документов до регистрации ребёнка и оформления пособий.",
         "category": "Семья",
         "estimated_duration": "1-2 месяца",

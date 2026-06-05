@@ -147,6 +147,33 @@ SIDEBAR_WIDTH_TABLET = 228
 GRADIENT_FUTUREWAFE = ["#1E65FF", "#88B2FF"]       # blue → light blue
 GRADIENT_MIDNIGHT_SURGE = ["#010F28", "#0038E1"]   # dark navy → deep blue
 
+# Calm document-card accents. User-facing document colors must be selected
+# from this tokenized palette instead of hardcoded inside pages.
+DOCUMENT_COLOR_PALETTE = [
+    {"id": "blue", "label": "Синий", "color": "#1E65FF"},
+    {"id": "navy", "label": "Графит", "color": "#243B63"},
+    {"id": "green", "label": "Зелёный", "color": "#20A462"},
+    {"id": "teal", "label": "Бирюзовый", "color": "#0F9F8F"},
+    {"id": "cyan", "label": "Голубой", "color": "#06A6B2"},
+    {"id": "purple", "label": "Фиолетовый", "color": "#8B5CF6"},
+    {"id": "indigo", "label": "Индиго", "color": "#4F46E5"},
+    {"id": "rose", "label": "Розовый", "color": "#D9467E"},
+    {"id": "orange", "label": "Янтарный", "color": "#F59E0B"},
+    {"id": "red", "label": "Красный", "color": "#EF4444"},
+    {"id": "slate", "label": "Серый", "color": "#64748B"},
+    {"id": "black", "label": "Тёмный", "color": "#111827"},
+]
+
+DOCUMENT_TYPE_COLOR_MAP = {
+    "Паспорт / ID": "blue",
+    "Водительское удостоверение": "green",
+    "Медкнижка": "orange",
+    "Свидетельство о рождении": "purple",
+    "Документ на жильё": "teal",
+    "Квитанция / подтверждение оплаты": "slate",
+    "Другое": "navy",
+}
+
 # AI Chat panel
 AI_CHAT_PANEL_WIDTH = 360
 AI_CHAT_PANEL_HEIGHT = 520

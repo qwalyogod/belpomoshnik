@@ -239,7 +239,7 @@ def build_sidebar(
                     expand=True,
                     controls=[
                         ft.Text("Спросить агента", size=ts(13), weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
-                        ft.Text("ИИ-помощник, 24/7", size=ts(10), color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
+                        ft.Text("подскажет нужный раздел", size=ts(10), color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
                     ],
                 ),
                 ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE_ROUNDED, size=ts(18), color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),

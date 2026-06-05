@@ -161,7 +161,10 @@ def build_desktop_header(
     role: str = "guest",
     test_accounts: list[dict] | None = None,
     on_logout=None,
+    on_logout_all=None,
     on_switch_account=None,
+    on_guest=None,
+    on_add_account=None,
     on_login=None,
 ) -> ft.Container:
     user = user or {}
@@ -224,26 +227,26 @@ def build_desktop_header(
     user_area_controls: list[ft.Control] = []
 
     if is_guest:
-        # Гость: кнопка «Регистрация» (контурная) + «Войти» (синяя)
-        user_area_controls.append(
-            ft.Container(
-                ink=True,
-                on_click=lambda _: go_to("/register"),
-                border_radius=12,
-                padding=ft.Padding(left=14, top=9, right=14, bottom=9),
-                bgcolor=APP_COLORS["surface"],
-                border=border_all(APP_COLORS["stroke2"]),
-                content=ft.Row(
-                    spacing=8,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Icon(ft.Icons.PERSON_ADD_OUTLINED, size=16, color=APP_COLORS["text"]),
-                        ft.Text("Регистрация", size=13, weight=ft.FontWeight.W_700, color=APP_COLORS["text"]),
-                    ],
-                ),
-                tooltip="Создать аккаунт",
+        if page is not None:
+            from components.user_menu import build_user_menu
+            user_area_controls.append(
+                build_user_menu(
+                    page=page,
+                    user={"name": "Гость", "email": ""},
+                    role="guest",
+                    on_profile=lambda: go_to("/profile"),
+                    on_settings=lambda: go_to("/settings"),
+                    on_logout=on_guest if on_guest else (lambda: go_to("/")),
+                    on_logout_all=on_logout_all,
+                    on_guest=on_guest,
+                    on_login=lambda: (on_login() if on_login else go_to("/login")),
+                    test_accounts=test_accounts or [],
+                    on_switch_account=on_switch_account,
+                    on_add_account=on_add_account if on_add_account else (lambda: go_to("/register")),
+                    show_name=True,
+                    size=40,
+                )
             )
-        )
         user_area_controls.append(
             ft.Container(
                 ink=True,
@@ -275,7 +278,10 @@ def build_desktop_header(
                     on_logout=on_logout if on_logout else (lambda: go_to("/login")),
                     test_accounts=test_accounts or [],
                     on_switch_account=on_switch_account,
-                    on_add_account=(lambda: go_to("/register")),
+                    on_add_account=on_add_account if on_add_account else (lambda: go_to("/register")),
+                    on_guest=on_guest,
+                    on_logout_all=on_logout_all,
+                    on_login=lambda: (on_login() if on_login else go_to("/login")),
                     show_name=True,
                     size=40,
                 )

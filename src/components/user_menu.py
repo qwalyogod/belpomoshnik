@@ -6,13 +6,14 @@
   1. Профиль
   2. Настройки
   ─────────────────────
-  3. Список тестовых аккаунтов для переключения (с email и галкой у текущего)
+  3. Быстрый вход: гость, тестовые роли и добавленные пользователи
   4. Добавить пользователя
   ─────────────────────
   5. Email текущего пользователя
-  6. Выйти
+  6. Выйти в гостевой режим / выйти со всех аккаунтов
 
-Гость в header не получает аватара — у него отдельная кнопка «Войти».
+Гость тоже получает меню, чтобы можно было показать приложение без аккаунта
+и быстро переключиться на роли для демонстрации.
 """
 from __future__ import annotations
 
@@ -54,6 +55,9 @@ def build_user_menu(
     test_accounts: list[dict] | None = None,
     on_switch_account=None,
     on_add_account=None,
+    on_guest=None,
+    on_logout_all=None,
+    on_login=None,
     show_name: bool = True,
 ) -> ft.Control:
     """
@@ -67,6 +71,7 @@ def build_user_menu(
     user_email = user.get("email", "")
     user_name = user.get("name", "Пользователь")
     initials = _initials(user_name)
+    is_guest = role == "guest"
 
     # ── Avatar (круг с инициалами или картинкой) ──────────────────────────
     if avatar_url:
@@ -131,7 +136,8 @@ def build_user_menu(
         acc_email = account.get("email", "")
         acc_role = account.get("role", "")
         acc_name = account.get("name", "") or _role_label(acc_role)
-        active = acc_email == user_email
+        is_guest_account = acc_role == "guest"
+        active = (is_guest and is_guest_account) or (acc_email == user_email and not is_guest_account)
         check = ft.Icon(ft.Icons.CHECK_CIRCLE, size=ts(16), color=APP_COLORS["blue"]) if active else ft.Container(width=16, height=16)
         body = ft.Column(
             spacing=1,
@@ -144,7 +150,12 @@ def build_user_menu(
 
         def _click(_=None) -> None:
             _close_menu()
-            if not active and on_switch_account:
+            if active:
+                return
+            if is_guest_account and on_guest:
+                on_guest()
+                return
+            if on_switch_account:
                 on_switch_account(acc_email, acc_name, acc_role)
 
         row = ft.Container(
@@ -209,25 +220,29 @@ def build_user_menu(
     items: list[ft.Control] = [
         header_block,
         ft.Divider(height=1, color=APP_COLORS["stroke2"]),
-        _menu_item(ft.Icons.PERSON_OUTLINE, "Профиль", on_profile),
         _menu_item(ft.Icons.SETTINGS_OUTLINED, "Настройки", on_settings),
     ]
+    if is_guest:
+        items.append(_menu_item(ft.Icons.LOGIN_ROUNDED, "Войти", on_login))
+    else:
+        items.insert(2, _menu_item(ft.Icons.PERSON_OUTLINE, "Профиль", on_profile))
 
-    if test_accounts:
+    switch_accounts = [{"email": "", "name": "Гость", "role": "guest"}, *test_accounts]
+    if switch_accounts:
         items.extend([
             ft.Divider(height=1, color=APP_COLORS["stroke2"]),
             ft.Container(
                 padding=ft.Padding(left=14, top=8, right=14, bottom=4),
-                content=ft.Text("Сменить пользователя", size=ts(11), weight=ft.FontWeight.W_700, color=APP_COLORS["muted2"]),
+                content=ft.Text("Быстрый вход", size=ts(11), weight=ft.FontWeight.W_700, color=APP_COLORS["muted2"]),
             ),
         ])
-        items.extend([_account_row(acc) for acc in test_accounts])
+        items.extend([_account_row(acc) for acc in switch_accounts])
 
     if on_add_account is not None:
         items.append(_menu_item(ft.Icons.PERSON_ADD_OUTLINED, "Добавить пользователя", on_add_account))
 
     # Footer block: email + выйти
-    items.extend([
+    footer_controls: list[ft.Control] = [
         ft.Divider(height=1, color=APP_COLORS["stroke2"]),
         ft.Container(
             padding=padding_symmetric(horizontal=14, vertical=8),
@@ -236,19 +251,23 @@ def build_user_menu(
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.Icon(ft.Icons.MAIL_OUTLINE, size=ts(14), color=APP_COLORS["muted2"]),
-                    ft.Text(user_email or "—", size=ts(11), color=APP_COLORS["muted"], expand=True, max_lines=1, no_wrap=True),
+                    ft.Text(user_email or "Гостевой просмотр", size=ts(11), color=APP_COLORS["muted"], expand=True, max_lines=1, no_wrap=True),
                 ],
             ),
         ),
-        _menu_item(ft.Icons.LOGOUT, "Выйти", on_logout, danger=True),
-    ])
+    ]
+    if not is_guest:
+        footer_controls.append(_menu_item(ft.Icons.LOGOUT, "Выйти в гостевой режим", on_logout, danger=True))
+        if on_logout_all is not None:
+            footer_controls.append(_menu_item(ft.Icons.POWER_SETTINGS_NEW_ROUNDED, "Выйти со всех аккаунтов", on_logout_all, danger=True))
+    items.extend(footer_controls)
 
     menu_card = ft.Container(
         bgcolor=APP_COLORS["panel"],
         border_radius=14,
         border=border_all(APP_COLORS["stroke"]),
         shadow=ft.BoxShadow(blur_radius=28, color=ft.Colors.with_opacity(0.22, ft.Colors.BLACK)),
-        width=300,
+        width=340,
         padding=padding_symmetric(horizontal=6, vertical=6),
         content=ft.Column(spacing=2, tight=True, controls=items),
         # Лёгкая анимация появления
