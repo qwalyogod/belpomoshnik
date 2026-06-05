@@ -179,3 +179,17 @@
     line-height: 1.5;
   }
 }
+
+/* iOS / WKWebView (Flet WebView) scroll reliability ------------------------
+   In an embedded WebView nested overflow containers can refuse to scroll.
+   Pin the height chain to the WebView viewport (100%) and enable momentum +
+   vertical pan on every scroll area. */
+html, body, #root { height: 100%; }
+
+[class*="overflow-y-auto"],
+[class*="overflow-auto"],
+[class*="overflow-y-scroll"] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useNavigate, useLocation, RouterProvider } from "react-router";
 import { router } from "./routes";
 import { motion, AnimatePresence } from "motion/react";
@@ -48,7 +48,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -88,12 +88,67 @@ export function MobileTopBar({ title, onBack, right }: { title: string; onBack?:
   );
 }
 
+// Mobile «зажми Профиль» → переключение пользователей (как user-switcher на desktop).
+function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const { currentUser, quickAccounts, signInAs, signOut } = useStore();
+  if (!open) return null;
+  const accounts = [{ id: "guest", name: "Гость", email: "", role: "guest" }, ...quickAccounts];
+  const choose = (id: string) => { signInAs(id); onClose(); navigate("/"); };
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <motion.div
+        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 320, damping: 32 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full rounded-t-[28px] border-t border-black/[0.06] bg-white px-4 pb-9 pt-3 dark:border-white/[0.06] dark:bg-[#0F1117]"
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 dark:bg-white/20" />
+        <div className="px-1 pb-2 text-[12px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40">Сменить пользователя</div>
+        <div className="space-y-1">
+          {accounts.map((a) => {
+            const activeAcc = a.id === "guest" ? currentUser.role === "guest" : currentUser.id === a.id;
+            const initial = a.role === "guest" ? "Г" : (a.name || "П").slice(0, 1).toUpperCase();
+            return (
+              <button key={a.id} onClick={() => choose(a.id)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${activeAcc ? "bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"}`}>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#0056FF]/10 text-[14px] font-medium text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{initial}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] tracking-tight text-black dark:text-white">{a.name}</span>
+                  <span className="block truncate text-[12px] tracking-tight text-black/45 dark:text-white/45">{roleTitle(a.role)}</span>
+                </span>
+                {activeAcc && <Check size={16} className="text-[#0056FF] dark:text-[#7FA8FF]" />}
+              </button>
+            );
+          })}
+        </div>
+        {currentUser.role !== "guest" && (
+          <button onClick={() => { signOut(); onClose(); navigate("/"); }} className="mt-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[14px] tracking-tight text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10">
+            <span className="grid h-10 w-10 shrink-0 place-items-center"><LogOut size={18} /></span> Выйти из аккаунта
+          </button>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
   const { openAssistant } = React.useContext(ShellContext);
-  const renderTab = (t: { id: Page; i: React.ReactNode; n: string }) => {
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const holdTimer = useRef<number | undefined>(undefined);
+  const held = useRef(false);
+
+  // «Профиль»: короткий тап → переход, зажатие (450мс) → переключение пользователей.
+  const profileHandlers = {
+    onPointerDown: () => { held.current = false; holdTimer.current = window.setTimeout(() => { held.current = true; setSwitcherOpen(true); }, 450); },
+    onPointerUp: () => { if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = undefined; } if (!held.current) onChange("profile"); },
+    onPointerLeave: () => { if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = undefined; } },
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  };
+
+  const renderTab = (t: { id: Page; i: React.ReactNode; n: string }, isProfile = false) => {
     const isActive = active === t.id;
+    const handlers = isProfile ? profileHandlers : { onClick: () => onChange(t.id) };
     return (
-      <button key={t.id} onClick={() => onChange(t.id)} className="relative flex flex-1 flex-col items-center gap-0.5 py-1.5">
+      <button key={t.id} {...handlers} className="relative flex flex-1 select-none flex-col items-center gap-0.5 py-1.5">
         {isActive && <motion.span layoutId="mobile-nav" className="absolute inset-x-2 inset-y-0 rounded-2xl bg-[#E3E7FC] dark:bg-[#0E1A3A]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
         <span className={`relative ${isActive ? "text-[#0056FF] dark:text-[#7FA8FF]" : "text-black/55 dark:text-white/55"}`}>{t.i}</span>
         <span className={`relative text-[10px] tracking-tight ${isActive ? "text-[#0056FF] dark:text-[#7FA8FF]" : "text-black/55 dark:text-white/55"}`}>{t.n}</span>
@@ -109,20 +164,23 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
     { id: "profile", i: <User size={20} />, n: "Профиль" },
   ];
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
-      <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
-        {left.map(renderTab)}
-        <div className="w-16 shrink-0" />
-        {right.map(renderTab)}
-        <button
-          onClick={openAssistant}
-          aria-label="ИИ-помощник"
-          className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
-        >
-          <Sparkles size={24} />
-        </button>
+    <>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+        <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
+          {left.map((t) => renderTab(t))}
+          <div className="w-16 shrink-0" />
+          {right.map((t) => renderTab(t, t.id === "profile"))}
+          <button
+            onClick={openAssistant}
+            aria-label="ИИ-помощник"
+            className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
+          >
+            <Sparkles size={24} />
+          </button>
+        </div>
       </div>
-    </div>
+      <MobileUserSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
+    </>
   );
 }
 
