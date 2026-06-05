@@ -1,5 +1,298 @@
 # Журнал изменений
 
+## 2026-06-04 (React/Vite — backend bridge ситуаций и задач)
+
+### Что изменено
+
+- `reactvitemaket/src/app/services/api.ts` — добавлены методы `/api/user/situations` и `/api/user/tasks` для списка, создания, обновления и удаления пользовательских ситуаций/задач.
+- `reactvitemaket/src/app/data/types.ts` — пользовательская ситуация получила карту `backendTaskIds`, связывающую задачу сценария с backend-задачей.
+- `reactvitemaket/src/app/data/adapters.ts` — добавлен адаптер пользовательской ситуации из backend DTO в React-модель с сопоставлением задач по этапу и названию.
+- `reactvitemaket/src/app/data/store.tsx` — ситуации догружаются из backend после JWT-входа; создание ситуации из сценария, отметка задачи и удаление backend-ситуации синхронизируются с API при сохранении локального fallback.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус переноса пользовательских ситуаций и задач.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Backend smoke через `curl --noproxy '*'`: `/api/auth/login` → `/api/user/situations` → `/api/user/tasks/{id}` → delete situation — ✅ создание, отметка задачи и удаление работают.
+- Browser check `/situations` на `http://127.0.0.1:8550` — ✅ страница открывается, прогресс задач отображается, console errors нет.
+
+---
+
+## 2026-06-04 (React/Vite — backend bridge личных документов)
+
+### Что изменено
+
+- `reactvitemaket/src/app/services/api.ts` — добавлены методы JWT login/register, profile endpoints и CRUD личных документов `/api/user/documents`.
+- `reactvitemaket/src/app/data/adapters.ts` — адаптер личного документа теперь понимает backend-поля `doc_type`, `issued_date`, `expiry_date` и считает статус по сроку действия.
+- `reactvitemaket/src/app/data/store.tsx` — добавлен мягкий backend auth bridge для аккаунтов React/Vite; личные документы догружаются из API и синхронизируются при создании, редактировании и удалении backend-документов.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус переноса пользовательских данных к API.
+
+### Результат проверки
+
+- `PYTHONPATH=src .venv/bin/python -m backend.bootstrap` — ✅ тестовые backend-аккаунты созданы/проверены.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Backend smoke `/api/auth/login` + `/api/user/documents` — ✅ JWT вход и создание/list документа работают.
+- Browser check `/documents` под тестовым гражданином — ✅ документ из backend отображается в React-интерфейсе.
+
+---
+
+## 2026-06-04 (React/Vite — пользовательское состояние по аккаунтам)
+
+### Что изменено
+
+- `reactvitemaket/src/app/data/store.tsx` — добавлено локальное per-user хранение ситуаций, документов, избранного, уведомлений, профиля и настроек.
+- `reactvitemaket/src/app/data/store.tsx` — гостевой режим получает пустую личную область; мутации личных данных для гостя заблокированы на уровне store.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — создание ситуации из сценария теперь безопасно обрабатывает отказ protected action; форма документа синхронизирует поля при открытии/смене документа.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус переноса пользовательских данных.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `/documents` под гражданином — ✅ добавленный документ сохраняется после перезагрузки страницы.
+- Browser check `/documents` под гостем — ✅ личные документы не наследуются, добавление документа открывает окно входа/регистрации.
+
+---
+
+## 2026-06-04 (React/Vite — роли, гость и protected actions)
+
+### Что изменено
+
+- `reactvitemaket/src/app/data/types.ts` — добавлена модель локального пользователя `AppUser`.
+- `reactvitemaket/src/app/data/store.tsx` — добавлены текущий пользователь, гостевой режим, быстрые аккаунты, локальная регистрация, вход по email/паролю, выход в гостевой режим и сброс быстрого списка.
+- `reactvitemaket/src/app/App.tsx` — добавлен desktop dropdown быстрого входа, корректный показ роли пользователя, условная ссылка на админ-панель и protected guard для desktop/mobile.
+- `reactvitemaket/src/app/pages.tsx` — страницы входа и регистрации переведены на локальную auth-логику; кнопка добавления документа подключена к общему защищённому действию.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — окно гостевого ограничения теперь ведёт на вход или регистрацию.
+- `reactvitemaket/src/app/routes.tsx` — детальная страница сценария защищена от отсутствующего guard-контекста.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус миграции.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `http://127.0.0.1:8560/` — ✅ приложение открывается.
+- Browser check быстрого входа — ✅ видны тестовые роли и выход в гостевой режим.
+- Browser check `/admin` — ✅ после выбора администратора админ-панель доступна.
+- Browser check `/documents` в гостевом режиме — ✅ protected action открывает окно входа/регистрации.
+- Browser check `/login` — ✅ вход тестовым гражданином проходит с первого клика.
+
+---
+
+## 2026-06-04 (React/Vite — счётчики сценариев из backend API)
+
+### Что изменено
+
+- `src/backend/schemas.py` — `ScenarioPublicSummary` расширен полями `stage_count` и `task_count`.
+- `src/backend/service.py` — публичные списки сценариев загружают этапы и шаги через `selectinload`, чтобы summary-счётчики считались без дополнительных запросов из UI.
+- `src/backend/api/public.py` — summary-сценарии теперь отдают категорию, количество этапов и количество задач.
+- `reactvitemaket/src/app/data/types.ts` — модель `Scenario` получила поля `stageCount` и `taskCount`.
+- `reactvitemaket/src/app/data/adapters.ts` — adapter переносит `stage_count` / `task_count` из backend DTO во frontend-модель.
+- `reactvitemaket/src/app/data/store.tsx` — защищённые старые mock-id сохраняются для локальных ситуаций, но scalar-поля API теперь всё равно обновляют карточку.
+- `reactvitemaket/src/app/pages.tsx` — каталог сценариев показывает количество задач из API, если оно доступно.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус миграции.
+
+### Результат проверки
+
+- Backend TestClient: `/api/scenarios` — ✅ `rozhdenie-rebenka` отдаёт `stage_count: 6`, `task_count: 7`.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `http://127.0.0.1:8560/scenarios` — ✅ «Рождение ребёнка» отображается один раз, показывает backend-срок и `Задач: 7`.
+
+---
+
+## 2026-06-04 (React/Vite — API-first публичный контент)
+
+### Что изменено
+
+- `reactvitemaket/src/app/data/store.tsx` — добавлена нормализация публичного контента по названию и категории, чтобы одноимённые mock/backend карточки не дублировались.
+- `reactvitemaket/src/app/data/store.tsx` — добавлена стратегия `API-first`: backend-элементы получают приоритет, mock остаётся fallback.
+- `reactvitemaket/src/app/data/store.tsx` — добавлено сохранение богатых mock-массивов для preview, если backend summary DTO пока не отдаёт этапы, документы, учреждения или источники.
+- `reactvitemaket/src/app/data/store.tsx` — избранные сценарии переназначаются со старого mock-id на backend-id при совпадении публичной карточки.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md`, `docs/DECISIONS.md` — обновлены под новую политику источников данных.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `http://127.0.0.1:8560/scenarios` — ✅ «Рождение ребёнка» отображается один раз, использует backend-срок и не показывает `Задач: 0`.
+- Browser check `http://127.0.0.1:8560/situations` — ✅ локальные ситуации «Потеря паспорта» и «Открытие ИП» не потерялись.
+- Browser check `http://127.0.0.1:8560/scenarios/rozhdenie-rebenka` — ✅ полный backend-сценарий догружается с этапами, задачами и источниками; console errors нет.
+
+---
+
+## 2026-06-04 (React/Vite — документы, учреждения и закон-апдейты из API)
+
+### Что изменено
+
+- `src/backend/seeds/mvp_childbirth.py` — seed-закон-апдейт переведён в статус `applied`, чтобы он попадал в публичный endpoint `/api/law-updates`.
+- `reactvitemaket/src/app/services/api.ts` — добавлен метод `getLawUpdates`.
+- `reactvitemaket/src/app/data/adapters.ts` — экспортированы адаптеры справочных документов и учреждений; закон-апдейт теперь определяет категорию по тексту, если отдельное поле категории отсутствует.
+- `reactvitemaket/src/app/data/store.tsx` — подключена загрузка `/api/documents`, `/api/authorities`, `/api/law-updates` с сохранением mock fallback.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — глобальный поиск теперь ищет по справочным документам и учреждениям, пришедшим из backend API.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус миграции.
+
+### Результат проверки
+
+- `PYTHONPATH=src .venv/bin/python -m backend.scripts.seed_db` — ✅ seed применён.
+- Backend TestClient: `/api/documents`, `/api/authorities`, `/api/law-updates` — ✅ 200 OK.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `http://127.0.0.1:8560/legal` — ✅ backend закон-апдейт отображается, console errors нет.
+- Browser check глобального поиска — ✅ запросы `ЗАГС` и `Заявление` находят учреждение и документ из backend API.
+
+---
+
+## 2026-06-03 (React/Vite — публичный API content bridge)
+
+### Что изменено
+
+- `src/backend/api/public.py` — добавлен публичный endpoint `GET /api/scenarios`.
+- `src/backend/service.py` — добавлена выборка опубликованных сценариев и категория в полной схеме сценария.
+- `src/backend/schemas.py` — добавлены поля `category` для summary/full DTO сценария.
+- `src/backend/app.py` — добавлен CORS для локальных React/Flet dev-серверов.
+- `reactvitemaket/src/app/data/store.tsx` — подключена загрузка `/api/problems`, `/api/scenarios` и lazy-загрузка `/api/scenarios/{slug}` с mock fallback.
+- `reactvitemaket/src/app/data/adapters.ts` — расширен адаптер backend DTO для сценариев, этапов, шагов, документов, учреждений, источников и зависимостей.
+- `reactvitemaket/.env.example` — добавлен пример `VITE_API_BASE_URL`.
+- `docs/PROJECT_STATUS.md`, `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md` — обновлены под фактический статус миграции.
+
+### Результат проверки
+
+- `PYTHONPATH=src .venv/bin/python -m backend.scripts.migrate` — ✅ применены миграции `0003`-`0006`.
+- `PYTHONPATH=src .venv/bin/python -m backend.scripts.seed_db` — ✅ добавлены MVP-данные сценария «Рождение ребёнка».
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Backend TestClient: `/api/problems`, `/api/scenarios`, `/api/scenarios/rozhdenie-rebenka` — ✅ 200 OK.
+- Browser check `http://127.0.0.1:8560/scenarios` → `/scenarios/rozhdenie-rebenka` — ✅ full detail подгрузил этапы, задачу и источники; console errors нет.
+
+---
+
+## 2026-06-03 (React/Vite — маршруты и API-слой)
+
+### Что изменено
+
+- `reactvitemaket/src/app/routes.tsx` — добавлены маршруты `/scenarios` и `/admin`; для `/admin` добавлен role guard с отказом доступа для не-администратора.
+- `reactvitemaket/src/app/pages.tsx` — приведены ключевые поля категорий, документов, уведомлений и закон-апдейтов к текущей модели `types.ts`.
+- `reactvitemaket/src/app/services/api.ts` — создан начальный API-клиент для публичных endpoints backend.
+- `reactvitemaket/src/app/data/adapters.ts` — создан слой адаптеров между backend DTO и frontend-моделью React-приложения.
+- `docs/REACT_MIGRATION_PLAN.md`, `docs/TASKS.md`, `docs/PROJECT_STATUS.md` — обновлены под фактический статус миграции.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- React/Vite dev-сервер `http://127.0.0.1:8560/` — ✅ открыт во встроенном браузере.
+- Проверены маршруты `/`, `/scenarios`, `/admin` — ✅ без console error; `/admin` показывает ограничение доступа для гостя.
+
+---
+
+## 2026-06-03 (старт React/Vite migration)
+
+### Что изменено
+
+- `docs/REACT_MIGRATION_AUDIT.md` — создан аудит React/Vite-макета: структура, сильные стороны, проблемы типов/маршрутов, риски и рекомендации.
+- `docs/REACT_MIGRATION_PLAN.md` — создан поэтапный план переноса UI на Vite/React/TypeScript с сохранением Flet baseline до parity.
+- `reactvitemaket/package.json` — удалены неиспользуемые зависимости Radix/MUI/Recharts/DnD и оставлен минимальный набор для текущего reachable React bundle.
+- `reactvitemaket/pnpm-lock.yaml` — создан lock-файл зависимостей.
+- `.gitignore` — добавлены `node_modules/` и `**/node_modules/`.
+- `AGENTS.md` — добавлено правило читать migration-документы перед задачами по React/Vite.
+- `docs/TASKS.md` — добавлен этап 21 «Переход на React/Vite frontend».
+- `docs/DECISIONS.md` — зафиксировано архитектурное решение о постепенной миграции UI.
+- `docs/PROJECT_STATUS.md` — зафиксирован новый текущий курс UI.
+
+### Результат проверки
+
+- Markdown-документы созданы.
+- `pnpm install` в `reactvitemaket/` — ✅ выполнено после сокращения зависимостей.
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- React/Vite dev-сервер `http://127.0.0.1:8560/` — ✅ главная страница открылась во встроенном браузере.
+- Flet/Python-код приложения не изменялся.
+
+---
+
+## 2026-06-03 (Sprint 2 — документы)
+
+### Что изменено
+
+- `src/theme/app_theme.py` — добавлена токенизированная палитра из 12 спокойных цветов для карточек документов.
+- `src/pages/documents_page.py` — большая карточка документа теперь использует выбранный цвет; список документов и selected-state подстраиваются под цвет документа.
+- `src/pages/documents_page.py` — добавлены явные действия для выбранного документа: открыть скан, редактировать, удалить.
+- `src/pages/documents_page.py` — текст про защиту документов приведён к фактической локальной модели хранения без обещания биометрии.
+- `src/main.py` — форма добавления/редактирования документа получила календарный выбор даты выдачи и срока действия вместо ручного ввода.
+- `src/main.py` — добавлен выбор цвета карточки документа и сохранение цвета в локальное состояние.
+- `src/main.py` — импортированный PDF получает цвет документа по умолчанию.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — обновлён статус Sprint 2.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `PYTHONPATH=src .venv/bin/python` со сборкой `build_documents_page(...)` для desktop/mobile — ✅ без ошибок.
+- `.venv/bin/python -m pytest -q` — ✅ 98 passed.
+- `.venv/bin/flet run -w src/main.py --host 127.0.0.1 -p 8550` — ✅ web-сервер запущен.
+- В web-версии `/documents` проверены пустое состояние, открытие диалога добавления документа и календарь без ручного режима ввода — ✅ без traceback.
+
+---
+
+## 2026-06-03 (Sprint 2 — фильтры поиска и «Рядом со мной»)
+
+### Что изменено
+
+- `src/services/institutions.py` — подбор учреждений теперь учитывает все адреса профиля, выбирает лучшее совпадение и дедуплицирует результаты.
+- `src/pages/search_page.py` — добавлен отдельный фильтр «Рядом», рабочий быстрый фильтр «Рядом со мной», активные состояния фильтров и кнопка сброса.
+- `src/pages/search_page.py` — исправлен серый web-плейсхолдер пустого блока поиска: пустые контролы больше не добавляются в layout.
+- `src/main.py` — глобальный поиск получает профиль пользователя и общий обработчик сброса запроса/фильтра.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — обновлён статус Sprint 2.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `.venv/bin/python -m pytest -q` — ✅ 98 passed.
+- `PYTHONPATH=src .venv/bin/python` с проверкой `match_nearby_institutions(...)` и сборкой `build_search_page(...)` — ✅ без ошибок.
+- `.venv/bin/flet run -w src/main.py --host 127.0.0.1 -p 8550` — ✅ web-сервер запущен.
+- В web-версии `/search` проверены пустой поиск, фильтр «Рядом» и список учреждений рядом — ✅ без traceback и серого плейсхолдера.
+
+---
+
+## 2026-06-03 (Sprint 2 — гостевой режим и быстрый вход)
+
+### Что изменено
+
+- `src/components/user_menu.py` — выпадающее меню пользователя теперь содержит гостевой вход, быстрый вход по ролям, добавление пользователя, выход в гостевой режим и выход со всех аккаунтов.
+- `src/components/layout.py` — desktop-header показывает меню гостя и передаёт callbacks для настроек, входа, добавления пользователя и очистки быстрых аккаунтов.
+- `src/main.py` — добавлены локальные тестовые аккаунты ролей, `quick_accounts`, режим добавления пользователя через `/register`, гостевой выход, очистка добавленных быстрых пользователей и быстрый выбор локально добавленного аккаунта.
+- `src/data/mock_data.py` — убраны пользовательские формулировки, обозначающие сценарии и аудит как демонстрационные.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — зафиксирован новый сценарий показа: гость → роли → добавленный пользователь → выход.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `PYTHONPATH=src .venv/bin/python` со сборкой `build_desktop_header(...)` для гостя, гражданина и администратора — ✅ без ошибок.
+- `curl -I http://127.0.0.1:8550/`, `/settings`, `/register`, `/admin` — ✅ `HTTP/1.1 200 OK`.
+
+---
+
+## 2026-06-03 (Sprint 2 — ИИ-помощник с переходами)
+
+### Что изменено
+
+- `src/services/ai_helper.py` — добавлен локальный intent-router встроенного ИИ-помощника с картой реальных разделов приложения.
+- `src/components/ai_section_card.py` — добавлена компактная карточка-переход к рекомендованному разделу.
+- `src/components/ai_chat.py` — мини-чат теперь отвечает по намерению пользователя и показывает карточку раздела под ответом.
+- `src/main.py` — ИИ-помощник подключён к текущей роли, гостевому режиму и маршрутизации; на desktop-версии главной добавлена плавающая кнопка.
+- `src/components/sidebar.py` — подпись кнопки помощника стала нейтральной и не обещает круглосуточный сервис.
+- `src/services/search_suggestions.py` — добавлен локальный сервис подсказок глобального поиска.
+- `src/pages/search_page.py` — поле глобального поиска теперь показывает кликабельные подсказки во время ввода.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — зафиксировано начало Sprint 2 и следующие задачи.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `PYTHONPATH=src .venv/bin/python` со сборкой AI-controls, карточки перехода и search-controls — ✅ без ошибок.
+- `.venv/bin/flet run -w src/main.py --host 127.0.0.1 -p 8550` — ✅ web-сервер запущен.
+- `curl -I http://127.0.0.1:8550/` и `curl -I http://127.0.0.1:8550/search` — ✅ `HTTP/1.1 200 OK`.
+
+---
+
 ## 2026-06-02 (Админ-панель — связи закон-апдейтов с проблемами)
 
 ### Что изменено

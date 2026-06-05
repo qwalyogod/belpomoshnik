@@ -4,12 +4,15 @@
 
 Пользователь выбирает или описывает жизненную проблему, а приложение показывает понятный пошаговый план действий: что делать, какие документы нужны, какие сроки учитывать, куда обращаться и каких ошибок избегать.
 
-Текущий статус: первая демонстрационная бета. Мобильный интерфейс работает на Flet, основные пользовательские сценарии собраны в цельный MVP, а для админ-панели и сценариев добавлена backend-основа (FastAPI + SQLAlchemy + SQLite для MVP-демо). Авторизация реализована как локальный MVP без JWT/RBAC.
+Текущий статус: первая демонстрационная бета. Рабочий интерфейс сейчас работает на Flet, основные пользовательские сценарии собраны в цельный MVP, а для админ-панели и сценариев добавлена backend-основа (FastAPI + SQLAlchemy + SQLite для MVP). Авторизация реализована как локальный MVP без JWT/RBAC.
+
+Новый UI-курс: пользовательский frontend постепенно переносится в `reactvitemaket/` на Vite/React/TypeScript. Flet-версия остаётся рабочим baseline до тех пор, пока React/Vite-версия не повторит основной функционал. План миграции зафиксирован в `docs/REACT_MIGRATION_PLAN.md`, аудит макета — в `docs/REACT_MIGRATION_AUDIT.md`.
 
 ## Технологии
 
 - Python.
 - Flet.
+- Vite + React + TypeScript (frontend-кандидат в `reactvitemaket/`).
 - FastAPI (backend API для сценариев и админ-раздела).
 - SQLAlchemy + SQLite (MVP база сценариев).
 - Markdown-документация.
@@ -64,6 +67,7 @@ ivan@example.by / 123456
 belpomoshnik/
 ├── assets/
 ├── docs/
+├── reactvitemaket/
 ├── src/
 │   ├── main.py
 │   ├── backend/
@@ -140,6 +144,37 @@ flet run src/main.py
 ```bash
 .venv/bin/flet run --ios src/main.py
 ```
+
+## React/Vite frontend-кандидат
+
+React/Vite-макет находится в папке `reactvitemaket/`. Это новый frontend-кандидат, который постепенно будет подключаться к backend API.
+
+Установка зависимостей:
+
+```bash
+cd reactvitemaket
+pnpm install
+```
+
+Проверка сборки:
+
+```bash
+pnpm build
+```
+
+Запуск локального frontend-превью:
+
+```bash
+pnpm dev --host 127.0.0.1 --port 8560
+```
+
+Если backend запущен на другом адресе, создайте `.env` по примеру:
+
+```bash
+cp .env.example .env
+```
+
+и настройте `VITE_API_BASE_URL`.
 
 ## Backend (API и БД)
 
