@@ -48,7 +48,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -165,7 +165,7 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
   ];
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
           {left.map((t) => renderTab(t))}
           <div className="w-16 shrink-0" />
