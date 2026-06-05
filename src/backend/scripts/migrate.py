@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 
@@ -45,7 +45,7 @@ def run() -> None:
             conn.executescript(sql)
             conn.execute(
                 "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
-                (migration.name, datetime.utcnow().isoformat()),
+                (migration.name, datetime.now(timezone.utc).isoformat()),
             )
             applied_count += 1
             print(f"[OK] Применена миграция: {migration.name}")

@@ -67,10 +67,27 @@ def get_published_problem_by_slug(db: Session, slug: str) -> Problem | None:
 def list_published_problem_scenarios(db: Session, problem_id: int) -> list[Scenario]:
     stmt = (
         select(Scenario)
+        .options(
+            selectinload(Scenario.problem),
+            selectinload(Scenario.stages).selectinload(ScenarioStage.steps),
+        )
         .where(
             Scenario.problem_id == problem_id,
             Scenario.status == ContentStatus.PUBLISHED,
         )
+        .order_by(Scenario.priority.desc(), Scenario.title.asc())
+    )
+    return list(db.scalars(stmt).all())
+
+
+def list_published_scenarios(db: Session) -> list[Scenario]:
+    stmt = (
+        select(Scenario)
+        .options(
+            selectinload(Scenario.problem),
+            selectinload(Scenario.stages).selectinload(ScenarioStage.steps),
+        )
+        .where(Scenario.status == ContentStatus.PUBLISHED)
         .order_by(Scenario.priority.desc(), Scenario.title.asc())
     )
     return list(db.scalars(stmt).all())
@@ -92,6 +109,7 @@ def get_published_scenario_by_slug(db: Session, slug: str) -> Scenario | None:
             selectinload(Scenario.stages)
             .selectinload(ScenarioStage.steps)
             .selectinload(ScenarioStep.deadline),
+            selectinload(Scenario.problem),
             selectinload(Scenario.dependencies),
             selectinload(Scenario.law_updates),
         )
@@ -117,6 +135,7 @@ def get_scenario_by_id(db: Session, scenario_id: int) -> Scenario | None:
             selectinload(Scenario.stages)
             .selectinload(ScenarioStage.steps)
             .selectinload(ScenarioStep.deadline),
+            selectinload(Scenario.problem),
             selectinload(Scenario.dependencies),
             selectinload(Scenario.law_updates),
         )
@@ -219,6 +238,7 @@ def scenario_to_full_schema(db: Session, scenario: Scenario) -> schemas.Scenario
     return payload.model_copy(
         update={
             "stages": stages_out,
+            "category": scenario.problem.category if scenario.problem else "",
             "related_scenarios": list_related_scenarios(db, scenario.id),
             "source_references": [
                 schemas.SourceReferenceOut.model_validate(item)

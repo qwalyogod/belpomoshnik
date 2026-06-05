@@ -166,6 +166,8 @@ class Authority(Base, TimestampMixin):
     address: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     working_hours: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     type: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    region: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    city: Mapped[str] = mapped_column(String(120), default="", nullable=False)
 
     steps: Mapped[list[ScenarioStep]] = relationship(back_populates="authority")
 

@@ -94,6 +94,8 @@ def _get_or_create_authorities(db: Session) -> dict[str, Authority]:
                 address="По месту регистрации",
                 working_hours="Уточняйте на официальном сайте",
                 type=authority_type,
+                region="Минская область",
+                city="Минск",
             )
             db.add(item)
             db.flush()
@@ -487,9 +489,11 @@ def seed_mvp_childbirth(db: Session) -> dict[str, int]:
                 affected_scenario_id=scenario.id,
                 affected_step_id=step_5.id,
                 update_date=datetime.now(timezone.utc),
-                status=LawUpdateStatus.NEW,
+                status=LawUpdateStatus.APPLIED,
             )
         )
+    elif law_update.status != LawUpdateStatus.APPLIED:
+        law_update.status = LawUpdateStatus.APPLIED
 
     db.commit()
 
@@ -499,4 +503,3 @@ def seed_mvp_childbirth(db: Session) -> dict[str, int]:
         "stages_count": len(scenario.stages),
         "steps_seeded": 7,
     }
-

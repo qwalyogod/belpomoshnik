@@ -151,6 +151,8 @@ class AuthorityBase(BaseModel):
     address: str = ""
     working_hours: str = ""
     type: str = ""
+    region: str = ""
+    city: str = ""
 
 
 class AuthorityCreate(AuthorityBase):
@@ -280,6 +282,8 @@ class AuthorityOut(ORMModel):
     address: str
     working_hours: str
     type: str
+    region: str = ""
+    city: str = ""
 
 
 class DeadlineOut(ORMModel):
@@ -366,10 +370,13 @@ class ScenarioPublicSummary(ORMModel):
     title: str
     slug: str
     short_description: str
+    category: str = ""
     status: ContentStatus
     difficulty_level: DifficultyLevel
     estimated_duration: str
     priority: int
+    stage_count: int = 0
+    task_count: int = 0
     content_verified_at: datetime | None = None
     verified_by: str = ""
     verification_notes: str = ""
@@ -396,6 +403,7 @@ class ScenarioFullOut(ORMModel):
     title: str
     slug: str
     short_description: str
+    category: str = ""
     description: str
     target_audience: str
     estimated_duration: str
@@ -447,4 +455,3 @@ class ReorderPayload(BaseModel):
 
 class ScenarioVerifyNotesPayload(BaseModel):
     notes: str = ""
-

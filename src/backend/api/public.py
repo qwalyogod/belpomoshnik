@@ -12,12 +12,26 @@ from backend.service import (
     list_published_law_updates,
     list_published_problem_scenarios,
     list_published_problems,
+    list_published_scenarios,
     list_published_scenario_steps,
     scenario_to_full_schema,
 )
 
 
 router = APIRouter(prefix="/api", tags=["public"])
+
+
+def _scenario_summary(scenario, category: str | None = None) -> schemas.ScenarioPublicSummary:
+    stage_count = len(scenario.stages)
+    task_count = sum(len(stage.steps) for stage in scenario.stages)
+    resolved_category = category if category is not None else scenario.problem.category if scenario.problem else ""
+    return schemas.ScenarioPublicSummary.model_validate(scenario).model_copy(
+        update={
+            "category": resolved_category,
+            "stage_count": stage_count,
+            "task_count": task_count,
+        }
+    )
 
 
 @router.get("/problems", response_model=list[schemas.ProblemPublicOut])
@@ -35,9 +49,14 @@ def get_problem(slug: str, db: Session = Depends(get_db)):
     payload = schemas.ProblemWithScenariosOut.model_validate(problem)
     return payload.model_copy(
         update={
-            "scenarios": [schemas.ScenarioPublicSummary.model_validate(item) for item in scenarios],
+            "scenarios": [_scenario_summary(item, problem.category) for item in scenarios],
         }
     )
+
+
+@router.get("/scenarios", response_model=list[schemas.ScenarioPublicSummary])
+def get_scenarios(db: Session = Depends(get_db)):
+    return [_scenario_summary(item) for item in list_published_scenarios(db)]
 
 
 @router.get("/scenarios/{slug}", response_model=schemas.ScenarioFullOut)
@@ -95,4 +114,3 @@ def get_admin_bootstrap_problems(db: Session = Depends(get_db)):
     чтобы можно было отрисовать списки до полной CRUD-интеграции UI.
     """
     return [schemas.ProblemPublicOut.model_validate(item) for item in list_problems_admin(db)]
-
