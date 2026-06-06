@@ -47,8 +47,13 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   };
 
   return (
-    <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      <div className="min-h-0 flex-1 overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    // На mobile скроллим страницу нативно (не вложенным overflow-auto) — это
+    // совпадает с поведением iOS-нативных приложений и решает проблему «главная
+    // не скроллится у гостя». overflow-x-hidden защищает от горизонтального
+    // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
+    // высоту viewport и плюс естественный overflow.
+    <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
+      <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -56,7 +61,6 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.25, ease: [0.16,1,0.3,1] }}
-            className="h-full"
           >
             <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
           </motion.div>
@@ -165,7 +169,10 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
   ];
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
+      {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
+          чтобы он оставался на месте при нативном page-scroll (когда shell
+          длиннее viewport, иначе нав повисает посреди контента). */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
           {left.map((t) => renderTab(t))}
           <div className="w-16 shrink-0" />
