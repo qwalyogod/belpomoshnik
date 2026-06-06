@@ -5,7 +5,7 @@ import { ShellContext, RootLayout } from "./App";
 import { MobileHome, DesktopHome } from "./App";
 import { AdminPanel } from "./components/desktop";
 import { ScenarioDetail, MySituationDetail, SettingsPage, LearningPage } from "./components/extra-screens";
-import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage, OnboardingPage, SourcesPage } from "./pages";
+import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage, OnboardingPage, SourcesPage, WelcomePage } from "./pages";
 
 function ResponsivePage({ mobile: MobileComp, desktop: DesktopComp }: { mobile: React.ElementType; desktop: React.ElementType }) {
   const { isMobile, dark, setDark } = React.useContext(ShellContext);
