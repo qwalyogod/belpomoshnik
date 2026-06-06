@@ -35,15 +35,11 @@ jobs:
         working-directory: reactvitemaket
         run: npx cap sync ios
 
-      - name: Install CocoaPods
-        working-directory: reactvitemaket/ios/App
-        run: pod install
-
       - name: Build app (no signing)
         working-directory: reactvitemaket/ios/App
         run: |
           xcodebuild \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Debug \
             -destination generic/platform=iOS \
