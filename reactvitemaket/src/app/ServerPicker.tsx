@@ -1,116 +1,105 @@
 /**
- * ServerPicker — экран ввода URL React-сервера.
+ * ServerPicker — экран ввода URL dev-сервера.
  *
- * Используется в dev-сборке на iPhone/Android, пока приложение ходит за
- * фронтендом на ПК разработчика. При фиксированном URL (production) этот
- * компонент можно удалить — приложение просто пойдёт по `server.url` из
- * capacitor.config.json.
+ * Показывается ТОЛЬКО в нативной Capacitor-оболочке (iOS/Android), при первом
+ * запуске или после «Сбросить». В обычном браузере/Vite dev — невидим.
  *
- * Логика:
- *  - при старте читаем `localStorage["belpomoshnik.serverUrl"]`
- *  - если есть — НЕ показываем picker, приложение рендерится как обычно
- *  - если нет — picker перекрывает экран и блокирует навигацию
- *  - при сохранении пишем в localStorage и редиректим на URL
- *  - «Сбросить» очищает localStorage и возвращает picker (кнопка из настроек)
- *
- * localStorage в Capacitor WebView живёт на origin самого приложения
- * (capacitor://localhost), а вводимый URL — это origin следующей страницы.
- * Это нормально: нам нужно лишь сохранить строку, а не шарить сессию.
+ * Поведение:
+ *  - При старте читает `localStorage["belpomoshnik.serverUrl"]`
+ *  - Если URL сохранён — редиректит на него автоматически (один раз за сессию)
+ *  - Если нет — показывает экран ввода
+ *  - «Пропустить» — закрывает picker, приложение работает из бандла
+ *  - «Сбросить» — очищает localStorage и возвращает экран ввода
+ *    (вызывается через window.belpomoshnik.resetServer() из настроек)
  */
 import { useEffect, useState } from "react";
-import { Server, RefreshCw, ExternalLink, AlertTriangle } from "lucide-react";
+import { Server, RefreshCw, ExternalLink, AlertTriangle, Package } from "lucide-react";
 
 const STORAGE_KEY = "belpomoshnik.serverUrl";
+const SKIP_KEY = "belpomoshnik.serverSkipped";
 
 function normalizeUrl(raw: string): string | null {
   const s = raw.trim();
   if (!s) return null;
-  // Добавим http://, если пользователь ввёл просто IP/домен
   const withScheme = /^https?:\/\//i.test(s) ? s : `http://${s}`;
   try {
     const u = new URL(withScheme);
-    // Запретим заведомо опасные схемы
     if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    // Хвостовой слэш для origin-форм не нужен, но оставляем pathname если есть
     return u.toString().replace(/\/$/, "");
   } catch {
     return null;
   }
 }
 
-function readSavedUrl(): string | null {
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
 function isCapacitorShell(): boolean {
-  // Picker нужен ТОЛЬКО в Capacitor-сборке (мобильное приложение).
-  // В обычном вебе (Vite dev, продакшен) он не должен появляться.
   if (typeof window === "undefined") return false;
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-    .Capacitor;
-  if (cap && typeof cap.isNativePlatform === "function") {
-    return cap.isNativePlatform();
-  }
-  return false;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
 }
 
 export function ServerPicker() {
-  // Picker активен только в Capacitor (нативная оболочка). В обычном вебе/Vite
-  // dev — return null, чтобы не перекрывать основной UI.
-  if (typeof window === "undefined" || !isCapacitorShell()) {
-    return null;
-  }
+  if (typeof window === "undefined" || !isCapacitorShell()) return null;
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [value, setValue] = useState("");
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [open, setOpen] = useState(false);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    const s = readSavedUrl();
-    setSaved(s);
-    // Если URL уже сохранён — picker закрыт, приложение рендерится.
-    // Но оставляем hook для кнопки «Сбросить» из настроек.
-    setOpen(!s);
-  }, []);
+    try {
+      const skipped = localStorage.getItem(SKIP_KEY);
+      const saved = localStorage.getItem(STORAGE_KEY);
 
-  // Глобальный хук: SettingsPage дёргает `window.belpomoshnik.resetServer()`.
-  useEffect(() => {
-    (window as unknown as { belpomoshnik?: Record<string, unknown> }).belpomoshnik = {
-      ...((window as unknown as { belpomoshnik?: Record<string, unknown> }).belpomoshnik || {}),
-      resetServer: () => {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch {
-          /* ignore */
-        }
-        setSaved(null);
-        setOpen(true);
-      },
-    };
-  }, []);
+      if (skipped) {
+        // Пользователь нажал «Пропустить» — не показываем picker
+        setOpen(false);
+        return;
+      }
 
-  if (!open) {
-    // Если picker закрыт и есть сохранённый URL — пробрасываем пользователя
-    // на dev-сервер. На production-сборке (с зашитым server.url) этого не будет,
-    // потому что saved будет null и условие ниже не сработает.
-    if (saved && typeof window !== "undefined") {
-      const currentOrigin = window.location.origin;
-      if (!currentOrigin.startsWith(saved)) {
-        // Запускаем только один раз на загрузку
+      if (saved) {
+        // URL сохранён — редиректим один раз за сессию
+        setSavedUrl(saved);
         const flag = "belpomoshnik.redirectedOnce";
         if (!sessionStorage.getItem(flag)) {
           sessionStorage.setItem(flag, "1");
           window.location.replace(saved);
         }
+        setOpen(false);
+        return;
       }
+
+      // Первый запуск — показываем picker
+      setOpen(true);
+    } catch {
+      setOpen(true);
     }
-    return null;
-  }
+  }, []);
+
+  // Глобальный хук для кнопки «Сбросить сервер» из настроек
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    (window as unknown as { belpomoshnik?: Record<string, unknown> }).belpomoshnik = {
+      ...((window as unknown as { belpomoshnik?: Record<string, unknown> }).belpomoshnik ?? {}),
+      resetServer: () => {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(SKIP_KEY);
+          sessionStorage.removeItem("belpomoshnik.redirectedOnce");
+        } catch { /* ignore */ }
+        setSavedUrl(null);
+        setValue("");
+        setError(null);
+        setOpen(true);
+      },
+    };
+  }, []);
+
+  if (!open) return null;
 
   const submit = () => {
     const url = normalizeUrl(value);
@@ -120,18 +109,22 @@ export function ServerPicker() {
     }
     try {
       localStorage.setItem(STORAGE_KEY, url);
+      localStorage.removeItem(SKIP_KEY);
+      sessionStorage.removeItem("belpomoshnik.redirectedOnce");
     } catch {
       setError("Не удалось сохранить (WebView storage недоступен)");
       return;
     }
     setError(null);
-    // Сбросим флаг редиректа, чтобы он сработал
-    try {
-      sessionStorage.removeItem("belpomoshnik.redirectedOnce");
-    } catch {
-      /* ignore */
-    }
     window.location.replace(url);
+  };
+
+  const skip = () => {
+    try {
+      localStorage.setItem(SKIP_KEY, "1");
+      localStorage.removeItem(STORAGE_KEY);
+    } catch { /* ignore */ }
+    setOpen(false);
   };
 
   return (
@@ -145,8 +138,7 @@ export function ServerPicker() {
         display: "flex",
         flexDirection: "column",
         padding: "calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px)",
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
       }}
     >
       <div
@@ -156,45 +148,47 @@ export function ServerPicker() {
           maxWidth: 380,
           display: "flex",
           flexDirection: "column",
-          gap: 20,
+          gap: 16,
         }}
       >
+        {/* Logo row */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span
             style={{
               display: "grid",
               placeItems: "center",
-              width: 36,
-              height: 36,
-              borderRadius: 12,
+              width: 40,
+              height: 40,
+              borderRadius: 14,
               background: "linear-gradient(135deg,#0056FF,#2277FF)",
+              boxShadow: "0 8px 20px -6px rgba(0,86,255,0.5)",
             }}
           >
-            <Server size={18} color="#fff" />
+            <Server size={20} color="#fff" />
           </span>
-          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: -0.2 }}>
+          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: -0.3 }}>
             Укажите сервер
           </div>
         </div>
 
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "rgba(255,255,255,0.6)" }}>
-          Приложение пока работает в режиме разработки и должно получать интерфейс
-          с компьютера. Введите адрес Vite-сервера (виден в терминале:{" "}
-          <code style={{ fontFamily: "ui-monospace, monospace", color: "#7FA8FF" }}>
-            Network: http://&lt;IP&gt;:8560
-          </code>
-          ).
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "rgba(255,255,255,0.6)" }}>
+          Запустите на компьютере <code style={{ fontFamily: "ui-monospace, monospace", color: "#7FA8FF" }}>pnpm dev</code>{" "}
+          и введите адрес из строки{" "}
+          <code style={{ fontFamily: "ui-monospace, monospace", color: "#7FA8FF" }}>Network:</code>.
+          Или нажмите «Пропустить» — приложение откроется из встроенной версии.
         </p>
 
+        {/* Input */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 8,
             background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: `1px solid ${error ? "rgba(252,165,165,0.5)" : "rgba(255,255,255,0.1)"}`,
             borderRadius: 16,
             padding: "12px 14px",
+            transition: "border-color 0.2s",
           }}
         >
           <ExternalLink size={16} color="rgba(255,255,255,0.4)" />
@@ -204,13 +198,8 @@ export function ServerPicker() {
             type="url"
             placeholder="http://192.168.1.10:8560"
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (error) setError(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submit();
-            }}
+            onChange={(e) => { setValue(e.target.value); if (error) setError(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
             style={{
               flex: 1,
               background: "transparent",
@@ -222,27 +211,28 @@ export function ServerPicker() {
               letterSpacing: -0.1,
             }}
           />
+          {value && (
+            <button
+              onClick={() => { setValue(""); setError(null); }}
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", padding: 2 }}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {error && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              color: "#FCA5A5",
-              fontSize: 13,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FCA5A5", fontSize: 13 }}>
             <AlertTriangle size={14} />
             {error}
           </div>
         )}
 
+        {/* Primary CTA */}
         <button
           onClick={submit}
           style={{
-            height: 48,
+            height: 50,
             borderRadius: 14,
             background: "linear-gradient(135deg,#0056FF,#2277FF)",
             color: "#fff",
@@ -254,19 +244,36 @@ export function ServerPicker() {
             boxShadow: "0 16px 34px -10px rgba(0,86,255,0.5)",
           }}
         >
-          Открыть
+          Подключиться
         </button>
 
-        {saved && (
+        {/* Skip button */}
+        <button
+          onClick={skip}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            height: 44,
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 14,
+            color: "rgba(255,255,255,0.7)",
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          <Package size={15} /> Пропустить — встроенная версия
+        </button>
+
+        {/* Reset saved */}
+        {savedUrl && (
           <button
             onClick={() => {
-              try {
-                localStorage.removeItem(STORAGE_KEY);
-              } catch {
-                /* ignore */
-              }
-              setSaved(null);
-              setError(null);
+              try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+              setSavedUrl(null);
               setValue("");
             }}
             style={{
@@ -274,11 +281,11 @@ export function ServerPicker() {
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              height: 40,
+              height: 36,
               background: "transparent",
               border: "none",
-              color: "rgba(255,255,255,0.4)",
-              fontSize: 13,
+              color: "rgba(255,255,255,0.35)",
+              fontSize: 12,
               cursor: "pointer",
             }}
           >
@@ -286,10 +293,8 @@ export function ServerPicker() {
           </button>
         )}
 
-        <p style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: "rgba(255,255,255,0.35)" }}>
-          ПК и телефон должны быть в одной Wi-Fi. URL сохраняется на устройстве.
-          В production-сборке (когда приложение зальётся на сервер) этот экран
-          уберут.
+        <p style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: "rgba(255,255,255,0.3)" }}>
+          ПК и телефон должны быть в одной Wi-Fi. Адрес сохраняется на устройстве.
         </p>
       </div>
     </div>
