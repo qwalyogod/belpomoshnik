@@ -52,7 +52,7 @@ function AdminWindow({ open, isMobile, editor, signal, onClose }: { open: boolea
   return (
     // Container does NOT block the app behind (pointer-events-none); only the
     // window captures clicks, so the project stays navigable underneath.
-    <div className="pointer-events-none fixed inset-0 z-[95]">
+    <div className="pointer-events-none fixed inset-0 z-[100]">
       <div
         style={style}
         className={`pointer-events-auto absolute flex flex-col overflow-hidden bg-white shadow-[0_40px_120px_-20px_rgba(15,23,42,0.6)] dark:bg-[#0B0D13] ${fullscreen ? "inset-0 rounded-none" : "rounded-2xl border border-black/10 dark:border-white/15"} ${animating ? "transition-all duration-300 ease-out" : ""}`}

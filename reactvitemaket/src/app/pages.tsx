@@ -1238,11 +1238,62 @@ function payTone(status: string): "ok" | "warn" | "azure" {
   return "azure";
 }
 const todayISO = () => new Date().toISOString().slice(0, 10);
+const MONTHS_RU = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const monthLabel = (d: Date) => `${MONTHS_RU[d.getMonth()]} ${d.getFullYear()}`;
+const monthEnd = (d: Date) => {
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return last.toISOString().slice(0, 10);
+};
+
+function EditableField({
+  value,
+  onCommit,
+  placeholder,
+  inputClass,
+  type = "text",
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  placeholder?: string;
+  inputClass?: string;
+  type?: "text" | "number" | "date";
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setDraft(value); setEditing(true); }}
+        className={`block w-full truncate text-left ${inputClass ?? ""}`}
+        title={value || placeholder || ""}
+      >
+        {value || <span className="text-black/35 dark:text-white/35">{placeholder}</span>}
+      </button>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      type={type}
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { setEditing(false); if (draft !== value) onCommit(draft); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); }
+        if (e.key === "Escape") { setDraft(value); setEditing(false); }
+      }}
+      className={`w-full rounded-lg border border-[#0056FF]/40 bg-white px-2 py-1 text-[14px] tracking-tight text-black outline-none focus:ring-2 focus:ring-[#0056FF]/30 dark:bg-white/[0.06] dark:text-white ${inputClass ?? ""}`}
+    />
+  );
+}
 
 function FinanceBody() {
   const {
     role, utilityAccounts, taxes,
-    addUtilityAccount, deleteUtilityAccount, updateUtilityPayment, deleteUtilityPayment,
+    addUtilityAccount, updateUtilityAccount, deleteUtilityAccount,
+    addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     addTax, updateTax, deleteTax,
   } = useStore();
   const canEdit = role !== "guest";
@@ -1256,61 +1307,183 @@ function FinanceBody() {
             <Home size={18} className="text-[#0056FF]" /> ЖКХ
           </div>
           {canEdit && (
-            <GhostButton className="gap-1.5 px-3 text-[13px]" onClick={() => addUtilityAccount({ address: "Новый адрес", accountNumber: "", provider: "" })}>
+            <GhostButton
+              className="gap-1.5 px-3 text-[13px]"
+              onClick={() =>
+                addUtilityAccount({
+                  address: "Новый адрес",
+                  accountNumber: "",
+                  provider: "",
+                })
+              }
+            >
               <Plus size={14} /> Счёт
             </GhostButton>
           )}
         </div>
 
         <div className="mt-4 space-y-4">
-          {utilityAccounts.map((acc) => (
-            <Card key={acc.id} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 16 }}>{acc.address}</div>
-                  <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55 truncate">
-                    {acc.provider}{acc.accountNumber ? ` · ${acc.accountNumber}` : ""}
-                  </div>
-                </div>
-                {canEdit && (
-                  <button onClick={() => deleteUtilityAccount(acc.id)} className="grid h-8 w-8 place-items-center rounded-lg text-black/35 hover:bg-black/[0.04] hover:text-red-500 dark:text-white/35 dark:hover:bg-white/[0.06]">
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-4 space-y-2.5">
-                {acc.payments.map((p) => (
-                  <div key={p.id} className="flex items-center gap-3 rounded-2xl bg-[#F6F7FB] px-4 py-3 dark:bg-white/[0.04]">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="tracking-tight text-black dark:text-white">{p.period}</span>
-                        <Pill tone={payTone(p.status)}>{p.status}</Pill>
+          {utilityAccounts.map((acc) => {
+            const upcoming = acc.payments
+              .filter((p) => p.status !== "Оплачено")
+              .sort((a, b) => (a.paymentDeadline || "").localeCompare(b.paymentDeadline || ""));
+            const overdue = upcoming.find((p) => p.paymentDeadline && p.paymentDeadline < todayISO());
+            return (
+              <Card key={acc.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {canEdit ? (
+                      <EditableField
+                        value={acc.address}
+                        placeholder="Адрес (например, ул. Ленина, 12)"
+                        onCommit={(v) => updateUtilityAccount(acc.id, { address: v })}
+                        inputClass="tracking-tight text-black dark:text-white"
+                        // @ts-expect-error style via className
+                      />
+                    ) : (
+                      <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 16 }}>
+                        {acc.address}
                       </div>
-                      <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">
-                        {BYN(p.amount)}{p.paymentDeadline ? ` · оплатить до ${p.paymentDeadline}` : ""}
-                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                      {canEdit ? (
+                        <>
+                          <EditableField
+                            value={acc.provider}
+                            placeholder="Поставщик"
+                            onCommit={(v) => updateUtilityAccount(acc.id, { provider: v })}
+                            inputClass="bg-transparent text-[12px]"
+                          />
+                          <span>·</span>
+                          <EditableField
+                            value={acc.accountNumber}
+                            placeholder="Лицевой счёт"
+                            onCommit={(v) => updateUtilityAccount(acc.id, { accountNumber: v })}
+                            inputClass="bg-transparent text-[12px]"
+                          />
+                        </>
+                      ) : (
+                        <span>
+                          {acc.provider}
+                          {acc.accountNumber ? ` · ${acc.accountNumber}` : ""}
+                        </span>
+                      )}
                     </div>
-                    {canEdit && p.status !== "Оплачено" && (
-                      <button onClick={() => updateUtilityPayment(acc.id, p.id, { status: "Оплачено", paymentDate: todayISO() })}
-                        className="flex items-center gap-1 rounded-xl bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white">
-                        <Check size={13} /> Оплачено
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button onClick={() => deleteUtilityPayment(acc.id, p.id)} className="grid h-8 w-8 place-items-center rounded-lg text-black/30 hover:text-red-500 dark:text-white/30">
-                        <Trash2 size={14} />
-                      </button>
+                    {overdue && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                        <AlertCircle size={11} /> Просрочен платёж за {overdue.period}
+                      </div>
                     )}
                   </div>
-                ))}
-                {acc.payments.length === 0 && <div className="text-[12px] text-black/45 dark:text-white/45">Платежей пока нет</div>}
-              </div>
-            </Card>
-          ))}
+                  {canEdit && (
+                    <button
+                      onClick={() => deleteUtilityAccount(acc.id)}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-black/35 hover:bg-black/[0.04] hover:text-red-500 dark:text-white/35 dark:hover:bg-white/[0.06]"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  {acc.payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#F6F7FB] px-4 py-3 dark:bg-white/[0.04]"
+                    >
+                      <div className="flex-1 min-w-[120px]">
+                        {canEdit ? (
+                          <div className="flex items-center gap-2">
+                            <EditableField
+                              value={p.period}
+                              placeholder="Период (напр. Июль 2026)"
+                              onCommit={(v) => updateUtilityPayment(acc.id, p.id, { period: v })}
+                            />
+                            <Pill tone={payTone(p.status)}>{p.status}</Pill>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="tracking-tight text-black dark:text-white">{p.period}</span>
+                            <Pill tone={payTone(p.status)}>{p.status}</Pill>
+                          </div>
+                        )}
+                        <div className="mt-0.5 flex items-center gap-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                          {canEdit ? (
+                            <>
+                              <EditableField
+                                value={p.amount ? String(p.amount) : ""}
+                                placeholder="Сумма"
+                                type="number"
+                                onCommit={(v) =>
+                                  updateUtilityPayment(acc.id, p.id, { amount: Number(v) || 0 })
+                                }
+                              />
+                              <span>· оплатить до</span>
+                              <EditableField
+                                value={p.paymentDeadline || ""}
+                                placeholder="—"
+                                type="date"
+                                onCommit={(v) => updateUtilityPayment(acc.id, p.id, { paymentDeadline: v })}
+                              />
+                            </>
+                          ) : (
+                            <span>
+                              {BYN(p.amount)}
+                              {p.paymentDeadline ? ` · оплатить до ${p.paymentDeadline}` : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {canEdit && p.status !== "Оплачено" && (
+                        <button
+                          onClick={() =>
+                            updateUtilityPayment(acc.id, p.id, {
+                              status: "Оплачено",
+                              paymentDate: todayISO(),
+                            })
+                          }
+                          className="flex items-center gap-1 rounded-xl bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white"
+                        >
+                          <Check size={13} /> Оплачено
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          onClick={() => deleteUtilityPayment(acc.id, p.id)}
+                          className="grid h-8 w-8 place-items-center rounded-lg text-black/30 hover:text-red-500 dark:text-white/30"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {canEdit && (
+                    <button
+                      onClick={() =>
+                        addUtilityPayment(acc.id, {
+                          period: monthLabel(new Date()),
+                          amount: 0,
+                          status: "Предстоит",
+                          paymentDeadline: monthEnd(new Date()),
+                        })
+                      }
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 bg-transparent py-3 text-[13px] tracking-tight text-black/55 hover:bg-black/[0.02] dark:border-white/15 dark:text-white/55 dark:hover:bg-white/[0.03]"
+                    >
+                      <Plus size={14} /> Добавить платёж
+                    </button>
+                  )}
+                  {acc.payments.length === 0 && !canEdit && (
+                    <div className="text-[12px] text-black/45 dark:text-white/45">Платежей пока нет</div>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
           {utilityAccounts.length === 0 && (
             <Card className="p-6 text-center text-[13px] tracking-tight text-black/55 dark:text-white/55">
-              Лицевые счета не добавлены. Добавьте счёт, чтобы следить за сроками оплаты и передачи показаний.
+              {canEdit
+                ? "Лицевые счета не добавлены. Нажмите «Счёт», чтобы добавить первый."
+                : "Войдите, чтобы добавлять лицевые счета и следить за сроками оплаты."}
             </Card>
           )}
         </div>
@@ -1323,42 +1496,113 @@ function FinanceBody() {
             <Wallet size={18} className="text-[#0056FF]" /> Налоги
           </div>
           {canEdit && (
-            <GhostButton className="gap-1.5 px-3 text-[13px]" onClick={() => addTax({ title: "Новый налог", userType: "individual", amount: 0, status: "Предстоит", deadline: "", period: String(new Date().getFullYear()) })}>
+            <GhostButton
+              className="gap-1.5 px-3 text-[13px]"
+              onClick={() =>
+                addTax({
+                  title: "Новый налог",
+                  userType: "individual",
+                  amount: 0,
+                  status: "Предстоит",
+                  deadline: "",
+                  period: String(new Date().getFullYear()),
+                })
+              }
+            >
               <Plus size={14} /> Налог
             </GhostButton>
           )}
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {taxes.map((t) => (
-            <Card key={t.id} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 16 }}>{t.title}</div>
-                  <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">
-                    {BYN(t.amount)}{t.deadline ? ` · до ${t.deadline}` : ""}
+          {taxes.map((t) => {
+            const overdue = t.status !== "Оплачено" && t.deadline && t.deadline < todayISO();
+            return (
+              <Card key={t.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {canEdit ? (
+                      <EditableField
+                        value={t.title}
+                        placeholder="Название (напр. Земельный налог)"
+                        onCommit={(v) => updateTax(t.id, { title: v })}
+                        inputClass="tracking-tight text-black dark:text-white"
+                      />
+                    ) : (
+                      <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 16 }}>
+                        {t.title}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                      {canEdit ? (
+                        <>
+                          <EditableField
+                            value={t.amount ? String(t.amount) : ""}
+                            placeholder="Сумма"
+                            type="number"
+                            onCommit={(v) => updateTax(t.id, { amount: Number(v) || 0 })}
+                          />
+                          <span>·</span>
+                          <EditableField
+                            value={t.period || ""}
+                            placeholder="Период (2026)"
+                            onCommit={(v) => updateTax(t.id, { period: v })}
+                          />
+                          <span>· до</span>
+                          <EditableField
+                            value={t.deadline || ""}
+                            placeholder="—"
+                            type="date"
+                            onCommit={(v) => updateTax(t.id, { deadline: v })}
+                          />
+                        </>
+                      ) : (
+                        <span>
+                          {BYN(t.amount)}
+                          {t.deadline ? ` · до ${t.deadline}` : ""}
+                        </span>
+                      )}
+                    </div>
+                    {overdue && (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                        <AlertCircle size={11} /> Просрочен
+                      </div>
+                    )}
                   </div>
+                  <Pill
+                    tone={
+                      t.status === "Оплачено" ? "ok" : overdue ? "warn" : "lavender"
+                    }
+                  >
+                    {t.status}
+                  </Pill>
                 </div>
-                <Pill tone={t.status === "Оплачено" ? "ok" : t.status === "Просрочено" ? "warn" : "lavender"}>{t.status}</Pill>
-              </div>
-              {canEdit && (
-                <div className="mt-4 flex items-center gap-2">
-                  {t.status !== "Оплачено" && (
-                    <button onClick={() => updateTax(t.id, { status: "Оплачено" })}
-                      className="flex items-center gap-1 rounded-xl bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white">
-                      <Check size={13} /> Отметить оплаченным
+                {canEdit && (
+                  <div className="mt-4 flex items-center gap-2">
+                    {t.status !== "Оплачено" && (
+                      <button
+                        onClick={() => updateTax(t.id, { status: "Оплачено" })}
+                        className="flex items-center gap-1 rounded-xl bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white"
+                      >
+                        <Check size={13} /> Отметить оплаченным
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteTax(t.id)}
+                      className="grid h-8 w-8 place-items-center rounded-lg text-black/35 hover:text-red-500 dark:text-white/35"
+                    >
+                      <Trash2 size={14} />
                     </button>
-                  )}
-                  <button onClick={() => deleteTax(t.id)} className="grid h-8 w-8 place-items-center rounded-lg text-black/35 hover:text-red-500 dark:text-white/35">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              )}
-            </Card>
-          ))}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
           {taxes.length === 0 && (
             <Card className="p-6 text-center text-[13px] tracking-tight text-black/55 dark:text-white/55 md:col-span-2">
-              Налоговые обязательства не добавлены.
+              {canEdit
+                ? "Налоговые обязательства не добавлены. Нажмите «Налог», чтобы добавить первое."
+                : "Войдите, чтобы добавлять налоговые обязательства."}
             </Card>
           )}
         </div>

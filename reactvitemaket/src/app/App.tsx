@@ -96,7 +96,7 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
   const accounts = [{ id: "guest", name: "Гость", email: "", role: "guest" }, ...quickAccounts];
   const choose = (id: string) => { signInAs(id); onClose(); navigate("/"); };
   return (
-    <div className="fixed inset-0 z-[95] flex items-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <motion.div
         initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 320, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
@@ -728,8 +728,8 @@ function HeaderUserMenu() {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-[65]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-[52px] z-[70] w-[320px] rounded-3xl border border-black/[0.08] bg-white p-3 shadow-[0_28px_80px_-38px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#0F1117]">
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-[52px] z-[110] w-[320px] rounded-3xl border border-black/[0.08] bg-white p-3 shadow-[0_28px_80px_-38px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#0F1117]">
             <div className="px-2 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Сменить пользователя</div>
             <div className="max-h-[260px] space-y-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
               {menuAccounts.map(account => {
@@ -785,7 +785,7 @@ function DesktopHeaderShell() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F4F5FA] dark:bg-[#05060A]">
-      <header className="flex items-center gap-4 border-b border-black/[0.06] bg-white/80 px-8 py-3 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/80">
+      <header className="relative z-50 flex items-center gap-4 border-b border-black/[0.06] bg-white/80 px-8 py-3 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/80">
         <button onClick={() => go("home")} className="shrink-0"><Logo size={26} /></button>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {TOP_NAV.map(t => {
@@ -858,8 +858,8 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
 
         {menuOpen && (
           <>
-            <div className="fixed inset-0 z-[65]" onClick={() => setMenuOpen(false)} />
-            <div className="absolute left-full top-0 z-[70] ml-3 w-[320px] rounded-3xl border border-black/[0.08] bg-white p-3 shadow-[0_28px_80px_-38px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#0F1117]">
+            <div className="fixed inset-0 z-[100]" onClick={() => setMenuOpen(false)} />
+            <div className="absolute left-full top-0 z-[110] ml-3 w-[320px] rounded-3xl border border-black/[0.08] bg-white p-3 shadow-[0_28px_80px_-38px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#0F1117]">
               <div className="px-2 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Сменить пользователя</div>
               <div className="max-h-[260px] space-y-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
                 {menuAccounts.map(account => {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, ReactNode, useCallback, useEffect } from "react";
+import { createContext, useContext, useMemo, useRef, useState, ReactNode, useCallback, useEffect } from "react";
 import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
@@ -463,6 +463,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const controller = new AbortController();
     setAuthSession(null);
+    // Сбросить токены в shared-хранилище apiClient, чтобы 401-refresh не сработал
+    // от предыдущего пользователя.
+    apiClient.saveTokens(null);
 
     if (currentUser.role === "guest" || !currentUser.email || !currentUser.password) {
       return () => controller.abort();
@@ -470,12 +473,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
     apiClient.login<AuthTokens>(currentUser.email, currentUser.password, { signal: controller.signal })
       .then(tokens => {
-        if (!controller.signal.aborted) setAuthSession(tokens);
+        if (!controller.signal.aborted) {
+          setAuthSession(tokens);
+          apiClient.saveTokens(tokens);
+        }
       })
       .catch(error => {
         if (!controller.signal.aborted) {
           console.warn("Backend auth is unavailable; React keeps local user state.", error);
           setAuthSession(null);
+          apiClient.saveTokens(null);
         }
       });
 
@@ -822,7 +829,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [applyUser]);
 
   const signOut = useCallback(() => {
+    // Дёргаем backend, чтобы refresh_token был revoke. Не блокируем UI
+    // на ошибке сети: локально мы уже стираем сессию.
+    void apiClient.logout().catch(() => undefined);
     setAuthSession(null);
+    apiClient.saveTokens(null);
     applyUser(GUEST_USER);
   }, [applyUser]);
 
@@ -1109,6 +1120,54 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         .catch(error => console.warn("Tax deleted locally; backend delete failed.", error));
     }
   }, [authSession?.access_token, role]);
+
+  // --- Синхронизация напоминаний с backend UserNotification (триггер email) ---
+  // buildReminders возвращает локальные AppNotification. По ТЗ дедлайны
+  // ЖКХ/налогов и истекающие документы должны также попадать в центр
+  // уведомлений на бэке и инициировать email-отправку. Чтобы не дублировать,
+  // помечаем каждый id напоминания в localStorage после первого пуша.
+  const REMINDER_PUSHED_KEY = "belp.remindersPushed";
+  const pushedRemindersRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(REMINDER_PUSHED_KEY);
+      if (raw) pushedRemindersRef.current = new Set(JSON.parse(raw) as string[]);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (role === "guest" || !authSession?.access_token) return;
+    if (typeof window === "undefined") return;
+    const fresh = buildReminders(documents, utilityAccounts, taxes, settings);
+    for (const r of fresh) {
+      if (pushedRemindersRef.current.has(r.id)) continue;
+      // Маппим kind → notification_type: document_expiring → doc_expiry, остальные → task_due.
+      const notificationType = r.kind === "document_expiring" ? "doc_expiry" : "task_due";
+      apiClient
+        .createUserNotification<unknown>(authSession.access_token, {
+          title: r.title,
+          description: r.body,
+          notification_type: notificationType,
+          due_date: r.createdAt || null,
+          send_email: true,
+        })
+        .then(() => {
+          pushedRemindersRef.current.add(r.id);
+          try {
+            window.localStorage.setItem(
+              REMINDER_PUSHED_KEY,
+              JSON.stringify(Array.from(pushedRemindersRef.current)),
+            );
+          } catch {
+            /* ignore */
+          }
+        })
+        .catch((err) => console.warn("Reminder sync failed; staying local-only.", err));
+    }
+  }, [documents, utilityAccounts, taxes, settings, authSession?.access_token, role]);
 
   // --- Editor / UGC publications (local-first; backend persistence later) ---
   const articleToServer = (a: Partial<Article>): Record<string, unknown> => {

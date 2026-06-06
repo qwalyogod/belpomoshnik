@@ -9,31 +9,133 @@ export type AuthTokens = {
   expires_in: number;
 };
 
+// API_BASE_URL — динамический.
+// 1) Если задан VITE_API_BASE_URL в env — используем его (dev/prod).
+// 2) Иначе — берём origin из ServerPicker (там же, где React на iPhone).
+// 3) Фолбэк — 127.0.0.1:8000 для локального запуска вне Capacitor.
+//
+// Идея: Vite-сервер и бэк живут на одном origin (vite на :8560, бэк на :8060).
+// Если picker хранит http://192.168.x.x:8560, то API_BASE = http://192.168.x.x:8060.
+// Меняйте порт через env если у вас другое разнесение.
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const DEV_BACKEND_PORT = "8060";
 
-export const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
+function resolveApiBaseUrl(): string {
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (typeof window === "undefined") return DEFAULT_API_BASE_URL;
+  try {
+    const raw = window.localStorage.getItem("belpomoshnik.serverUrl");
+    if (raw) {
+      const u = new URL(raw);
+      // Vite origin -> API на соседнем порту
+      const nextPort = u.port === "8560" || u.port === "8550" ? DEV_BACKEND_PORT : u.port;
+      return `${u.protocol}//${u.hostname}:${nextPort}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_API_BASE_URL;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+
+const REFRESH_STORAGE_KEY = "belpomoshnik.authTokens";
+const REFRESH_INFLIGHT: { promise: Promise<AuthTokens | null> | null } = { promise: null };
+
+function loadStoredTokens(): AuthTokens | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REFRESH_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as AuthTokens) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredTokens(tokens: AuthTokens | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (tokens) window.localStorage.setItem(REFRESH_STORAGE_KEY, JSON.stringify(tokens));
+    else window.localStorage.removeItem(REFRESH_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function refreshTokens(): Promise<AuthTokens | null> {
+  if (REFRESH_INFLIGHT.promise) return REFRESH_INFLIGHT.promise;
+  const current = loadStoredTokens();
+  if (!current?.refresh_token) return null;
+  const p = (async () => {
+    try {
+      const body = new URLSearchParams();
+      body.set("refresh_token", current.refresh_token);
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      if (!res.ok) {
+        saveStoredTokens(null);
+        return null;
+      }
+      const next = (await res.json()) as AuthTokens;
+      saveStoredTokens(next);
+      return next;
+    } catch {
+      return null;
+    } finally {
+      REFRESH_INFLIGHT.promise = null;
+    }
+  })();
+  REFRESH_INFLIGHT.promise = p;
+  return p;
+}
 
 async function requestJson<T>(path: string, options: RequestInit & ApiRequestOptions = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
+  // На 401 пытаемся один раз обновить access_token и повторить исходный запрос.
+  // Не делаем этого для самого /api/auth/*, чтобы не зациклиться.
+  const isAuthEndpoint = path.startsWith("/api/auth/");
+  let attempt = 0;
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `API request failed: ${response.status}`);
+  while (attempt < 2) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+    });
+
+    if (response.status === 401 && !isAuthEndpoint && attempt === 0) {
+      const next = await refreshTokens();
+      if (next?.access_token) {
+        // Подменяем токен в заголовке и пробуем ещё раз.
+        const headers = new Headers(options.headers || {});
+        headers.set("Authorization", `Bearer ${next.access_token}`);
+        options = { ...options, headers };
+        attempt++;
+        continue;
+      }
+    }
+
+    if (!response.ok) {
+      const message = await response.text().catch(() => "");
+      lastError = new Error(message || `API request failed: ${response.status}`);
+      break;
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return response.json() as Promise<T>;
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
+  throw lastError ?? new Error("API request failed");
 }
 
 function authHeaders(accessToken: string) {
@@ -100,6 +202,17 @@ export const apiClient = {
     }),
   getUserNotifications: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/user/notifications", { headers: authHeaders(accessToken), ...options }),
+  createUserNotification: <T>(
+    accessToken: string,
+    payload: { title: string; description?: string; notification_type?: string; due_date?: string | null; send_email?: boolean },
+    options?: ApiRequestOptions,
+  ) =>
+    requestJson<T>("/api/user/notifications", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
   markNotificationRead: <T>(accessToken: string, id: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/user/notifications/${encodeURIComponent(id)}/read`, {
       method: "PATCH",
@@ -323,4 +436,27 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+
+  // --- Auth helpers (хранилище токенов и выход) ---
+
+  saveTokens: (tokens: AuthTokens | null) => saveStoredTokens(tokens),
+  loadTokens: () => loadStoredTokens(),
+
+  logout: async (options?: ApiRequestOptions): Promise<void> => {
+    const current = loadStoredTokens();
+    saveStoredTokens(null);
+    if (!current?.refresh_token) return;
+    try {
+      const body = new URLSearchParams();
+      body.set("refresh_token", current.refresh_token);
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+        ...options,
+      });
+    } catch {
+      // На бэке refresh всё равно истечёт, локально мы уже стёрли токены.
+    }
+  },
 };

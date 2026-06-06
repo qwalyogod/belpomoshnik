@@ -139,6 +139,131 @@ def build_doc_expiry_body(doc_titles: list[str]) -> tuple[str, str]:
     return plain, html
 
 
+def build_task_due_body(
+    tasks: list[dict],
+    user_name: str = "",
+) -> tuple[str, str]:
+    """MVP-сценарий №1: дедлайн задачи.
+
+    `tasks` — список словарей с ключами `title`, `due_date` (ISO-строка),
+    `situation_title` (опц.), `description` (опц.).
+    Возвращает (plain_text, html).
+    """
+    greeting = f"Здравствуйте, {user_name}!" if user_name else "Здравствуйте!"
+    plain_lines = [
+        greeting,
+        "",
+        "## Скоро истекает срок задачи",
+        "---",
+        "Следующие задачи требуют вашего внимания:",
+        "",
+    ]
+    for t in tasks:
+        line = f"  • {t.get('title', 'Без названия')}"
+        if t.get("due_date"):
+            line += f" — до {t['due_date']}"
+        if t.get("situation_title"):
+            line += f" (ситуация «{t['situation_title']}»)"
+        plain_lines.append(line)
+        if t.get("description"):
+            plain_lines.append(f"      {t['description']}")
+    plain_lines += [
+        "",
+        "Откройте приложение, чтобы отметить выполненные шаги и увидеть детали.",
+        "",
+        "С уважением,",
+        f"Команда {APP_NAME}",
+    ]
+    plain = "\n".join(plain_lines)
+    html = _html_template(f"Срок задачи подходит — {APP_NAME}", plain)
+    return plain, html
+
+
+def build_legal_update_body(
+    updates: list[dict],
+    user_name: str = "",
+) -> tuple[str, str]:
+    """MVP-сценарий №2: новое важное изменение в законодательстве.
+
+    `updates` — список словарей с ключами `title`, `effective_date`,
+    `summary` (краткое описание), `action_needed` (что сделать), `source_url`.
+    Возвращает (plain_text, html).
+    """
+    greeting = f"Здравствуйте, {user_name}!" if user_name else "Здравствуйте!"
+    plain_lines = [
+        greeting,
+        "",
+        "## Важные изменения в законодательстве",
+        "---",
+        "Опубликованы изменения, которые могут касаться вас:",
+        "",
+    ]
+    for u in updates:
+        plain_lines.append(f"  • {u.get('title', 'Изменение')}")
+        if u.get("effective_date"):
+            plain_lines.append(f"      Действует с: {u['effective_date']}")
+        if u.get("summary"):
+            for line in str(u["summary"]).splitlines():
+                plain_lines.append(f"      {line}")
+        if u.get("action_needed"):
+            plain_lines.append(f"      Что сделать: {u['action_needed']}")
+        if u.get("source_url"):
+            plain_lines.append(f"      Источник: {u['source_url']}")
+        plain_lines.append("")
+    plain_lines += [
+        "Откройте раздел «Важное для вас» в приложении, чтобы увидеть подробности.",
+        "",
+        "С уважением,",
+        f"Команда {APP_NAME}",
+    ]
+    plain = "\n".join(plain_lines)
+    html = _html_template(f"Новые изменения в законодательстве — {APP_NAME}", plain)
+    return plain, html
+
+
+def build_email_for_notification(
+    db: Session,
+    notification: "UserNotification",
+    user: "User",
+) -> tuple[str, str] | None:
+    """Универсальный билдер: по типу UserNotification выбирает шаблон.
+
+    Возвращает (subject, body) или None, если для типа нет шаблона.
+    Используется в API при ручной отправке уведомления на почту.
+    """
+    from backend.models import UserNotification  # noqa: F401  (type-only import)
+
+    ntype = getattr(notification, "notification_type", "task")
+    title = notification.title
+    description = notification.description or ""
+    raw_due = getattr(notification, "due_date", None)
+    if raw_due is None:
+        due = None
+    elif hasattr(raw_due, "isoformat"):
+        due = raw_due.isoformat()
+    else:
+        due = str(raw_due)
+
+    if ntype == "doc_expiry":
+        body, html = build_doc_expiry_body([title])
+        return f"Срок документа: {title}", body
+    if ntype in ("task", "task_due"):
+        body, html = build_task_due_body([{
+            "title": title,
+            "description": description,
+            "due_date": due,
+        }], user_name=user.name or "")
+        return f"Срок задачи: {title}", body
+    if ntype in ("legal_update", "law_update"):
+        body, html = build_legal_update_body([{
+            "title": title,
+            "summary": description,
+            "effective_date": due,
+        }], user_name=user.name or "")
+        return f"Новое в законодательстве: {title}", body
+    return None
+
+
 # ---------------------------------------------------------------------------
 # I4 — Постановка письма в очередь
 # ---------------------------------------------------------------------------

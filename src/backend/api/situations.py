@@ -95,6 +95,10 @@ class NotificationIn(BaseModel):
     notification_type: str = "task"
     source: str = ""
     due_date: str | None = None
+    # Если True — письмо-дубликат автоматически ставится в очередь.
+    # По ТЗ email-копии обязательны для 2 сценариев: дедлайн задачи, новый закон-апдейт.
+    # Под капотом то же поведение, что и для типов task_due/legal_update/doc_expiry.
+    send_email: bool = False
 
 
 class NotificationOut(BaseModel):
@@ -268,10 +272,33 @@ def list_notifications(user: User = Depends(get_current_user), db: Session = Dep
 
 @router.post("/notifications", response_model=NotificationOut, status_code=status.HTTP_201_CREATED)
 def create_notification(payload: NotificationIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    n = UserNotification(id=_new_id(), user_id=user.id, **payload.model_dump())
+    # Не пишем send_email в БД — это флаг для авто-постановки email-дубликата
+    data = payload.model_dump()
+    send_email_flag = data.pop("send_email", False)
+    n = UserNotification(id=_new_id(), user_id=user.id, **data)
     db.add(n)
     db.commit()
     db.refresh(n)
+
+    # Авто-постановка в email-очередь:
+    #  - send_email=True (явный запрос)
+    #  - или тип уведомления из MVP-сценариев ТЗ: дедлайн задачи, закон-апдейт, срок документа
+    auto_email_types = {"task_due", "legal_update", "law_update", "doc_expiry"}
+    if send_email_flag or payload.notification_type in auto_email_types:
+        from backend.email_service import build_email_for_notification, enqueue_email
+
+        built = build_email_for_notification(db, n, user)
+        if built is not None and user.email:
+            subject, body = built
+            enqueue_email(
+                db,
+                user_id=user.id,
+                recipient=user.email,
+                subject=subject,
+                body=body,
+                notification_type=payload.notification_type,
+            )
+
     return NotificationOut.model_validate(n)
 
 
@@ -308,3 +335,49 @@ def delete_notification(notification_id: str, user: User = Depends(get_current_u
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Уведомление не найдено.")
     db.delete(n)
     db.commit()
+
+
+@router.post("/notifications/{notification_id}/email")
+def email_notification(
+    notification_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Поставить email-копию уведомления в очередь отправки.
+
+    Возвращает id записи EmailNotification. Cron-таска в `scheduler.py`
+    дёргает `send_pending_emails` каждые 60 секунд.
+    """
+    from backend.email_service import build_email_for_notification, enqueue_email
+
+    n = db.scalars(
+        select(UserNotification).where(
+            UserNotification.id == notification_id,
+            UserNotification.user_id == user.id,
+        )
+    ).first()
+    if not n:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Уведомление не найдено.")
+    if not user.email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="У пользователя не задан email.")
+
+    built = build_email_for_notification(db, n, user)
+    if built is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Для типа «{n.notification_type}» email-шаблон не настроен.",
+        )
+    subject, body = built
+    entry = enqueue_email(
+        db,
+        user_id=user.id,
+        recipient=user.email,
+        subject=subject,
+        body=body,
+        notification_type=n.notification_type,
+    )
+    return {
+        "email_id": entry.id,
+        "status": entry.status,
+        "scheduled_at": entry.scheduled_at.isoformat() if entry.scheduled_at else None,
+    }
