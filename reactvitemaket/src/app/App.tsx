@@ -83,58 +83,110 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   );
 }
 
-export function MobileTopBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: React.ReactNode }) {
-  return (
-    // v0.9: sticky к верху страницы, фон полупрозрачный чтобы контент
-    // при скролле плавно уходил под него. safe-area-top через paddingTop
-    // (iOS-шейф-зона). z-[40] — выше контента, ниже модалок/меню.
-    <div
-      className="sticky top-0 z-40 flex items-center justify-between border-b border-black/[0.04] bg-[#F6F7FB]/85 px-5 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
-      style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
-    >
-      {onBack ? (
-        <button onClick={onBack} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]">
-          <ChevronLeft size={18} className="text-black dark:text-white" />
-        </button>
-      ) : <div className="w-10" />}
-      <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>{title}</div>
-      <div className="w-10 flex justify-end">{right}</div>
-    </div>
-  );
+// v0.10: ВСЁ, что нужно для mobile header (back/title/bell), теперь
+// рендерится в MobileBrandBar внутри shell. MobileTopBar сохранён как
+// no-op для обратной совместимости (страницы его ещё вызывают), но ничего
+// не рисует. Удалим все его вызовы в следующем проходе.
+export function MobileTopBar(_props: { title: string; onBack?: () => void; right?: React.ReactNode }) {
+  return null;
 }
 
 /* v0.9: «бренд-бар» — логотип + название + кнопка уведомлений.
    Рендерится внутри MobileShell один раз, на каждой странице.
    На главной показывается полный (лого+название+уведомления),
    на остальных — только кнопка уведомлений. */
+/* v0.10: единый mobile header. На главной (/, /onboarding, /welcome) —
+   лого+имя «Белпомощник», на остальных — back+title раздела, всегда —
+   колокольчик справа. Title берётся из pathname (fallback — сегмент URL). */
+const MOBILE_TITLES: Record<string, string> = {
+  "/": "Главная",
+  "/onboarding": "Добро пожаловать",
+  "/welcome": "Добро пожаловать",
+  "/catalog": "Каталог ситуаций",
+  "/scenarios": "Каталог",
+  "/situations": "Мои ситуации",
+  "/documents": "Мои документы",
+  "/finance": "ЖКХ и налоги",
+  "/news": "Новости",
+  "/sources": "Источники",
+  "/notifications": "Уведомления",
+  "/profile": "Профиль",
+  "/settings": "Настройки",
+  "/learning": "Обучение",
+  "/about": "О приложении",
+  "/login": "Войти",
+  "/register": "Регистрация",
+  "/admin": "Админ-панель",
+  "/editor": "Редактор контента",
+  "/problems": "Проблемы",
+  "/law-detail": "Закон-апдейт",
+  "/problem-detail": "Проблема",
+};
+
+function mobileTitleFromPath(pathname: string): string {
+  if (MOBILE_TITLES[pathname]) return MOBILE_TITLES[pathname];
+  // для динамических: /situations/:id, /scenarios/:id, /law-detail/:id
+  for (const key of Object.keys(MOBILE_TITLES)) {
+    if (pathname.startsWith(`${key}/`)) return MOBILE_TITLES[key];
+  }
+  return "Белпомощник";
+}
+
 export function MobileBrandBar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isHome = location.pathname === "/" || location.pathname === "/onboarding" || location.pathname === "/welcome";
+  const isHome =
+    location.pathname === "/" ||
+    location.pathname === "/onboarding" ||
+    location.pathname === "/welcome";
+  const title = mobileTitleFromPath(location.pathname);
   return (
     <div
-      className="sticky top-0 z-40 flex items-center justify-between border-b border-black/[0.04] bg-[#F6F7FB]/85 px-5 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
       style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
     >
-      {isHome ? (
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2"
-        >
-          <Logo size={26} />
-          <div className="text-[15px] font-semibold tracking-tight text-black dark:text-white">Белпомощник</div>
-        </button>
-      ) : (
-        <div className="w-10" />
-      )}
-      <div className="flex items-center gap-1">
+      {/* Левая зона: 40px */}
+      <div className="flex w-10 shrink-0 items-center">
+        {isHome ? (
+          <button
+            onClick={() => navigate("/")}
+            aria-label="На главную"
+            className="flex items-center gap-2"
+          >
+            <Logo size={26} />
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Назад"
+            className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
+          >
+            <ChevronLeft size={18} className="text-black dark:text-white" />
+          </button>
+        )}
+      </div>
+
+      {/* Центр: title (или лого+имя на главной) */}
+      <div className="min-w-0 flex-1 text-center">
+        {isHome ? (
+          <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
+            Белпомощник
+          </div>
+        ) : (
+          <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
+            {title}
+          </div>
+        )}
+      </div>
+
+      {/* Правая зона: bell 40px */}
+      <div className="flex w-10 shrink-0 items-center justify-end">
         <button
           onClick={() => navigate("/notifications")}
-          className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
           aria-label="Уведомления"
+          className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
         >
           <Bell size={17} className="text-black dark:text-white" />
-          {/* Можно подцепить unreadCount из useStore при желании */}
         </button>
       </div>
     </div>
