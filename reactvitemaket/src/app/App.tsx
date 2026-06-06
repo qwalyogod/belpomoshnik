@@ -160,11 +160,11 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
     );
   };
   const left: { id: Page; i: React.ReactNode; n: string }[] = [
+    { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
     { id: "home", i: <Home size={20} />, n: "Главная" },
-    { id: "situations", i: <FileText size={20} />, n: "Ситуации" },
   ];
   const right: { id: Page; i: React.ReactNode; n: string }[] = [
-    { id: "documents", i: <Shield size={20} />, n: "Документы" },
+    { id: "news", i: <Newspaper size={20} />, n: "Новости" },
     { id: "profile", i: <User size={20} />, n: "Профиль" },
   ];
   return (
@@ -708,16 +708,19 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
   );
 }
 
+// v0.5: Каталог — первая основная функция (поиск информации), поэтому идёт
+// первым. «Уведомления» убраны из меню — остались только как кнопка с
+// колокольчиком в правом блоке. «Важное» (/legal) закрыто — редирект на
+// /news (см. routes.tsx). В v0.7 лента новостей объединит обычные новости
+// и закон-апдейты.
 const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string }[] = [
+  { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
   { id: "home", icon: <Home size={16} />, label: "Главная" },
   { id: "situations", icon: <FileText size={16} />, label: "Ситуации", badge: "3" },
   { id: "documents", icon: <Shield size={16} />, label: "Документы" },
   { id: "finance", icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
-  { id: "notifications", icon: <Bell size={16} />, label: "Уведомления", badge: "5" },
   { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
-  { id: "legal", icon: <BookOpen size={16} />, label: "Важное" },
   { id: "sources", icon: <Shield size={16} />, label: "Источники" },
-  { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
 ];
 
 function HeaderUserMenu() {
@@ -895,17 +898,16 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </div>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Личный кабинет</div>
+        {item("catalog", <LayoutGrid size={16} />, "Каталог ситуаций")}
         {item("home", <Home size={16} />, "Главная")}
         {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
         {item("documents", <Shield size={16} />, "Документы")}
-        {item("notifications", <Bell size={16} />, "Уведомления", "5")}
         {item("news", <Newspaper size={16} />, "Новости")}
-        {item("legal", <BookOpen size={16} />, "Важное для вас")}
         {item("sources", <Shield size={16} />, "Источники")}
       </nav>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>
-        {item("catalog", <LayoutGrid size={16} />, "Каталог ситуаций")}
+        {item("finance", <Wallet size={16} />, "ЖКХ и налоги")}
         {item("profile", <User size={16} />, "Профиль")}
         {(role === "admin" || role === "editor") && (
           <button onClick={openAdmin} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]">

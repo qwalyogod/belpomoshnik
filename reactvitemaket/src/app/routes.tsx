@@ -1,5 +1,5 @@
 import React from "react";
-import { createBrowserRouter, useOutletContext, useParams, useNavigate } from "react-router";
+import { createBrowserRouter, useOutletContext, useParams, useNavigate, Navigate } from "react-router";
 import { useStore } from "./data/store";
 import { ShellContext, RootLayout } from "./App";
 import { MobileHome, DesktopHome } from "./App";
@@ -144,7 +144,9 @@ export const router = createBrowserRouter([
       { path: "scenarios/:id", element: <ScenarioPageWrapper /> },
       { path: "documents", element: <DocumentsPage /> },
       { path: "finance", element: <FinancePage /> },
-      { path: "legal", element: <LegalPage /> },
+      // v0.5: «Важное» закрыто — редирект на /news. В v0.7 там добавим
+      // фильтр-чипы «Все / Новости / Закон-апдейт».
+      { path: "legal", element: <Navigate to="/news" replace /> },
       { path: "news", element: <NewsPage /> },
       { path: "sources", element: <SourcesPage /> },
       { path: "law-detail/:id", element: <LawDetailPage /> },
