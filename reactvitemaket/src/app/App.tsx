@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate, useLocation, RouterProvider } from "react-router";
 import { router } from "./routes";
 import { motion, AnimatePresence } from "motion/react";
