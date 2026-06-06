@@ -1,0 +1,66 @@
+/*
+ * Mobile & tablet UX fixes (ТЗ, дизайн-ревью 2026-06-06)
+ *
+ *  1. user-select: none    — нельзя выделять текст на мобиле/планшете
+ *  2. -webkit-touch-callout: none — не показывать iOS callout (копировать/искать)
+ *  3. -webkit-tap-highlight-color: transparent — убрать синюю подсветку тапа
+ *  4. font-size: 16px на <input>/<textarea>/<select> — iOS Safari не зумит фокус
+ *  5. touch-action: manipulation — отключает double-tap-to-zoom на ссылках/кнопках
+ *  6. overscroll-behavior: none — не дёргать страницу при свайпе сверху/снизу
+ *
+ *  Сработает на breakpoint <= 1023px (mobile + tablet). На desktop не трогаем —
+ *  там выделение текста нужно для копирования планов.
+ */
+
+@media (max-width: 1023px) {
+  html, body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* Разрешить выделение и callout ТОЛЬКО там, где это нужно по UX:
+     полям ввода, текстовым областям и редактируемым зонам. */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  [contenteditable=""],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* iOS зумит фокус на input, если font-size < 16px. Принудительно 16px
+     + отключаем автоматический ресайз шрифта пользователем. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Отключаем double-tap-to-zoom на интерактивных элементах.
+     pinch-zoom уже отключён через <meta viewport user-scalable=no>,
+     но double-tap zoom живёт отдельным флагом. */
+  button,
+  a,
+  [role="button"],
+  label,
+  summary,
+  .no-zoom {
+    touch-action: manipulation;
+  }
+}
+
+/* iOS: убрать серый "автозаполнитель" подсветку паролей в WebView. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #ffffff inset;
+  -webkit-text-fill-color: inherit;
+  transition: background-color 5000s ease-in-out 0s;
+}
