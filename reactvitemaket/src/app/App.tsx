@@ -53,7 +53,12 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
     // высоту viewport и плюс естественный overflow.
     <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      {/* v0.9: brand-bar (лого+имя на главной, только кнопка уведомлений
+          на остальных страницах) — sticky сверху, в нём же учтён
+          safe-area-inset-top, поэтому общий paddingTop shell-у
+          больше не нужен. */}
+      <MobileBrandBar />
+      <div>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -80,7 +85,13 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
 
 export function MobileTopBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between px-5 pt-12 pb-3">
+    // v0.9: sticky к верху страницы, фон полупрозрачный чтобы контент
+    // при скролле плавно уходил под него. safe-area-top через paddingTop
+    // (iOS-шейф-зона). z-[40] — выше контента, ниже модалок/меню.
+    <div
+      className="sticky top-0 z-40 flex items-center justify-between border-b border-black/[0.04] bg-[#F6F7FB]/85 px-5 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+    >
       {onBack ? (
         <button onClick={onBack} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]">
           <ChevronLeft size={18} className="text-black dark:text-white" />
@@ -88,6 +99,44 @@ export function MobileTopBar({ title, onBack, right }: { title: string; onBack?:
       ) : <div className="w-10" />}
       <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>{title}</div>
       <div className="w-10 flex justify-end">{right}</div>
+    </div>
+  );
+}
+
+/* v0.9: «бренд-бар» — логотип + название + кнопка уведомлений.
+   Рендерится внутри MobileShell один раз, на каждой странице.
+   На главной показывается полный (лого+название+уведомления),
+   на остальных — только кнопка уведомлений. */
+export function MobileBrandBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === "/" || location.pathname === "/onboarding" || location.pathname === "/welcome";
+  return (
+    <div
+      className="sticky top-0 z-40 flex items-center justify-between border-b border-black/[0.04] bg-[#F6F7FB]/85 px-5 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+    >
+      {isHome ? (
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2"
+        >
+          <Logo size={26} />
+          <div className="text-[15px] font-semibold tracking-tight text-black dark:text-white">Белпомощник</div>
+        </button>
+      ) : (
+        <div className="w-10" />
+      )}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => navigate("/notifications")}
+          className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
+          aria-label="Уведомления"
+        >
+          <Bell size={17} className="text-black dark:text-white" />
+          {/* Можно подцепить unreadCount из useStore при желании */}
+        </button>
+      </div>
     </div>
   );
 }
@@ -212,16 +261,10 @@ function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => vo
   const firstLegal = legal[0];
   const firstName = currentUser.role === "guest" ? "" : (currentUser.name || "").split(" ")[0];
   return (
-    <div className="h-full overflow-y-auto px-5 pb-32 pt-12 [&::-webkit-scrollbar]:hidden">
-      <div className="flex items-center justify-between">
-        <Logo size={26} />
-        <button onClick={() => onNavigate("notifications")} className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]">
-          <Bell size={17} className="text-black dark:text-white" />
-          <span className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-[#0056FF] text-[10px] text-white">3</span>
-        </button>
-      </div>
-
-      <div className="mt-5">
+    <div className="h-full overflow-y-auto px-5 pb-32 [&::-webkit-scrollbar]:hidden">
+      {/* v0.9: логотип+название+уведомления рендерятся в MobileBrandBar
+          (sticky сверху), здесь убрали чтобы не дублировать. */}
+      <div className="mt-3">
         <div className="tracking-tight text-black/50 dark:text-white/50">Добрый день{firstName ? `, ${firstName}` : ""}</div>
         <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 28, lineHeight: 1.1 }}>
           Какая у вас<br />ситуация?
