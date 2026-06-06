@@ -13,7 +13,7 @@ import { motion } from "motion/react";
 import { UserDocument } from "./data/types";
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
-import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed } from "./components/extra-screens";
+import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
 
 function PageSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -277,12 +277,14 @@ export function SituationsPage() {
 
 export function DocumentsPage() {
   const { isMobile } = useContext(ShellContext);
-  const { documents, settings } = useStore();
+  const { documents, settings, role } = useStore();
   const navigate = useNavigate();
   const context = useOutletContext<{ onAddDoc?: () => void }>();
   const onAddDoc = context?.onAddDoc ?? (() => undefined);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
+  // v0.3: открытая карточка документа (read-only preview + PDF upload)
+  const [cardId, setCardId] = useState<string | null>(null);
 
   const filtered = documents.filter(d => {
     if (filter === "active" && d.status !== "active") return false;
@@ -307,22 +309,28 @@ export function DocumentsPage() {
 
           <div className="space-y-3">
             {filtered.map((d) => (
-              <Card key={d.id} className="flex items-center gap-3 p-4">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                  <FileText size={18} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="tracking-tight text-black dark:text-white truncate">{d.title}</div>
-                  <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55 truncate">
-                    {maskDocumentNumber(d.number, !settings.privacy.maskDocuments)}
+              <button
+                key={d.id}
+                onClick={() => setCardId(d.id)}
+                className="block w-full text-left"
+              >
+                <Card className="flex items-center gap-3 p-4">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                    <FileText size={18} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="tracking-tight text-black dark:text-white truncate">{d.title}</div>
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55 truncate">
+                      {maskDocumentNumber(d.number, !settings.privacy.maskDocuments)}
+                    </div>
                   </div>
-                </div>
-                {d.status === 'expired' ? (
-                  <span className="text-[11px] text-red-500 bg-red-50 dark:bg-red-500/20 px-2 py-1 rounded">Истёк</span>
-                ) : d.expiresAt ? (
-                  <span className="text-[11px] text-black/50 dark:text-white/50 px-2 py-1">до {d.expiresAt}</span>
-                ) : null}
-              </Card>
+                  {d.status === 'expired' ? (
+                    <span className="text-[11px] text-red-500 bg-red-50 dark:bg-red-500/20 px-2 py-1 rounded">Истёк</span>
+                  ) : d.expiresAt ? (
+                    <span className="text-[11px] text-black/50 dark:text-white/50 px-2 py-1">до {d.expiresAt}</span>
+                  ) : null}
+                </Card>
+              </button>
             ))}
             {filtered.length === 0 && <div className="text-center mt-8 text-[13px] text-black/55">Документы не найдены</div>}
           </div>
@@ -331,6 +339,12 @@ export function DocumentsPage() {
             <ScanLine size={16} /> Добавить документ
           </button>
         </div>
+        <DocumentCardModal
+          open={cardId !== null}
+          onClose={() => setCardId(null)}
+          docId={cardId}
+          onEdit={role === "guest" ? undefined : (id) => context?.onAddDoc?.()}
+        />
       </div>
     );
   }
@@ -356,30 +370,38 @@ export function DocumentsPage() {
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(d => (
-          <Card key={d.id} className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                <FileText size={18} />
+          <button key={d.id} onClick={() => setCardId(d.id)} className="block text-left">
+            <Card className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                  <FileText size={18} />
+                </div>
+                {d.status === "expired" && <Pill tone="warn">Истёк</Pill>}
+                {d.status === "expiring" && <Pill tone="warn">Скоро истекает</Pill>}
+                {d.status === "active" && <Pill tone="ok">Активен</Pill>}
               </div>
-              {d.status === "expired" && <Pill tone="warn">Истёк</Pill>}
-              {d.status === "expiring" && <Pill tone="warn">Скоро истекает</Pill>}
-              {d.status === "active" && <Pill tone="ok">Активен</Pill>}
-            </div>
-            <div className="mt-4 tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>{d.title}</div>
-            <div className="mt-1 font-mono text-[13px] tracking-wider text-black/55 dark:text-white/55">
-              {maskDocumentNumber(d.number, !settings.privacy.maskDocuments)}
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-[12px] text-black/55 dark:text-white/55">
-              <div><div>Выдан</div><div className="mt-0.5 text-black dark:text-white">{d.issuedAt}</div></div>
-              {d.expiresAt && <div><div>Годен до</div><div className="mt-0.5 text-black dark:text-white">{d.expiresAt}</div></div>}
-            </div>
-            <div className="mt-4 flex gap-2">
-               <GhostButton className="flex-1 py-1.5 text-[12px]">Показать</GhostButton>
-            </div>
-          </Card>
+              <div className="mt-4 tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>{d.title}</div>
+              <div className="mt-1 font-mono text-[13px] tracking-wider text-black/55 dark:text-white/55">
+                {maskDocumentNumber(d.number, !settings.privacy.maskDocuments)}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-[12px] text-black/55 dark:text-white/55">
+                <div><div>Выдан</div><div className="mt-0.5 text-black dark:text-white">{d.issuedAt}</div></div>
+                {d.expiresAt && <div><div>Годен до</div><div className="mt-0.5 text-black dark:text-white">{d.expiresAt}</div></div>}
+              </div>
+              <div className="mt-4 flex gap-2">
+                 <GhostButton className="flex-1 py-1.5 text-[12px]">Открыть</GhostButton>
+              </div>
+            </Card>
+          </button>
         ))}
         {filtered.length === 0 && <div className="col-span-full mt-4 text-[14px] text-black/55 dark:text-white/55">Документы не найдены.</div>}
       </div>
+      <DocumentCardModal
+        open={cardId !== null}
+        onClose={() => setCardId(null)}
+        docId={cardId}
+        onEdit={role === "guest" ? undefined : (id) => context?.onAddDoc?.()}
+      />
     </div>
   );
 }

@@ -253,6 +253,32 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+  uploadDocumentScan: async (
+    accessToken: string,
+    docId: string,
+    file: File,
+    options?: ApiRequestOptions,
+  ): Promise<{ doc_id: number; scan_url: string; scan_size: number; updated_at: string | null }> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/api/user/documents/${encodeURIComponent(docId)}/scan`, {
+      method: "POST",
+      headers: authHeaders(accessToken), // browser sets multipart boundary
+      body: form,
+      ...options,
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => "");
+      throw new Error(message || `Upload failed: ${res.status}`);
+    }
+    return res.json();
+  },
+  deleteDocumentScan: (accessToken: string, id: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/user/documents/${encodeURIComponent(id)}/scan`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
 
   getUserSituations: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/user/situations", { headers: authHeaders(accessToken), ...options }),
