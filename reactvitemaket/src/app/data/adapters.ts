@@ -24,6 +24,7 @@ import type {
   Article,
   ArticleKind,
   ArticleStatus,
+  CustomField,
 } from "./types";
 
 type LooseRecord = Record<string, unknown>;
@@ -253,14 +254,38 @@ export function adaptProblem(input: LooseRecord): Problem {
 
 export function adaptUserDocument(input: LooseRecord): UserDocument {
   const expiresAt = text(input.expiresAt || input.expires_at || input.expiry_date, "") || undefined;
+  // v0.4: парсим custom_fields_json (если бэк прислал) или принимаем массивом
+  let customFields: CustomField[] | undefined;
+  const rawCustom = input.customFields ?? input.custom_fields_json;
+  if (Array.isArray(rawCustom)) {
+    customFields = rawCustom.filter(
+      (item): item is CustomField =>
+        item && typeof item === "object" && typeof item.name === "string" && typeof item.value === "string",
+    );
+  } else if (typeof rawCustom === "string" && rawCustom.trim()) {
+    try {
+      const parsed = JSON.parse(rawCustom);
+      if (Array.isArray(parsed)) {
+        customFields = parsed.filter(
+          (item): item is CustomField =>
+            item && typeof item === "object" && typeof item.name === "string" && typeof item.value === "string",
+        );
+      }
+    } catch {
+      customFields = undefined;
+    }
+  }
   return {
     id: identifier(input.id, "document"),
     type: documentType(input.type || input.doc_type || input.document_type),
     title: text(input.title || input.name, "Документ"),
     number: text(input.number || input.document_number, ""),
     issuedAt: text(input.issuedAt || input.issued_at || input.issued_date, "") || undefined,
+    issuedBy: text(input.issuedBy || input.issued_by, "") || undefined,
+    comment: text(input.comment, "") || undefined,
     expiresAt,
     status: computedDocumentStatus(expiresAt ?? "", input.status),
+    customFields: customFields && customFields.length > 0 ? customFields : undefined,
   };
 }
 

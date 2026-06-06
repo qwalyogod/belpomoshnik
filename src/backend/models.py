@@ -489,6 +489,9 @@ class UserDocument(Base, TimestampMixin):
     is_sensitive: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
     scan_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # v0.4: пользовательские поля для doc_type='other'. Храним как JSON-строку,
+    # чтобы не плодить колонки. Для остальных типов остаётся пустым.
+    custom_fields_json: Mapped[str] = mapped_column(String(2000), default="", nullable=False)
 
     user: Mapped[User] = relationship(back_populates="documents")
 
