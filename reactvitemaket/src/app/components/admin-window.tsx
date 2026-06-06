@@ -29,7 +29,18 @@ function AdminWindow({ open, isMobile, editor, signal, onClose }: { open: boolea
 
   const onHeaderDown = (e: React.MouseEvent) => {
     if (maximized || isMobile) return;
-    drag.current = { sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y };
+    startDrag(e.clientX, e.clientY);
+  };
+
+  // v0.8: long-press на фоне (не на header) 600мс -> включается drag.
+  // Помогает на touch и тем, кто не нашёл узкий header-bar. Чтобы не
+  // путать со скроллом/обычным тапом, жёсткий 600мс + drag начинается не
+  // с момента mousedown, а с момента отпускания после удержания.
+  const holdRef = useRef<{ timer: number; sx: number; sy: number; ox: number; oy: number; fired: boolean } | null>(null);
+  const HOLD_MS = 600;
+
+  const startDrag = (sx: number, sy: number) => {
+    drag.current = { sx, sy, ox: pos.x, oy: pos.y };
     const move = (ev: MouseEvent) => {
       if (!drag.current) return;
       setPos({ x: drag.current.ox + ev.clientX - drag.current.sx, y: drag.current.oy + ev.clientY - drag.current.sy });
@@ -42,6 +53,51 @@ function AdminWindow({ open, isMobile, editor, signal, onClose }: { open: boolea
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
   };
+
+  const onBgPointerDown = (e: React.PointerEvent) => {
+    // Не запускаем hold, если нажали на интерактивный элемент (кнопка, input, link)
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select, [role='button'], [data-no-drag]")) return;
+    if (maximized || isMobile) return;
+    if (drag.current) return;
+
+    holdRef.current = {
+      timer: window.setTimeout(() => {
+        const h = holdRef.current;
+        if (!h || h.fired) return;
+        h.fired = true;
+        // Стартуем drag из текущей позиции курсора/тача
+        startDrag(e.clientX, e.clientY);
+      }, HOLD_MS),
+      sx: e.clientX,
+      sy: e.clientY,
+      ox: pos.x,
+      oy: pos.y,
+      fired: false,
+    };
+  };
+  const onBgPointerMove = (e: React.PointerEvent) => {
+    const h = holdRef.current;
+    if (!h || h.fired) return;
+    // Отменяем hold, если палец/мышь сдвинулся > 8px — это скролл/тап, не удержание
+    if (Math.abs(e.clientX - h.sx) > 8 || Math.abs(e.clientY - h.sy) > 8) {
+      window.clearTimeout(h.timer);
+      holdRef.current = null;
+    }
+  };
+  const onBgPointerUp = () => {
+    const h = holdRef.current;
+    if (!h) return;
+    window.clearTimeout(h.timer);
+    holdRef.current = null;
+  };
+
+  // Очистка таймера при unmount/закрытии
+  useEffect(() => {
+    return () => {
+      if (holdRef.current) window.clearTimeout(holdRef.current.timer);
+    };
+  }, []);
 
   if (!open) return null;
   const fullscreen = isMobile || maximized;
@@ -56,10 +112,17 @@ function AdminWindow({ open, isMobile, editor, signal, onClose }: { open: boolea
       <div
         style={style}
         className={`pointer-events-auto absolute flex flex-col overflow-hidden bg-white shadow-[0_40px_120px_-20px_rgba(15,23,42,0.6)] dark:bg-[#0B0D13] ${fullscreen ? "inset-0 rounded-none" : "rounded-2xl border border-black/10 dark:border-white/15"} ${animating ? "transition-all duration-300 ease-out" : ""}`}
+        onPointerDown={onBgPointerDown}
+        onPointerMove={onBgPointerMove}
+        onPointerUp={onBgPointerUp}
+        onPointerCancel={onBgPointerUp}
       >
         <div
           onMouseDown={onHeaderDown}
           onDoubleClick={() => !isMobile && setMaximized(m => !m)}
+          // v0.8: safe-area-top inset, чтобы крестик и кнопки не уходили
+          // за iOS-шейф-зону на устройствах вроде iPhone с Dynamic Island.
+          style={{ paddingTop: "env(safe-area-inset-top)", minHeight: "calc(2.5rem + env(safe-area-inset-top))" }}
           className={`flex shrink-0 items-center justify-between bg-[#0B0D13] px-4 py-2.5 text-white ${fullscreen ? "" : "cursor-move"}`}
         >
           <div className="flex items-center gap-2 text-[13px] tracking-tight">
