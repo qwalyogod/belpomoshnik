@@ -159,6 +159,8 @@ export const router = createBrowserRouter([
       { path: "register", element: <RegisterPage /> },
       { path: "about", element: <AboutPage /> },
       { path: "onboarding", element: <OnboardingPage /> },
+      // v1.0: лендинг для гостя. Прямой URL тоже работает (например, share).
+      { path: "welcome", element: <WelcomePage /> },
       { path: "problems", element: <ProblemsPage /> },
       { path: "admin", element: <AdminPageWrapper /> },
       { path: "editor", element: <EditorPageWrapper /> }
