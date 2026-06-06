@@ -1803,11 +1803,11 @@ function OnboardingGate() {
   const { role } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
+  // v1.0: гость на '/' -> /welcome (лендинг). /onboarding оставлен для
+  // залогиненых (первый запуск после регистрации -> 4 шага -> '/').
   useEffect(() => {
     if (role !== "guest") return;
-    let onboarded = true;
-    try { onboarded = !!localStorage.getItem("belp.onboarded"); } catch { /* ignore */ }
-    if (!onboarded && location.pathname === "/") navigate("/onboarding", { replace: true });
+    if (location.pathname === "/") navigate("/welcome", { replace: true });
   }, [role, location.pathname, navigate]);
   return null;
 }

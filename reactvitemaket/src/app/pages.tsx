@@ -481,6 +481,157 @@ const ONBOARDING_STEPS = [
   { icon: <Award size={22} />, badge: "04", title: "Ведите прогресс", desc: "Отмечайте выполненное и смотрите, как ситуация движется к завершению." },
 ];
 
+/* ============================================================
+   v1.0: WelcomePage — лендинг для гостя (вместо обычного дашборда).
+   Гость, зашедший на /, редиректится на /welcome и видит эту страницу.
+   После регистрации/логина возвращается на / (дашборд).
+   ============================================================ */
+export function WelcomePage() {
+  const navigate = useNavigate();
+  const [activeCategory, setActiveCategory] = useState<string>("documents");
+  const [activeStep, setActiveStep] = useState<number>(0);
+
+  // Демо-карточки сценариев для блока «Попробуйте»
+  const DEMO_CATEGORIES = [
+    { id: "documents", label: "Документы", icon: <Shield size={18} />, color: "from-[#001A66] to-[#0056FF]" },
+    { id: "housing", label: "ЖКХ", icon: <Home size={18} />, color: "from-[#0056FF] to-[#2277FF]" },
+    { id: "taxes", label: "Налоги", icon: <Wallet size={18} />, color: "from-[#2277FF] to-[#9BB8FF]" },
+    { id: "family", label: "Семья", icon: <Heart size={18} />, color: "from-[#001A66] to-[#9BB8FF]" },
+  ];
+
+  const DEMO_STEPS = [
+    { title: "Выберите сценарий", desc: "Паспорт, ЖКХ, налоги, прописка — уже готовые пошаговые планы.", icon: <Search size={20} /> },
+    { title: "Создайте свою ситуацию", desc: "Один тап — и в «Моих ситуациях» появятся задачи, документы, сроки.", icon: <Plus size={20} /> },
+    { title: "Получайте напоминания", desc: "Белпомощник напомнит о дедлайнах и приближающихся сроках документов.", icon: <Bell size={20} /> },
+  ];
+
+  return (
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
+      {/* Декоративные blur-орбы */}
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0056FF]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-[#2277FF]/10 blur-3xl" />
+
+      <div className="relative mx-auto max-w-[1100px] px-5 pb-32 pt-6 sm:px-8 sm:pt-10">
+        {/* v1.0: brand-bar */}
+        <div className="flex items-center justify-between">
+          <button onClick={() => navigate("/welcome")} className="flex items-center gap-2">
+            <Logo size={30} />
+          </button>
+          <button
+            onClick={() => navigate("/login")}
+            className="text-[13px] tracking-tight text-black/65 hover:text-black dark:text-white/65 dark:hover:text-white"
+          >
+            Войти
+          </button>
+        </div>
+
+        {/* Hero */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+            <Sparkles size={12} /> mobile-first · Беларусь
+          </span>
+          <h1 className="mt-5 max-w-[18ch] text-[36px] font-medium leading-[1.05] tracking-tight text-black dark:text-white sm:text-[56px]">
+            Помощник, который <span className="bg-gradient-to-r from-[#0056FF] to-[#2277FF] bg-clip-text text-transparent">превращает проблему</span> в понятный план
+          </h1>
+          <p className="mt-5 max-w-[58ch] text-[15px] leading-relaxed tracking-tight text-black/65 dark:text-white/65 sm:text-[18px]">
+            Найдите жизненную ситуацию, получите чек-лист, документы, сроки и напоминания. Без канцелярита. Паспорт, ЖКХ, налоги, прописка — по шагам.
+          </p>
+
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <PrimaryButton onClick={() => navigate("/register")} className="px-7 sm:w-auto">Зарегистрироваться</PrimaryButton>
+            <GhostButton onClick={() => navigate("/login")} className="px-7">У меня уже есть аккаунт</GhostButton>
+          </div>
+        </motion.div>
+
+        {/* Категории — интерактивные табы с превью */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="mt-14">
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Попробуйте</div>
+              <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>Жизненные ситуации</h2>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {DEMO_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setActiveCategory(c.id)}
+                className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-left transition-all ${activeCategory === c.id ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.06] bg-white text-black/70 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white/70"}`}
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br text-white" style={{ backgroundImage: `linear-gradient(135deg, var(--tw-gradient-stops))` }}>
+                  {c.icon}
+                </span>
+                <span className="text-[14px] font-medium tracking-tight">{c.label}</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Шаги работы */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="mt-14">
+          <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Как это работает</div>
+          <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>Три шага до результата</h2>
+          <div className="mt-5 space-y-3">
+            {DEMO_STEPS.map((step, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveStep(i)}
+                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all ${activeStep === i ? "border-[#0056FF] bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-white/[0.04]"}`}
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#0056FF] text-white">{step.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 15 }}>{i + 1}. {step.title}</div>
+                  <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">{step.desc}</div>
+                </div>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-black/30 dark:text-white/30">{String(i + 1).padStart(2, "0")}</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* CTA блок */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-14 overflow-hidden rounded-3xl p-1">
+          <div
+            className="rounded-[22px] p-8 text-white sm:p-10"
+            style={{ background: "radial-gradient(120% 100% at 0% 0%, #2277FF 0%, #0056FF 45%, #001A66 100%)" }}
+          >
+            <div className="text-[12px] uppercase tracking-[0.14em] text-white/70">Готовы попробовать?</div>
+            <h3 className="mt-2 max-w-[20ch] tracking-tight" style={{ fontSize: 28, lineHeight: 1.1 }}>
+              Зарегистрируйтесь — это бесплатно и занимает минуту.
+            </h3>
+            <p className="mt-3 max-w-[48ch] text-[14px] leading-relaxed text-white/80">
+              После регистрации вы получите доступ к каталогу ситуаций, документам, уведомлениям и админ-панели (если у вас есть роль редактора или администратора).
+            </p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => navigate("/register")}
+                className="rounded-2xl bg-white px-6 py-3 text-[14px] font-semibold tracking-tight text-[#0056FF] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.25)]"
+              >
+                Создать аккаунт
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                className="rounded-2xl border border-white/30 bg-white/10 px-6 py-3 text-[14px] font-semibold tracking-tight text-white backdrop-blur"
+              >
+                У меня уже есть аккаунт
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Footer */}
+        <div className="mt-12 flex flex-col items-center gap-2 text-[12px] text-black/40 dark:text-white/40 sm:flex-row sm:justify-between">
+          <div>© 2026 Белпомощник · Беларусь</div>
+          <div className="flex gap-4">
+            <button onClick={() => navigate("/about")} className="hover:text-black dark:hover:text-white">О приложении</button>
+            <button onClick={() => navigate("/login")} className="hover:text-black dark:hover:text-white">Войти</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const finish = (to: string) => {
