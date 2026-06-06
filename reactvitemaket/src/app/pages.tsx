@@ -532,15 +532,64 @@ export function OnboardingPage() {
 export function NewsPage() {
   const { isMobile } = useContext(ShellContext);
   const navigate = useNavigate();
-  const { articles } = useStore();
-  const hasNews = articles.some((a) => a.status === "published" && a.kind === "news");
+  const { articles, legal } = useStore();
 
-  const empty = !hasNews && (
+  // v0.7: объединяем «Новости» (статьи с kind='news') и «Закон-апдейты»
+  // (массив legal) в одну ленту с фильтр-чипами. Подписка на закон-апдейты
+  // уже есть в settings.notifications.legal.
+  type FilterKey = "all" | "news" | "law";
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  const newsList = articles
+    .filter((a) => a.status === "published" && a.kind === "news")
+    .map((a) => ({
+      kind: "news" as const,
+      title: a.title,
+      summary: a.summary ?? "",
+      date: a.publishedAt ?? a.updatedAt ?? "",
+      // никаких дополнительных полей
+    }));
+
+  const lawList = legal.map((l) => ({
+    kind: "law" as const,
+    title: l.title,
+    summary: l.summary ?? "",
+    date: l.effectiveDate ?? "",
+    sourceUrl: l.sourceUrl,
+    priority: l.priority,
+  }));
+
+  const combined =
+    filter === "news" ? newsList
+    : filter === "law" ? lawList
+    : [...newsList, ...lawList].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+
+  const filterCounts = {
+    all: newsList.length + lawList.length,
+    news: newsList.length,
+    law: lawList.length,
+  };
+
+  const filterChips = ([
+    { key: "all" as const, label: "Все" },
+    { key: "news" as const, label: "Новости" },
+    { key: "law" as const, label: "Закон-апдейт" },
+  ]).map((c) => (
+    <button
+      key={c.key}
+      onClick={() => setFilter(c.key)}
+      className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${filter === c.key ? "bg-[#0056FF] text-white" : "bg-white text-black/70 hover:bg-black/[0.04] dark:bg-white/[0.06] dark:text-white/70 dark:hover:bg-white/[0.08]"}`}
+    >
+      {c.label} {filterCounts[c.key] > 0 ? <span className="ml-1 opacity-60">{filterCounts[c.key]}</span> : null}
+    </button>
+  ));
+
+  const empty = combined.length === 0 && (
     <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
       <div>
         <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><Newspaper size={20} /></div>
-        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>Пока нет новостей</div>
-        <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">Материалы редакции появятся здесь. Можно предложить свою новость.</div>
+        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>Пока нет материалов</div>
+        <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">Редакционные публикации и закон-апдейты появятся здесь.</div>
       </div>
     </div>
   );
@@ -551,7 +600,12 @@ export function NewsPage() {
         <MobileTopBar title="Новости" onBack={() => navigate(-1)} />
         <div className="px-5 space-y-4">
           <ProposeButton kind="news" className="w-full justify-center" />
-          <EditorialFeed kind="news" title="Новости редакции" />
+          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">{filterChips}</div>
+          <div className="space-y-3">
+            {combined.map((item, i) => (
+              <NewsCard key={`${item.kind}-${i}-${item.title}`} item={item} navigate={navigate} />
+            ))}
+          </div>
           {empty}
         </div>
       </div>
@@ -560,13 +614,49 @@ export function NewsPage() {
 
   return (
     <div className="p-8">
-      <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Материалы</div>
-      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Новости и публикации</div>
-      <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Материалы редакции: адаптация, трудоустройство, правовые источники и работа с организациями.</p>
-      <div className="mt-6"><ProposeButton kind="news" /></div>
-      <div className="mt-8"><EditorialFeed kind="news" title="Новости редакции" /></div>
+      <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Лента</div>
+      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Новости и закон-апдейты</div>
+      <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Редакционные материалы и релевантные изменения в законодательстве, подобранные под профиль.</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <ProposeButton kind="news" />
+        <div className="flex flex-wrap gap-2">{filterChips}</div>
+      </div>
+      <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {combined.map((item, i) => (
+          <NewsCard key={`${item.kind}-${i}-${item.title}`} item={item} navigate={navigate} />
+        ))}
+      </div>
       {empty}
     </div>
+  );
+}
+
+function NewsCard({
+  item, navigate,
+}: {
+  item:
+    | { kind: "news"; title: string; summary: string; date: string }
+    | { kind: "law"; title: string; summary: string; date: string; sourceUrl?: string; priority?: "low" | "medium" | "high" };
+  navigate: (path: string) => void;
+}) {
+  const isLaw = item.kind === "law";
+  return (
+    <button
+      onClick={() => isLaw ? navigate("/legal") : navigate("/news")}
+      className="block text-left"
+    >
+      <Card className="flex h-full flex-col p-5">
+        <div className="flex items-center gap-2">
+          <Pill tone={isLaw ? "warn" : "lavender"}>
+            {isLaw ? "Закон-апдейт" : "Новость"}
+          </Pill>
+          {isLaw && item.priority === "high" && <Pill tone="warn"><AlertCircle size={11} /> Важное</Pill>}
+        </div>
+        <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 16, lineHeight: 1.25 }}>{item.title}</div>
+        {item.summary && <div className="mt-1 line-clamp-3 text-[13px] tracking-tight text-black/55 dark:text-white/55">{item.summary}</div>}
+        {item.date && <div className="mt-auto pt-3 text-[11px] tracking-tight text-black/40 dark:text-white/40">{item.date}</div>}
+      </Card>
+    </button>
   );
 }
 
