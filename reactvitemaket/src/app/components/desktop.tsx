@@ -11,8 +11,9 @@ import { Card, Pill, PrimaryButton, GhostButton, Logo } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
 import { useStore } from "../data/store";
 import type { Article } from "../data/types";
-import { CATEGORIES } from "../data/mock";
-import { REGION_NAMES, districtsForRegion } from "../data/geo";
+import { RegionsEditor } from "./regions-editor";
+import { LawEditor } from "./law-editor";
+import { AuthoritiesEditor } from "./authorities-editor";
 
 function NavItem({ icon, label, active, badge, onClick }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; onClick?: () => void }) {
   return (
@@ -260,7 +261,7 @@ const SAMPLE_TOP_MATERIALS = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, authorities } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, addCategory, updateCategory, deleteCategory, setAdminUserRole, setAdminUserActive } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -303,7 +304,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     const el = navScrollRef.current;
     if (el && el.clientWidth) setNavPage(Math.round(el.scrollLeft / el.clientWidth));
   };
-  const catLabel = (id: string) => CATEGORIES.find((c) => c.id === id)?.name ?? id;
+  const catLabel = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
   const statusLabel = (s: string) => (s === "published" ? "Опубликовано" : s === "review" ? "На проверке" : s === "rejected" ? "Отклонено" : "Черновик");
 
   const apiRows = admin.scenarios.map((s) => ({
@@ -665,68 +666,115 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     </div>
   );
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [catEditing, setCatEditing] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [catDraft, setCatDraft] = useState("");
+  const startCatEdit = (id: string, name: string) => { setCatEditing(id); setCatDraft(name); };
+  const saveCat = (id: string) => { updateCategory(id, catDraft); setCatEditing(null); };
   const categoriesBody = (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {categories.map((c) => {
-        const cnt = admin.scenarios.filter((s) => catLabel(s.category) === c.name).length + articles.filter((a) => a.category === c.name).length;
-        return (
-          <Card key={c.id} className="p-4">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><LayoutGrid size={16} /></div>
-            <div className="mt-3 tracking-tight text-black dark:text-white">{c.name}</div>
-            <div className="mt-0.5 text-[12px] tracking-tight text-black/45 dark:text-white/45">{cnt} материалов</div>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
-  const authoritiesBody = authorities.length === 0 ? sectionEmpty(<Building2 size={20} />, "Учреждения загружаются", "Справочник госучреждений появится из API.") : (
-    <Card className="p-0">
-      <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <table className="w-full min-w-[640px]">
-          <thead><tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40"><th className="px-5 py-3">Учреждение</th><th className="py-3">Город</th><th className="py-3">Телефон</th><th className="py-3 pr-5">Адрес</th></tr></thead>
-          <tbody className="text-[13px] tracking-tight text-black dark:text-white">
-            {authorities.map((a) => (
-              <tr key={a.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
-                <td className="px-5 py-3.5">{a.name}</td>
-                <td className="py-3.5 text-black/65 dark:text-white/65">{a.city || "—"}</td>
-                <td className="py-3.5 text-black/55 dark:text-white/55">{a.phone || "—"}</td>
-                <td className="max-w-[260px] truncate py-3.5 pr-5 text-black/50 dark:text-white/50">{a.address || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-[13px] tracking-tight text-black/55 dark:text-white/55">{categories.length} категорий</div>
+        <button
+          onClick={() => { const n = window.prompt("Название новой категории"); if (n?.trim()) addCategory(n.trim()); }}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"
+        >
+          <Plus size={14} /> Категория
+        </button>
       </div>
-    </Card>
-  );
-
-  const regionsBody = (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {REGION_NAMES.map((r) => {
-        const ds = districtsForRegion(r);
-        return (
-          <Card key={r} className="p-4">
-            <div className="flex items-center gap-2"><MapPin size={15} className="text-[#0056FF]" /><span className="tracking-tight text-black dark:text-white">{r}</span></div>
-            <div className="mt-1 text-[12px] tracking-tight text-black/45 dark:text-white/45">{ds.length} районов</div>
-            <div className="mt-2 line-clamp-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">{ds.slice(0, 4).map((d) => d.center || d.name).join(", ")}{ds.length > 4 ? "…" : ""}</div>
-          </Card>
-        );
-      })}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {categories.map((c) => {
+          const cnt = admin.scenarios.filter((s) => catLabel(s.category) === c.name).length + articles.filter((a) => a.category === c.name).length;
+          const isEditing = catEditing === c.id;
+          return (
+            <Card key={c.id} className="p-4">
+              <div className="flex items-start justify-between gap-1">
+                <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><LayoutGrid size={16} /></div>
+                <button
+                  onClick={() => { if (window.confirm(`Удалить категорию «${c.name}»?`)) deleteCategory(c.id); }}
+                  className="grid h-6 w-6 place-items-center rounded-lg text-black/25 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-white/25"
+                  title="Удалить"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              {isEditing ? (
+                <div className="mt-2 flex items-center gap-1">
+                  <input
+                    autoFocus
+                    value={catDraft}
+                    onChange={(e) => setCatDraft(e.target.value)}
+                    onBlur={() => saveCat(c.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveCat(c.id); if (e.key === "Escape") setCatEditing(null); }}
+                    className="min-w-0 flex-1 rounded-lg border border-[#0056FF] bg-white px-2 py-1 text-[13px] tracking-tight text-black outline-none dark:bg-white/[0.04] dark:text-white"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="mt-3 cursor-text tracking-tight text-black dark:text-white hover:text-[#0056FF] dark:hover:text-[#7FA8FF]"
+                  onClick={() => startCatEdit(c.id, c.name)}
+                  title="Нажмите, чтобы переименовать"
+                >
+                  {c.name}
+                </div>
+              )}
+              <div className="mt-0.5 text-[12px] tracking-tight text-black/45 dark:text-white/45">{cnt} материалов</div>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 
+  const authoritiesBody = <AuthoritiesEditor mobile={mobile} />;
+
+  const regionsBody = <RegionsEditor mobile={mobile} />;
+
+  const uniqueRoles = [
+    { value: "citizen", label: "Гражданин" },
+    { value: "editor", label: "Редактор" },
+    { value: "admin", label: "Администратор" },
+  ];
+  const roleValue = (raw: string) => (uniqueRoles.some(r => r.value === raw) ? raw : "citizen");
   const usersBody = admin.users.length === 0 ? sectionEmpty(<Users size={20} />, "Доступно администратору", "Список пользователей и ролей виден только администратору платформы.") : (
     <Card className="p-0">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <table className="w-full min-w-[560px]">
-          <thead><tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40"><th className="px-5 py-3">Имя</th><th className="py-3">Email</th><th className="py-3">Роль</th><th className="py-3 pr-5">Статус</th></tr></thead>
+        <table className="w-full min-w-[640px]">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+              <th className="px-5 py-3">Имя</th>
+              <th className="py-3">Email</th>
+              <th className="py-3">Роль</th>
+              <th className="py-3">Статус</th>
+              <th className="py-3 pr-5" />
+            </tr>
+          </thead>
           <tbody className="text-[13px] tracking-tight text-black dark:text-white">
             {admin.users.map((u) => (
               <tr key={u.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
                 <td className="px-5 py-3.5">{u.name || "—"}</td>
                 <td className="py-3.5 text-black/55 dark:text-white/55">{u.email}</td>
-                <td className="py-3.5"><Pill tone="lavender">{roleLabel(u.role)}</Pill></td>
-                <td className="py-3.5 pr-5"><Pill tone={u.isActive ? "ok" : "ghost"}>{u.isActive ? "Активен" : "Заблокирован"}</Pill></td>
+                <td className="py-3.5">
+                  <select
+                    value={roleValue(u.role)}
+                    onChange={(e) => setAdminUserRole(u.id, e.target.value)}
+                    className="rounded-lg border border-black/10 bg-white px-2 py-1 text-[12px] tracking-tight text-black outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                  >
+                    {uniqueRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </td>
+                <td className="py-3.5">
+                  <Pill tone={u.isActive ? "ok" : "warn"}>{u.isActive ? "Активен" : "Заблокирован"}</Pill>
+                </td>
+                <td className="whitespace-nowrap py-3.5 pr-5 text-right">
+                  <button
+                    onClick={() => setAdminUserActive(u.id, !u.isActive)}
+                    className={`inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors ${u.isActive ? "border-red-500/30 text-red-500 hover:bg-red-500/[0.08]" : "border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/[0.08] dark:text-emerald-400"}`}
+                  >
+                    <Ban size={12} /> {u.isActive ? "Заблокировать" : "Разблокировать"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -752,20 +800,74 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     </div>
   );
 
+  type RuleState = { enabled: boolean; days: number };
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [ruleStates, setRuleStates] = useState<Record<string, RuleState>>(() => {
+    try { const s = window.localStorage.getItem("belp.rules"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  const toggleRule = (key: string, def: RuleState) => {
+    const next = { ...ruleStates, [key]: { ...(ruleStates[key] ?? def), enabled: !(ruleStates[key]?.enabled ?? def.enabled) } };
+    setRuleStates(next);
+    try { window.localStorage.setItem("belp.rules", JSON.stringify(next)); } catch { /* ok */ }
+  };
+  const setRuleDays = (key: string, def: RuleState, days: number) => {
+    const next = { ...ruleStates, [key]: { ...(ruleStates[key] ?? def), days } };
+    setRuleStates(next);
+    try { window.localStorage.setItem("belp.rules", JSON.stringify(next)); } catch { /* ok */ }
+  };
   const RULE_TYPES = [
-    { l: "Истечение срока документа", d: "Напоминание за 60 и 14 дней до окончания срока." },
-    { l: "Срок уплаты налога", d: "Уведомление о приближении срока уплаты." },
-    { l: "Показания счётчиков ЖКХ", d: "Ежемесячное напоминание о передаче показаний." },
-    { l: "Дедлайн по ситуации", d: "Напоминание о незавершённых задачах сценария." },
+    { key: "doc_expiry", l: "Истечение срока документа", d: "Уведомление за N дней до окончания срока.", daysLabel: "За сколько дней", def: { enabled: true, days: 60 } },
+    { key: "tax_due", l: "Срок уплаты налога", d: "Напоминание о приближении срока уплаты.", daysLabel: "За сколько дней", def: { enabled: true, days: 14 } },
+    { key: "utility_counter", l: "Показания счётчиков ЖКХ", d: "Ежемесячное напоминание о передаче показаний.", daysLabel: "День месяца (1-28)", def: { enabled: true, days: 25 } },
+    { key: "situation_deadline", l: "Дедлайн по ситуации", d: "Напоминание о незавершённых задачах сценария.", daysLabel: "За сколько дней до дедлайна", def: { enabled: true, days: 3 } },
   ];
   const rulesBody = (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {RULE_TYPES.map((r) => (
-        <Card key={r.l} className="flex items-start gap-3 p-4">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><Bell size={16} /></div>
-          <div><div className="tracking-tight text-black dark:text-white">{r.l}</div><div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">{r.d}</div></div>
-        </Card>
-      ))}
+    <div className="space-y-3">
+      <div className="mb-2 text-[13px] tracking-tight text-black/55 dark:text-white/55">
+        Управление правилами автоматических уведомлений для всех пользователей.
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {RULE_TYPES.map((r) => {
+          const st: RuleState = ruleStates[r.key] ?? r.def;
+          return (
+            <Card key={r.key} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors ${st.enabled ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "bg-black/[0.04] text-black/35 dark:bg-white/[0.04] dark:text-white/35"}`}>
+                    <Bell size={16} />
+                  </div>
+                  <div>
+                    <div className="tracking-tight text-black dark:text-white">{r.l}</div>
+                    <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">{r.d}</div>
+                  </div>
+                </div>
+                <div
+                  role="switch"
+                  aria-checked={st.enabled}
+                  onClick={() => toggleRule(r.key, r.def)}
+                  className={`relative mt-0.5 h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${st.enabled ? "bg-[#0056FF]" : "bg-black/20 dark:bg-white/20"}`}
+                >
+                  <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${st.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+              </div>
+              {st.enabled && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{r.daysLabel}:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={st.days}
+                    onChange={(e) => setRuleDays(r.key, r.def, Number(e.target.value) || r.def.days)}
+                    className="w-16 rounded-lg border border-black/10 bg-white px-2 py-1 text-center text-[13px] tabular-nums tracking-tight text-black outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                  />
+                  <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">дней</span>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -802,6 +904,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
           : section === "moderation" ? moderationBody
           : section === "scenarios" ? scenariosBody
           : section === "categories" ? categoriesBody
+          : section === "law" ? <LawEditor mobile={mobile} />
           : section === "authorities" ? authoritiesBody
           : section === "regions" ? regionsBody
           : section === "users" ? usersBody

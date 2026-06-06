@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, useState, ReactNode, useCallback, u
 import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
-  AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article,
+  AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
@@ -12,6 +12,7 @@ import {
 import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
+import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
@@ -102,6 +103,33 @@ type Store = {
   updateSettings: (patch: Partial<Settings>) => void;
   setLang: (l: Lang) => void;
 
+  // geography (regions → districts → city), editable by admin
+  geo: GeoRegion[];
+  addRegion: (name: string) => void;
+  deleteRegion: (region: string) => void;
+  updateRegion: (originalName: string, next: GeoRegion) => void;
+  resetGeo: () => void;
+
+  // legal updates, editable by admin
+  addLegal: (item: Omit<LegalUpdate, "id">) => void;
+  updateLegal: (id: string, patch: Partial<LegalUpdate>) => void;
+  deleteLegal: (id: string) => void;
+  resetLegal: () => void;
+
+  // categories, editable by admin
+  addCategory: (name: string) => void;
+  updateCategory: (id: string, name: string) => void;
+  deleteCategory: (id: string) => void;
+
+  // institutions (authorities), editable by admin
+  addAuthority: (item: Omit<Institution, "id">) => void;
+  updateAuthority: (id: string, patch: Partial<Institution>) => void;
+  deleteAuthority: (id: string) => void;
+
+  // admin user management
+  setAdminUserRole: (id: string, role: string) => void;
+  setAdminUserActive: (id: string, active: boolean) => void;
+
   // helpers
   scenarioById: (id: string) => Scenario | undefined;
   problemById: (id: string) => Problem | undefined;
@@ -160,6 +188,9 @@ const CURRENT_USER_KEY = "belp.currentUserId";
 const USER_DATA_PREFIX = "belp.userData.";
 const ARTICLES_KEY = "belp.articles";
 const BLOCKED_SUBMITTERS_KEY = "belp.blockedSubmitters";
+const LEGAL_KEY = "belp.legal";
+const CATEGORIES_KEY = "belp.categories";
+const AUTHORITIES_KEY = "belp.authorities";
 
 type PersistedUserData = {
   situations: UserSituation[];
@@ -380,9 +411,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const role = currentUser.role;
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
   const [problems, setProblems] = useState<Problem[]>(PROBLEMS);
-  const [legal, setLegal] = useState<LegalUpdate[]>(LEGAL_UPDATES);
+  const [legal, setLegal] = useState<LegalUpdate[]>(() => safeRead<LegalUpdate[]>(LEGAL_KEY, LEGAL_UPDATES));
   const [publicDocuments, setPublicDocuments] = useState<DocumentRef[]>([]);
-  const [authorities, setAuthorities] = useState<Institution[]>([]);
+  const [authorities, setAuthorities] = useState<Institution[]>(() => safeRead<Institution[]>(AUTHORITIES_KEY, []));
+  const [mutableCategories, setMutableCategories] = useState<Category[]>(() => safeRead<Category[]>(CATEGORIES_KEY, CATEGORIES));
   const [publicContentStatus, setPublicContentStatus] = useState<Store["publicContentStatus"]>("fallback");
   const [publicContentError, setPublicContentError] = useState<string | undefined>(undefined);
   const [situations, setSituations] = useState<UserSituation[]>(INITIAL_SITUATIONS);
@@ -393,6 +425,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // moderation queue can see citizen submissions). Global localStorage, not per-user.
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
+  // Editable geography (regions → districts → city). Admin edits persist globally.
+  const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED));
   const [viewsDaily, setViewsDaily] = useState<{ date: string; count: number }[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
@@ -465,6 +499,73 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // Platform-wide content + moderation block-list (cached locally for offline).
   useEffect(() => { safeWrite(ARTICLES_KEY, articles); }, [articles]);
   useEffect(() => { safeWrite(BLOCKED_SUBMITTERS_KEY, blockedSubmitters); }, [blockedSubmitters]);
+  useEffect(() => { safeWrite(GEO_KEY, geo); }, [geo]);
+  useEffect(() => { safeWrite(LEGAL_KEY, legal); }, [legal]);
+  useEffect(() => { safeWrite(CATEGORIES_KEY, mutableCategories); }, [mutableCategories]);
+  useEffect(() => { safeWrite(AUTHORITIES_KEY, authorities); }, [authorities]);
+
+  // --- Geography CRUD (admin "Регионы и города") ---
+  const addRegion = useCallback((name: string) => {
+    const region = name.trim();
+    if (!region) return;
+    setGeo((prev) => (prev.some((r) => r.region === region) ? prev : [...prev, { region, region_center: "", districts: [] }]));
+  }, []);
+  const deleteRegion = useCallback((region: string) => {
+    setGeo((prev) => prev.filter((r) => r.region !== region));
+  }, []);
+  const updateRegion = useCallback((originalName: string, next: GeoRegion) => {
+    const region = next.region.trim();
+    if (!region) return;
+    setGeo((prev) => prev.map((r) => (r.region === originalName ? { ...next, region } : r)));
+  }, []);
+  const resetGeo = useCallback(() => setGeo(GEO_SEED), []);
+
+  // --- Legal updates CRUD ---
+  const addLegal = useCallback((item: Omit<LegalUpdate, "id">) => {
+    setLegal(prev => [{ ...item, id: uid("law") }, ...prev]);
+  }, []);
+  const updateLegal = useCallback((id: string, patch: Partial<LegalUpdate>) => {
+    setLegal(prev => prev.map(l => l.id === id ? { ...l, ...patch } : l));
+  }, []);
+  const deleteLegal = useCallback((id: string) => {
+    setLegal(prev => prev.filter(l => l.id !== id));
+  }, []);
+  const resetLegal = useCallback(() => setLegal(LEGAL_UPDATES), []);
+
+  // --- Categories CRUD ---
+  const addCategory = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const id = `cat-${trimmed.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+    setMutableCategories(prev => (prev.some(c => c.name === trimmed) ? prev : [...prev, { id: id as Category["id"], name: trimmed }]));
+  }, []);
+  const updateCategory = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setMutableCategories(prev => prev.map(c => c.id === id ? { ...c, name: trimmed } : c));
+  }, []);
+  const deleteCategory = useCallback((id: string) => {
+    setMutableCategories(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  // --- Authorities CRUD ---
+  const addAuthority = useCallback((item: Omit<Institution, "id">) => {
+    setAuthorities(prev => [{ ...item, id: uid("inst") }, ...prev]);
+  }, []);
+  const updateAuthority = useCallback((id: string, patch: Partial<Institution>) => {
+    setAuthorities(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+  }, []);
+  const deleteAuthority = useCallback((id: string) => {
+    setAuthorities(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  // --- Admin user management (local-first; API sync later) ---
+  const setAdminUserRole = useCallback((id: string, role: string) => {
+    setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+  }, []);
+  const setAdminUserActive = useCallback((id: string, active: boolean) => {
+    setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: active } : u));
+  }, []);
 
   // Resolve the backend numeric user id (for proposer matching + block targeting).
   useEffect(() => {
@@ -1236,7 +1337,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, setRole,
     currentUser, quickAccounts, isAuthenticated: role !== "guest",
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
-    categories: CATEGORIES, scenarios, problems, legal, publicDocuments, authorities,
+    categories: mutableCategories, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
     admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
@@ -1249,6 +1350,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
     settings, updateSettings, setLang,
+    geo, addRegion, deleteRegion, updateRegion, resetGeo,
+    addLegal, updateLegal, deleteLegal, resetLegal,
+    addCategory, updateCategory, deleteCategory,
+    addAuthority, updateAuthority, deleteAuthority,
+    setAdminUserRole, setAdminUserActive,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
   }), [
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
@@ -1263,6 +1369,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     reminders, allNotifications,
     markRead, markAllRead, unreadCount,
     updateProfile, applyQuizResult, updateSettings, setLang,
+    geo, addRegion, deleteRegion, updateRegion, resetGeo,
+    addLegal, updateLegal, deleteLegal, resetLegal,
+    addCategory, updateCategory, deleteCategory, mutableCategories,
+    addAuthority, updateAuthority, deleteAuthority,
+    setAdminUserRole, setAdminUserActive,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
   ]);
