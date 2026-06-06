@@ -1,0 +1,70 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: reactvitemaket
+        run: pnpm install
+
+      - name: Build Vite
+        working-directory: reactvitemaket
+        run: pnpm build
+
+      - name: Sync Capacitor
+        working-directory: reactvitemaket
+        run: npx cap sync ios
+
+      - name: Install CocoaPods
+        working-directory: reactvitemaket/ios/App
+        run: pod install
+
+      - name: Build app (no signing)
+        working-directory: reactvitemaket/ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination generic/platform=iOS \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+
+      - name: Package IPA (unsigned)
+        run: |
+          mkdir -p $RUNNER_TEMP/ipa/Payload
+          cp -r $RUNNER_TEMP/App.xcarchive/Products/Applications/App.app \
+                $RUNNER_TEMP/ipa/Payload/App.app
+          cd $RUNNER_TEMP/ipa
+          zip -r ../belpomoshnik.ipa Payload
+          echo "IPA created at $RUNNER_TEMP/belpomoshnik.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: belpomoshnik-ios
+          path: ${{ runner.temp }}/belpomoshnik.ipa
+          retention-days: 30
