@@ -6,7 +6,7 @@ import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
