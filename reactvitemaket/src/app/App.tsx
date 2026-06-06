@@ -811,11 +811,14 @@ function DesktopHeaderShell() {
             <button onClick={openAdmin} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"><Users size={16} />{role === "editor" ? "Редактор" : "Админ"}</button>
           )}
         </nav>
-        <button onClick={() => setSearchOpen(true)} className="hidden h-10 w-[260px] shrink-0 items-center gap-2 overflow-hidden rounded-2xl border border-black/[0.06] bg-[#F6F7FB] px-3 text-left lg:flex dark:border-white/[0.06] dark:bg-white/[0.04]">
-          <Search size={15} className="shrink-0 text-black/40 dark:text-white/40" />
-          <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[13px] tracking-tight text-black/40 dark:text-white/40">Поиск по сервису</span>
-          <span className="shrink-0 rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] text-black/50 dark:bg-white/[0.08] dark:text-white/60">⌘K</span>
-        </button>
+        {/* v0.6: на desktop поиск inline в header — input + dropdown с подсказками.
+            На tablet/mobile остаётся кнопка -> overlay. */}
+        <HeaderSearch
+          className="hidden lg:flex"
+          onOpenScenario={openScenario}
+          onOpenLegal={() => navigate("/legal")}
+          onOpenDocuments={() => navigate("/documents")}
+        />
         <button onClick={() => setSearchOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-black shadow-sm lg:hidden dark:bg-white/[0.06] dark:text-white"><Search size={16} /></button>
         <button onClick={() => go("notifications")} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-black shadow-sm dark:bg-white/[0.06] dark:text-white"><Bell size={16} /></button>
         <HeaderUserMenu />
@@ -930,6 +933,137 @@ function roleTitle(role: string) {
     editor: "Редактор",
     admin: "Администратор",
   } as Record<string, string>)[role] ?? role;
+}
+
+/* ============================================================
+   v0.6: inline-поиск в desktop header
+   ============================================================ */
+function HeaderSearch({
+  className,
+  onOpenScenario,
+  onOpenLegal,
+  onOpenDocuments,
+}: {
+  className?: string;
+  onOpenScenario: (id: string) => void;
+  onOpenLegal: () => void;
+  onOpenDocuments: () => void;
+}) {
+  const navigate = useNavigate();
+  const { scenarios, problems, documents, publicDocuments, authorities, legal } = useStore();
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Закрываем dropdown по клику вне
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  // ⌘K / Ctrl+K — фокус на input
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setOpen(true);
+      }
+      if (e.key === "Escape") {
+        setOpen(false);
+        inputRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const pool = useMemo(() => {
+    const p: { label: string; kind: string }[] = [];
+    problems.forEach((x) => p.push({ label: x.title, kind: "проблема" }));
+    scenarios.forEach((x) => p.push({ label: x.title, kind: "сценарий" }));
+    publicDocuments.forEach((x) => p.push({ label: x.name, kind: "документ" }));
+    documents.forEach((x) => p.push({ label: x.title, kind: "документ" }));
+    authorities.forEach((x) => p.push({ label: x.name, kind: "учреждение" }));
+    legal.forEach((x) => p.push({ label: x.title, kind: "закон-апдейт" }));
+    return p;
+  }, [problems, scenarios, publicDocuments, documents, authorities, legal]);
+
+  const suggestions = useMemo(() => {
+    if (!q.trim()) return pool.slice(0, 6);
+    const lower = q.toLowerCase();
+    return pool
+      .filter((p) => p.label.toLowerCase().includes(lower))
+      .slice(0, 8);
+  }, [q, pool]);
+
+  const commit = (value: string) => {
+    if (!value.trim()) return;
+    setQ(value);
+    setOpen(false);
+    // Простая маршрутизация по первому совпадению
+    const firstScenario = scenarios.find((s) => s.title.toLowerCase().includes(value.toLowerCase()));
+    if (firstScenario) { onOpenScenario(firstScenario.id); return; }
+    const firstDoc = documents.find((d) => d.title.toLowerCase().includes(value.toLowerCase()));
+    if (firstDoc) { onOpenDocuments(); return; }
+    if (legal.some((l) => l.title.toLowerCase().includes(value.toLowerCase()))) { onOpenLegal(); return; }
+    // Фолбэк: ведём в каталог с query
+    navigate(`/catalog?q=${encodeURIComponent(value)}`);
+  };
+
+  return (
+    <div ref={rootRef} className={`relative w-[320px] shrink-0 ${className ?? ""}`}>
+      <div className="flex h-10 items-center gap-2 overflow-hidden rounded-2xl border border-black/[0.06] bg-[#F6F7FB] px-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+        <Search size={15} className="shrink-0 text-black/40 dark:text-white/40" />
+        <input
+          ref={inputRef}
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => { if (e.key === "Enter") commit(q); }}
+          placeholder="Поиск по сервису"
+          className="min-w-0 flex-1 bg-transparent text-[13px] tracking-tight outline-none placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40"
+        />
+        {q && (
+          <button
+            onClick={() => { setQ(""); inputRef.current?.focus(); }}
+            className="shrink-0 text-black/35 hover:text-black/60 dark:text-white/35"
+            aria-label="Очистить"
+          >
+            <X size={13} />
+          </button>
+        )}
+        <span className="shrink-0 rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] text-black/50 dark:bg-white/[0.08] dark:text-white/60">⌘K</span>
+      </div>
+
+      {open && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[100] max-h-[420px] overflow-y-auto rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-[0_24px_60px_-20px_rgba(15,23,42,0.25)] dark:border-white/[0.08] dark:bg-[#0F1117] [scrollbar-width:thin]">
+          {!q.trim() && (
+            <div className="px-3 pb-1.5 pt-2 text-[10px] uppercase tracking-[0.14em] text-black/40 dark:text-white/40">Подсказки</div>
+          )}
+          {suggestions.map((s, i) => (
+            <button
+              key={`${s.kind}:${s.label}:${i}`}
+              onClick={() => commit(s.label)}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[13px] tracking-tight text-black hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.04]"
+            >
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                <Search size={12} />
+              </span>
+              <span className="min-w-0 flex-1 truncate">{s.label}</span>
+              <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">{s.kind}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function UserSwitcher() {
