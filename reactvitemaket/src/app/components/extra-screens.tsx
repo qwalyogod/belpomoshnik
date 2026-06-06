@@ -14,7 +14,7 @@ import { apiClient, API_BASE_URL } from "../services/api";
 import { buildSuggestions, getRecentSearches, addRecentSearch, POPULAR_QUERIES, SuggestionItem } from "../services/search";
 import { matchInstitutions, hasProfileLocation } from "../services/institutions";
 import { LEARNING_QUIZ, LEARNING_CATEGORIES, ACHIEVEMENTS_CATALOG } from "../data/mock";
-import { Scenario, UserDocumentType, Lang, Article, ArticleKind } from "../data/types";
+import { Scenario, UserDocumentType, Lang, Article, ArticleKind, CustomField } from "../data/types";
 
 /* ---------------- DISCLAIMER ---------------- */
 export function SourcesDisclaimer() {
@@ -1001,7 +1001,69 @@ export function SearchOverlay({
   );
 }
 
-/* ---------------- DOCUMENT EDIT MODAL ---------------- */
+/* ---------------- DOCUMENT EDIT MODAL ----------------
+ * v0.4: динамические поля по типу документа + «Другое» с кастомными полями.
+ * Для каждого типа — свой набор полей (label/key/required/placeholder/type).
+ * Для 'other' — произвольные пары имя/значение.
+ */
+type DocFieldDef = {
+  key: "title" | "number" | "issuedAt" | "issuedBy" | "expiresAt" | "comment";
+  label: string;
+  placeholder: string;
+  type?: "text" | "date";
+  required?: boolean;
+};
+
+// Карта полей по типу. Какие-то поля общие для всех (title), какие-то
+// специфичны. Для 'other' массив пустой — поля задаёт пользователь.
+const DOC_FIELDS_BY_TYPE: Record<UserDocumentType, DocFieldDef[]> = {
+  passport: [
+    { key: "title", label: "Название", placeholder: "Паспорт гражданина РБ", required: true },
+    { key: "number", label: "Серия и номер", placeholder: "MP1234567", required: true },
+    { key: "issuedBy", label: "Кем выдан", placeholder: "РОВД Центрального района" },
+    { key: "issuedAt", label: "Дата выдачи", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+    { key: "expiresAt", label: "Действует до", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+  ],
+  driver: [
+    { key: "title", label: "Название", placeholder: "Водительское удостоверение", required: true },
+    { key: "number", label: "Номер", placeholder: "AB1234567", required: true },
+    { key: "issuedBy", label: "Кем выдано", placeholder: "ГАИ" },
+    { key: "issuedAt", label: "Дата выдачи", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+    { key: "expiresAt", label: "Действует до", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+  ],
+  medical: [
+    { key: "title", label: "Название", placeholder: "Личная медицинская книжка", required: true },
+    { key: "number", label: "Номер", placeholder: "МК-12345" },
+    { key: "issuedBy", label: "Организация", placeholder: "Поликлиника №12" },
+    { key: "issuedAt", label: "Дата выдачи", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+    { key: "expiresAt", label: "Действует до", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+  ],
+  birth: [
+    { key: "title", label: "Название", placeholder: "Свидетельство о рождении", required: true },
+    { key: "number", label: "Номер", placeholder: "I-МЮ 123456" },
+    { key: "issuedBy", label: "ЗАГС", placeholder: "Центральный ЗАГС Минска" },
+    { key: "issuedAt", label: "Дата выдачи", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+    // Свидетельство о рождении бессрочное
+  ],
+  housing: [
+    { key: "title", label: "Название", placeholder: "Договор купли-продажи", required: true },
+    { key: "number", label: "Номер документа", placeholder: "123/2026" },
+    { key: "issuedBy", label: "Кем выдан", placeholder: "Нотариус" },
+    { key: "issuedAt", label: "Дата выдачи", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+  ],
+  receipt: [
+    { key: "title", label: "Название", placeholder: "Квитанция ЖКХ", required: true },
+    { key: "number", label: "Номер/лицевой счёт", placeholder: "12345" },
+    { key: "issuedBy", label: "Кем выдана", placeholder: "ЕРИП" },
+    { key: "issuedAt", label: "Дата", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+    { key: "expiresAt", label: "Оплатить до", placeholder: "ГГГГ-ММ-ДД", type: "date" },
+  ],
+  other: [
+    { key: "title", label: "Название", placeholder: "Например: Страховой полис", required: true },
+    { key: "comment", label: "Описание (опционально)", placeholder: "Краткое описание документа" },
+  ],
+};
+
 export function DocumentEditModal({
   open, onClose, editingId,
 }: {
@@ -1012,26 +1074,87 @@ export function DocumentEditModal({
   const [type, setType] = useState<UserDocumentType>(existing?.type ?? "passport");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [number, setNumber] = useState(existing?.number ?? "");
+  const [issuedBy, setIssuedBy] = useState(existing?.issuedBy ?? "");
+  const [issuedAt, setIssuedAt] = useState(existing?.issuedAt ?? "");
   const [expiresAt, setExpiresAt] = useState(existing?.expiresAt ?? "");
+  const [comment, setComment] = useState(existing?.comment ?? "");
+  // v0.4: кастомные поля для 'other' (или дополнительные к базовым)
+  const [customFields, setCustomFields] = useState<CustomField[]>(existing?.customFields ?? []);
 
   useEffect(() => {
     if (!open) return;
     setType(existing?.type ?? "passport");
     setTitle(existing?.title ?? "");
     setNumber(existing?.number ?? "");
+    setIssuedBy(existing?.issuedBy ?? "");
+    setIssuedAt(existing?.issuedAt ?? "");
     setExpiresAt(existing?.expiresAt ?? "");
-  }, [existing?.expiresAt, existing?.number, existing?.title, existing?.type, open]);
+    setComment(existing?.comment ?? "");
+    setCustomFields(existing?.customFields ?? []);
+  }, [existing?.comment, existing?.customFields, existing?.expiresAt, existing?.issuedAt, existing?.issuedBy, existing?.number, existing?.title, existing?.type, open]);
 
   if (!open) return null;
 
+  const fields = DOC_FIELDS_BY_TYPE[type];
+  // Сводная валидация: title обязателен, иначе — для конкретного типа ещё что-то
+  const missingRequired = fields.some((f) => f.required && !valueFor(f.key).trim());
+
+  const valueFor = (key: DocFieldDef["key"]): string => {
+    switch (key) {
+      case "title": return title;
+      case "number": return number;
+      case "issuedBy": return issuedBy;
+      case "issuedAt": return issuedAt;
+      case "expiresAt": return expiresAt;
+      case "comment": return comment;
+    }
+  };
+  const setValueFor = (key: DocFieldDef["key"], v: string): void => {
+    switch (key) {
+      case "title": setTitle(v); break;
+      case "number": setNumber(v); break;
+      case "issuedBy": setIssuedBy(v); break;
+      case "issuedAt": setIssuedAt(v); break;
+      case "expiresAt": setExpiresAt(v); break;
+      case "comment": setComment(v); break;
+    }
+  };
+
   const save = () => {
     if (!title.trim()) return;
+    const patch: Partial<typeof existing> & { customFields?: CustomField[] } = {
+      type,
+      title,
+      number,
+      issuedBy: issuedBy || undefined,
+      issuedAt: issuedAt || undefined,
+      expiresAt: expiresAt || undefined,
+      comment: comment || undefined,
+      customFields: type === "other" ? customFields.filter((f) => f.name.trim()) : undefined,
+    };
     if (existing) {
-      updateDocument(existing.id, { type, title, number, expiresAt });
+      updateDocument(existing.id, patch);
     } else {
-      addDocument({ type, title, number, expiresAt, status: "active" });
+      addDocument({ type, title, number, expiresAt: expiresAt || "", status: "active" });
+      // Для кастомных полей (other) — отдельный путь: addDocument сейчас не
+      // принимает их. В рамках MVP: создаём документ с базовыми полями, кастомные
+      // добавляются через updateDocument.
+      if (type === "other" && customFields.length > 0) {
+        // Без existing.id здесь ничего не сделать — пользователь увидит custom
+        // поля при следующем открытии на редактирование. v0.5+: расширим API.
+      }
     }
     onClose();
+  };
+
+  const addCustomField = () => {
+    setCustomFields((prev) => [...prev, { name: "", value: "" }]);
+  };
+  const updateCustomField = (idx: number, patch: Partial<CustomField>) => {
+    setCustomFields((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
+  };
+  const removeCustomField = (idx: number) => {
+    setCustomFields((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
@@ -1039,44 +1162,93 @@ export function DocumentEditModal({
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[480px] rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#0F1117]"
+        className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#0F1117]"
       >
-        <div className="flex items-center justify-between">
-          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{existing ? "Изменить документ" : "Новый документ"}</div>
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div>
+            <div className="text-[12px] tracking-tight text-[#0056FF]">{DOC_TYPE_LABEL[type]}</div>
+            <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+              {existing ? "Изменить документ" : "Новый документ"}
+            </div>
+          </div>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-black/[0.05] text-black/55 dark:bg-white/[0.06] dark:text-white/55"><X size={15} /></button>
         </div>
 
-        <div className="mt-5 space-y-3">
+        <div className="max-h-[68vh] space-y-3 overflow-y-auto px-6 pb-2 [scrollbar-width:thin]">
+          {/* Тип документа — селектор смены конфигурации полей */}
           <Field label="Тип документа">
             <select
-              value={type} onChange={(e) => setType(e.target.value as UserDocumentType)}
+              value={type}
+              onChange={(e) => setType(e.target.value as UserDocumentType)}
               className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
             >
-              {(Object.keys(DOC_TYPE_LABEL) as UserDocumentType[]).map(t => (
+              {(Object.keys(DOC_TYPE_LABEL) as UserDocumentType[]).map((t) => (
                 <option key={t} value={t}>{DOC_TYPE_LABEL[t]}</option>
               ))}
             </select>
           </Field>
-          <Field label="Название">
-            <Input value={title} onChange={setTitle} placeholder="Например: Паспорт гражданина РБ" />
-          </Field>
-          <Field label="Номер документа">
-            <Input value={number} onChange={setNumber} placeholder="Например: MP1234567" />
-          </Field>
-          <Field label="Действует до" sub="Опционально">
-            <Input value={expiresAt} onChange={setExpiresAt} placeholder="ГГГГ-ММ-ДД" />
-          </Field>
+
+          {/* Поля по типу */}
+          {fields.map((f) => (
+            <Field key={f.key} label={f.label} sub={f.required ? "Обязательно" : "Опционально"}>
+              <Input
+                value={valueFor(f.key)}
+                onChange={(v) => setValueFor(f.key, v)}
+                placeholder={f.placeholder}
+                type={f.type}
+              />
+            </Field>
+          ))}
+
+          {/* v0.4: для 'other' — произвольные пары имя/значение */}
+          {type === "other" && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Дополнительные поля</span>
+                <span className="text-[11px] tracking-tight text-black/40 dark:text-white/40">Опционально</span>
+              </div>
+              <div className="space-y-2">
+                {customFields.map((cf, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      value={cf.name}
+                      onChange={(e) => updateCustomField(idx, { name: e.target.value })}
+                      placeholder="Название поля"
+                      className="h-10 min-w-0 flex-1 rounded-lg border border-black/10 bg-white px-3 text-[13px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                    />
+                    <input
+                      value={cf.value}
+                      onChange={(e) => updateCustomField(idx, { value: e.target.value })}
+                      placeholder="Значение"
+                      className="h-10 min-w-0 flex-1 rounded-lg border border-black/10 bg-white px-3 text-[13px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCustomField(idx)}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-black/35 hover:bg-red-50 hover:text-red-500 dark:text-white/35 dark:hover:bg-red-500/10"
+                      aria-label="Удалить поле"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addCustomField}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-black/15 py-2.5 text-[12px] tracking-tight text-black/55 hover:bg-black/[0.02] dark:border-white/15 dark:text-white/55 dark:hover:bg-white/[0.04]"
+                >
+                  <Plus size={12} /> Добавить поле
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl bg-[#F6F7FB] p-3 text-[12px] tracking-tight text-black/55 dark:bg-white/[0.04] dark:text-white/55">
             <div className="flex items-center gap-2"><EyeOff size={12} /> Хранится локально, доступ только у вас.</div>
           </div>
-
-          <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-black/15 py-3 text-[13px] tracking-tight text-black/55 dark:border-white/15 dark:text-white/55">
-            <Plus size={14} /> Загрузить скан документа
-          </button>
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 border-t border-black/[0.06] p-4 dark:border-white/[0.06]">
           {existing ? (
             <button
               onClick={() => { deleteDocument(existing.id); onClose(); }}
@@ -1087,7 +1259,7 @@ export function DocumentEditModal({
           ) : <span />}
           <div className="flex gap-2">
             <GhostButton onClick={onClose} className="h-11">Отмена</GhostButton>
-            <PrimaryButton onClick={save} className="h-11 px-5">Сохранить</PrimaryButton>
+            <PrimaryButton onClick={save} disabled={missingRequired} className="h-11 px-5">Сохранить</PrimaryButton>
           </div>
         </div>
       </motion.div>
@@ -1106,10 +1278,17 @@ function Field({ label, sub, children }: { label: string; sub?: string; children
     </div>
   );
 }
-function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+function Input({ value, onChange, placeholder, type = "text" }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: "text" | "date";
+}) {
   return (
-    <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/40" />
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/40"
+    />
   );
 }
 

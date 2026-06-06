@@ -77,6 +77,11 @@ class UserDocumentIn(BaseModel):
     is_sensitive: bool = False
     comment: str = ""
     scan_path: str = ""
+    # v0.4: кастомные поля для doc_type='other'. JSON-строка с массивом
+    # {name, value}. Ограничиваем 2000 символами на стороне БД; тут
+    # дополнительно валидируем — должна быть либо пустая строка, либо
+    # валидный JSON.
+    custom_fields_json: str = Field(default="", max_length=2000)
 
 
 class UserDocumentUpdate(BaseModel):
@@ -89,6 +94,7 @@ class UserDocumentUpdate(BaseModel):
     is_sensitive: bool | None = None
     comment: str | None = None
     scan_path: str | None = None
+    custom_fields_json: str | None = Field(default=None, max_length=2000)
 
 
 class UserDocumentOut(BaseModel):
@@ -103,6 +109,7 @@ class UserDocumentOut(BaseModel):
     is_sensitive: bool
     comment: str
     scan_path: str
+    custom_fields_json: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +227,7 @@ def create_document(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = UserDocument(user_id=user.id, **payload.model_dump())
+    doc = UserDocument(user_id=user.id, **_validate_doc_payload(payload.model_dump()))
     db.add(doc)
     db.commit()
     db.refresh(doc)
@@ -235,11 +242,45 @@ def update_document(
     db: Session = Depends(get_db),
 ):
     doc = _owned_document(db, user, doc_id)
-    for field, value in payload.model_dump(exclude_none=True).items():
+    validated = _validate_doc_payload(payload.model_dump(exclude_none=True))
+    for field, value in validated.items():
         setattr(doc, field, value)
     db.commit()
     db.refresh(doc)
     return UserDocumentOut.model_validate(doc)
+
+
+def _validate_doc_payload(payload: dict) -> dict:
+    """v0.4: проверить, что custom_fields_json — пустая строка или валидный JSON
+    массив объектов {name, value}. Без проверки фронт мог бы сохранить мусор."""
+    raw = (payload.get("custom_fields_json") or "").strip()
+    if not raw:
+        payload["custom_fields_json"] = ""
+        return payload
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"custom_fields_json не валидный JSON: {exc}",
+        ) from exc
+    if not isinstance(parsed, list):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="custom_fields_json должен быть массивом.",
+        )
+    # Мягкая нормализация: убеждаемся, что элементы — dict с name/value
+    normalized: list[dict] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:120]
+        value = str(item.get("value", "")).strip()[:500]
+        if not name:
+            continue
+        normalized.append({"name": name, "value": value})
+    payload["custom_fields_json"] = json.dumps(normalized, ensure_ascii=False)
+    return payload
 
 
 @router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)

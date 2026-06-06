@@ -102,14 +102,24 @@ export interface UserSituation {
 export type UserDocumentStatus = "active" | "expiring" | "expired";
 export type UserDocumentType = "passport" | "driver" | "medical" | "birth" | "housing" | "receipt" | "other";
 
+/** v0.4: пользовательское поле для типа «Другое». */
+export interface CustomField {
+  name: string;
+  value: string;
+}
+
 export interface UserDocument {
   id: string;
   type: UserDocumentType;
   title: string;
   number: string;             // raw — UI masks it
   issuedAt?: string;
+  issuedBy?: string;
+  comment?: string;
   expiresAt?: string;
   status: UserDocumentStatus;
+  /** v0.4: только для type='other'. Хранится в БД как JSON-строка. */
+  customFields?: CustomField[];
 }
 
 export interface UtilityPayment {
