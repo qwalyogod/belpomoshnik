@@ -3,13 +3,14 @@ import { motion } from "motion/react";
 import {
   Search, FileText, Building2, Lock, Check, ChevronRight, ChevronLeft, AlertCircle,
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
+  Eye, Upload, Download, ExternalLink,
   Award, BookOpen, Sparkles, Clock, MapPin, Wrench,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
 import { useNavigate } from "react-router";
 import { useStore, maskDocumentNumber, DOC_TYPE_LABEL } from "../data/store";
-import { apiClient } from "../services/api";
+import { apiClient, API_BASE_URL } from "../services/api";
 import { buildSuggestions, getRecentSearches, addRecentSearch, POPULAR_QUERIES, SuggestionItem } from "../services/search";
 import { matchInstitutions, hasProfileLocation } from "../services/institutions";
 import { LEARNING_QUIZ, LEARNING_CATEGORIES, ACHIEVEMENTS_CATALOG } from "../data/mock";
@@ -1115,6 +1116,254 @@ function Input({ value, onChange, placeholder }: { value: string; onChange: (v: 
 /* ---------------- helpers for usage in App ---------------- */
 export function formatDocumentNumber(num: string, masked: boolean) {
   return maskDocumentNumber(num, !masked);
+}
+
+/* ============================================================
+   v0.3 — Полная карточка документа (read-only preview + PDF upload)
+   ============================================================ */
+export function DocumentCardModal({
+  open, onClose, docId, onEdit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  docId: string | null;
+  onEdit?: (id: string) => void;
+}) {
+  const { documents, authSession } = useStore();
+  const doc = docId ? documents.find((d) => d.id === docId) : undefined;
+
+  // PDF-превью: хранится на бэке, мы храним относительный путь
+  // (DOCUMENT_SCAN_DIR / user_id / doc_id / token.pdf) в doc.scan_path.
+  // Превью показываем только когда есть scan_path И бэк доступен (authSession).
+  const [scanUrl, setScanUrl] = useState<string | null>(null);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [revealNumber, setRevealNumber] = useState(false);
+
+  // При открытии модалки сбрасываем локальный стейт
+  useEffect(() => {
+    if (!open) {
+      setScanUrl(null);
+      setScanError(null);
+      setRevealNumber(false);
+    }
+  }, [open]);
+
+  if (!open || !doc) return null;
+
+  const accessToken = authSession?.access_token ?? null;
+
+  const handleFile = async (file: File) => {
+    if (!accessToken) {
+      setScanError("Войдите, чтобы загрузить скан.");
+      return;
+    }
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setScanError("Только PDF.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setScanError("Файл больше 5 МБ.");
+      return;
+    }
+    setScanBusy(true);
+    setScanError(null);
+    try {
+      const res = await apiClient.uploadDocumentScan(accessToken, doc.id, file);
+      // Префикс /uploads/documents/... не зависит от API_BASE_URL (тот же origin),
+      // но мы домножаем на всякий случай, чтобы при поднятии бэка на другом хосте
+      // (LAN-режим) превью тоже открывалось.
+      setScanUrl(`${apiBaseUrl()}${res.scan_url}`);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Не удалось загрузить скан.");
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
+  const handleDeleteScan = async () => {
+    if (!accessToken) return;
+    setScanBusy(true);
+    setScanError(null);
+    try {
+      await apiClient.deleteDocumentScan(accessToken, doc.id);
+      setScanUrl(null);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Не удалось удалить скан.");
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
+  const maskedNumber = maskDocumentNumber(doc.number || "", !revealNumber);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[560px] overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#0F1117]"
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 p-6 pb-4">
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] tracking-tight text-[#0056FF]">
+              {DOC_TYPE_LABEL[doc.type as keyof typeof DOC_TYPE_LABEL] ?? "Документ"}
+            </div>
+            <h2 className="mt-1 truncate tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>
+              {doc.title}
+            </h2>
+            {doc.status && (
+              <div className="mt-2">
+                <Pill tone={doc.status === "active" ? "ok" : doc.status === "expiring" ? "warn" : "ghost"}>
+                  {doc.status === "active" ? "Действует" : doc.status === "expiring" ? "Скоро истекает" : "Истёк"}
+                </Pill>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/[0.05] text-black/55 dark:bg-white/[0.06] dark:text-white/55"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="max-h-[68vh] overflow-y-auto px-6 pb-6 [scrollbar-width:thin]">
+          {/* Номер с маскированием */}
+          {doc.number && (
+            <div className="rounded-2xl bg-[#F6F7FB] p-4 dark:bg-white/[0.04]">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Номер</div>
+                <button
+                  onClick={() => setRevealNumber((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] tracking-tight shadow-sm dark:bg-white/[0.06]"
+                >
+                  {revealNumber ? <EyeOff size={11} /> : <Eye size={11} />}
+                  {revealNumber ? "Скрыть" : "Показать"}
+                </button>
+              </div>
+              <div className="mt-1 font-mono text-[15px] tracking-[0.18em] text-black dark:text-white">{maskedNumber}</div>
+            </div>
+          )}
+
+          {/* Метаданные */}
+          <div className="mt-3 space-y-2.5">
+            {doc.expiresAt && (
+              <MetaRow label="Действует до" value={doc.expiresAt} />
+            )}
+            <MetaRow
+              label="Создан"
+              value={doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("ru-RU") : "—"}
+            />
+          </div>
+
+          {/* Скан */}
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Скан документа</div>
+              {scanUrl && (
+                <a
+                  href={scanUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[12px] tracking-tight text-[#0056FF]"
+                >
+                  <ExternalLink size={12} /> Открыть
+                </a>
+              )}
+            </div>
+
+            {scanUrl ? (
+              <div className="relative">
+                <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#F6F7FB] dark:border-white/[0.06] dark:bg-white/[0.04]">
+                  <iframe
+                    src={scanUrl}
+                    title={`Скан: ${doc.title}`}
+                    className="h-[280px] w-full"
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <button
+                    onClick={handleDeleteScan}
+                    disabled={scanBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] tracking-tight text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 size={13} /> Удалить скан
+                  </button>
+                  <a
+                    href={scanUrl}
+                    download
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[12px] tracking-tight text-white"
+                  >
+                    <Download size={13} /> Скачать
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <label
+                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/15 bg-[#F6F7FB] py-8 text-[13px] tracking-tight text-black/55 transition-colors hover:bg-black/[0.02] dark:border-white/15 dark:bg-white/[0.04] dark:text-white/55 dark:hover:bg-white/[0.04] ${scanBusy ? "pointer-events-none opacity-50" : ""}`}
+              >
+                <Upload size={20} className="text-[#0056FF]" />
+                <span>{scanBusy ? "Загружаем…" : "Загрузить PDF-скан"}</span>
+                <span className="text-[11px] text-black/40 dark:text-white/40">до 5 МБ</span>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleFile(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+            )}
+
+            {scanError && (
+              <div className="mt-2 inline-flex items-center gap-1 text-[12px] text-amber-600 dark:text-amber-400">
+                <AlertCircle size={12} /> {scanError}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-2 border-t border-black/[0.06] p-4 dark:border-white/[0.06]">
+          <span />
+          <div className="flex gap-2">
+            {onEdit && (
+              <GhostButton
+                onClick={() => { onEdit(doc.id); onClose(); }}
+                className="h-11 gap-1.5"
+              >
+                <Edit3 size={14} /> Изменить
+              </GhostButton>
+            )}
+            <PrimaryButton onClick={onClose} className="h-11 px-5">Готово</PrimaryButton>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-[13px] tracking-tight">
+      <span className="text-black/55 dark:text-white/55">{label}</span>
+      <span className="text-black dark:text-white">{value}</span>
+    </div>
+  );
+}
+
+function apiBaseUrl(): string {
+  return API_BASE_URL;
 }
 
 /* ---------------- Reader-facing editorial content ---------------- */
