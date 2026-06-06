@@ -1,5 +1,9 @@
 {
-  "appId": "by.belpomoshnik.app",
-  "appName": "Белпомощник",
-  "webDir": "dist"
+	"appId": "by.belpomoshnik.app",
+	"appName": "Белпомощник",
+	"webDir": "dist",
+	"server": {
+		"url": "http://192.168.100.95:8560",
+		"cleartext": true
+	}
 }

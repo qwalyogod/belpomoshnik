@@ -43,6 +43,9 @@ def create_app() -> FastAPI:
             "http://localhost:8560",
             "http://127.0.0.1:8550",
             "http://localhost:8550",
+            # LAN-адрес для live-reload: iPhone-приложение через Capacitor
+            # тянет Vite с ПК. Меняй, если ПК переехал в другую сеть.
+            "http://192.168.100.95:8560",
         ],
         allow_credentials=True,
         allow_methods=["*"],

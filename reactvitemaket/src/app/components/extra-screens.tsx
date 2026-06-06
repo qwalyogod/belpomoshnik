@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import {
   Search, FileText, Building2, Lock, Check, ChevronRight, ChevronLeft, AlertCircle,
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
-  Award, BookOpen, Sparkles, Clock, MapPin,
+  Award, BookOpen, Sparkles, Clock, MapPin, Wrench,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
@@ -437,6 +437,35 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
           <Row label="Быстрый вход (Face/Touch ID)" right={<Toggle on={settings.privacy.quickLogin} onChange={() => updateSettings({ privacy: { ...settings.privacy, quickLogin: !settings.privacy.quickLogin } })} />} />
         </div>
       </Card>
+
+      {/* Карточка «Разработка» видна только в нативной Capacitor-оболочке. */}
+      {typeof window !== "undefined" &&
+        (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+          .Capacitor?.isNativePlatform?.() && (
+          <Card className="p-5">
+            <div className="flex items-center gap-2">
+              <Wrench size={15} className="text-[#0056FF]" />
+              <div className="tracking-tight text-black dark:text-white">Разработка</div>
+            </div>
+            <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">
+              Приложение получает интерфейс с компьютера разработчика. Если вы
+              переехали в другую сеть, укажите новый адрес.
+            </div>
+            <div className="mt-3">
+              <button
+                onClick={() => {
+                  const w = window as unknown as {
+                    belpomoshnik?: { resetServer?: () => void };
+                  };
+                  w.belpomoshnik?.resetServer?.();
+                }}
+                className="rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
+              >
+                Сменить сервер разработки
+              </button>
+            </div>
+          </Card>
+        )}
     </div>
   );
 }
