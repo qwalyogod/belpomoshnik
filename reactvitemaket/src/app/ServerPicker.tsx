@@ -10,9 +10,11 @@
  * В браузере/Vite dev — не рендерится совсем.
  */
 import { useEffect, useState } from "react";
-import { Server, ExternalLink, AlertTriangle } from "lucide-react";
+import { Server, ExternalLink, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "belpomoshnik.serverUrl";
+
+type Candidate = { url: string; status: "checking" | "ok" | "fail"; detail?: string };
 
 function normalizeUrl(raw: string): string | null {
   const s = raw.trim();
@@ -33,6 +35,44 @@ function isCapacitorShell(): boolean {
   return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
 }
 
+// Резолвим все IPv4 у текущего устройства. На iPhone Capacitor WKWebView
+// видит все Wi-Fi/VPN интерфейсы; пробуем их как кандидаты.
+async function discoverLocalCandidates(): Promise<string[]> {
+  if (typeof window === "undefined") return [];
+  const cands: string[] = [];
+  // Попытка через WebRTC — даёт все локальные IPv4 (best-effort, не всегда работает).
+  try {
+    const RTCPeer = (window as unknown as { RTCPeerConnection?: typeof RTCPeerConnection }).RTCPeerConnection;
+    if (RTCPeer) {
+      const pc = new RTCPeer({ iceServers: [] });
+      pc.createDataChannel("");
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await new Promise<void>(r => setTimeout(r, 200));
+      const lines = (pc.localDescription?.sdp ?? "").split("\n");
+      for (const line of lines) {
+        const m = line.match(/a=candidate:.*? (\d+\.\d+\.\d+\.\d+) \d+ typ/);
+        if (m && m[1]) cands.push(m[1]);
+      }
+      pc.close();
+    }
+  } catch { /* ignore */ }
+  return Array.from(new Set(cands));
+}
+
+async function probeBase(url: string, timeoutMs = 2500): Promise<"ok" | "fail"> {
+  // Пробуем /api/health (тот же endpoint, что ConnectionBanner). На 2xx — OK.
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const r = await fetch(`${url}/api/health`, { signal: ctrl.signal, cache: "no-store" });
+    clearTimeout(t);
+    return r.ok ? "ok" : "fail";
+  } catch {
+    return "fail";
+  }
+}
+
 export function ServerPicker() {
   // Не рендерить в браузере / Vite dev
   if (typeof window === "undefined" || !isCapacitorShell()) return null;
@@ -43,38 +83,72 @@ export function ServerPicker() {
   const [value, setValue] = useState("");
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    // Уже на внешнем сервере (http/https) — пикер не нужен
     if (window.location.protocol !== "capacitor:") {
       setOpen(false);
       return;
     }
 
-    // На capacitor://localhost — показываем пикер, предзаполняем последним URL
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setValue(saved);
     } catch { /* ignore */ }
+
+    // Автопоиск кандидатов: пробуем сохранённый URL + найденные локальные IP.
+    (async () => {
+      const localIps = await discoverLocalCandidates();
+      const initial: Candidate[] = [];
+      // Сохранённый — первый.
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) initial.push({ url: saved, status: "checking" });
+      } catch { /* ignore */ }
+      // Локальные IPv4 — http://<ip>:8060 (бэк) и сразу с портом 8560 не проверяем,
+      // потому что dev бэк идёт на 8060. Но пикер ожидает Vite-адрес (8560),
+      // а бэк уже подтверждён через /api/health, так что покажем "http://<ip>:8560".
+      for (const ip of localIps) {
+        if (initial.some(c => c.url.startsWith(`http://${ip}:`))) continue;
+        initial.push({ url: `http://${ip}:8560`, status: "checking" });
+      }
+      setCandidates(initial);
+
+      // Параллельно проверяем каждый.
+      await Promise.all(initial.map(async (c, idx) => {
+        // Преобразуем Vite-url (8560) → backend-url (8060) для health-проверки.
+        let probeUrl = c.url;
+        try {
+          const u = new URL(c.url);
+          if (u.port === "8560" || u.port === "8550") u.port = "8060";
+          probeUrl = u.toString().replace(/\/$/, "");
+        } catch { /* keep as-is */ }
+        const status = await probeBase(probeUrl);
+        setCandidates(prev => prev.map((p, i) => i === idx ? { ...p, status } : p));
+      }));
+    })();
 
     setOpen(true);
   }, []);
 
   if (!open) return null;
 
-  const submit = () => {
-    const url = normalizeUrl(value);
+  const submit = (override?: string) => {
+    const url = normalizeUrl(override ?? value);
     if (!url) {
       setError("Введите корректный URL, например http://192.168.1.10:8560");
       return;
     }
-    // Сохраняем для следующего запуска (читается только с capacitor:// origin — OK)
     try { localStorage.setItem(STORAGE_KEY, url); } catch { /* ignore */ }
-    // Переходим на сервер внутри WebView (не в Safari)
-    // allowNavigation в capacitor.config.json разрешает это для iOS WKWebView
     window.location.replace(url);
   };
+
+  // Кандидаты, до которых бэк ответил OK — кликабельные.
+  const okCandidates = candidates.filter(c => c.status === "ok");
+  const pendingCandidates = candidates.filter(c => c.status === "checking");
+  const failedCandidates = candidates.filter(c => c.status === "fail");
 
   return (
     <div
@@ -117,6 +191,46 @@ export function ServerPicker() {
           {" "}будет адрес — вставьте его сюда.
           ПК и телефон должны быть в одной Wi-Fi.
         </p>
+
+        {/* Авто-найденные кандидаты (если есть рабочие — кликабельные) */}
+        {candidates.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+              Найденные серверы
+            </div>
+            {okCandidates.length === 0 && pendingCandidates.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
+                <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Проверяем доступные серверы…
+              </div>
+            )}
+            {okCandidates.map((c) => (
+              <button
+                key={c.url}
+                onClick={() => submit(c.url)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                  background: "rgba(0,86,255,0.12)",
+                  border: "1px solid rgba(127,168,255,0.4)",
+                  borderRadius: 14, padding: "12px 14px",
+                  color: "#fff", fontSize: 14, fontFamily: "ui-monospace, monospace",
+                  cursor: "pointer", WebkitTapHighlightColor: "transparent",
+                  transition: "transform 0.1s, background 0.15s",
+                }}
+                onTouchStart={(e) => (e.currentTarget.style.background = "rgba(0,86,255,0.22)")}
+                onTouchEnd={(e) => (e.currentTarget.style.background = "rgba(0,86,255,0.12)")}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.url}</span>
+                <CheckCircle2 size={16} color="#7FA8FF" style={{ flexShrink: 0 }} />
+              </button>
+            ))}
+            {okCandidates.length === 0 && pendingCandidates.length === 0 && failedCandidates.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#FCA5A5" }}>
+                <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                Не нашли бэкенд. Проверьте, что pnpm dev:all запущен на ПК.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Поле ввода */}
         <div style={{
@@ -187,6 +301,7 @@ export function ServerPicker() {
           Адрес сохраняется — следующий раз заполнится автоматически
         </p>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
