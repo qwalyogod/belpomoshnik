@@ -14,6 +14,7 @@ import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
 import { AdminWindowMount } from "./components/admin-window";
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
+import { ConnectionBanner } from "./components/ConnectionBanner";
 import { CATEGORIES } from "./data/mock";
 
 const catLabelApp = (id: string) => CATEGORIES.find(c => c.id === id)?.name ?? id;
@@ -129,6 +130,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
         onSignIn={() => { setGuardOpen(false); navigate("/login"); }}
         onRegister={() => { setGuardOpen(false); navigate("/register"); }}
       />
+      <ConnectionBanner />
     </div>
   );
 }
@@ -892,6 +894,7 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
         onSignIn={() => { setGuardOpen(false); navigate("/login"); }}
         onRegister={() => { setGuardOpen(false); navigate("/register"); }}
       />
+      <ConnectionBanner />
     </div>
   );
 }

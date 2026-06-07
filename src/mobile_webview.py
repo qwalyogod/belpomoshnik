@@ -285,12 +285,17 @@ def main(page: ft.Page) -> None:
         border_radius=14,
     )
 
-    def replace(control: ft.Control) -> None:
+    def replace(control: ft.Control, screen_name: str = "form") -> None:
         apply_shell_theme()
         lock_phone_orientation_if_needed()
         page.clean()
         page.add(root(control))
         page.update()
+        screens["current"] = screen_name
+
+    # P12: глобальный словарь текущего экрана. Используется on_message,
+    # чтобы не зацикливать переключения offline↔online↔offline.
+    screens: dict[str, str] = {"current": "form"}
 
     def show_connection_form(message: str | None = None, error: bool = False) -> None:
         colors = _palette(page)
@@ -336,7 +341,8 @@ def main(page: ft.Page) -> None:
                     "Введите адрес приложения и нажмите «Подключиться».",
                     controls,
                 ),
-            )
+            ),
+            screen_name="form",
         )
 
     def show_loading(url: str) -> None:
@@ -368,7 +374,8 @@ def main(page: ft.Page) -> None:
                         tight=True,
                     ),
                 ),
-            )
+            ),
+            screen_name="loading",
         )
 
     def show_offline() -> None:
@@ -393,7 +400,8 @@ def main(page: ft.Page) -> None:
                     ],
                     accent=_palette(page)["danger"],
                 ),
-            )
+            ),
+            screen_name="offline",
         )
 
     def show_server_error(detail: str | None = None) -> None:
@@ -420,7 +428,8 @@ def main(page: ft.Page) -> None:
                     ],
                     accent=_palette(page)["warning"],
                 ),
-            )
+            ),
+            screen_name="server_error",
         )
 
     def on_started(e: ft.ControlEvent) -> None:
@@ -439,6 +448,39 @@ def main(page: ft.Page) -> None:
             return
         show_server_error(str(e.data))
 
+    def on_message(e) -> None:
+        """P12: WebView → Python: React-приложение сообщает статус подключения.
+        payload: JSON { type: "belpomoshchik:connection", status: "online" | "offline" | "server-error" }.
+        Парсим и рисуем соответствующий «нативный» экран. Если page уже
+        показывает оффлайн/сервер-экран, переключаем только при смене. """
+        data = getattr(e, "data", None) or getattr(e, "message", None)
+        if not data:
+            return
+        try:
+            import json as _json
+            payload = _json.loads(str(data))
+        except Exception:  # noqa: BLE001
+            return
+        if not isinstance(payload, dict):
+            return
+        kind = payload.get("type")
+        if kind != "belpomoshchik:connection":
+            return
+        status = payload.get("status")
+        print(f"[shell] connection status from webview -> {status}")
+        if status == "online":
+            # Если сейчас показан один из error-экранов — пробуем перезагрузить страницу.
+            current_screen = screens.get("current")
+            if current_screen in {"offline", "server_error"}:
+                retry()
+            return
+        if status == "offline":
+            show_offline()
+            return
+        if status == "server-error":
+            show_server_error("React обнаружил, что бэкенд недоступен.")
+            return
+
     def on_console(e) -> None:
         print(f"[web:{getattr(e, 'severity_level', '?')}] {getattr(e, 'message', e)}")
 
@@ -451,6 +493,13 @@ def main(page: ft.Page) -> None:
         on_progress=on_progress,
         on_console_message=on_console,
     )
+    # P12: on_message доступен не во всех версиях flet-webview. Регистрируем
+    # только если атрибут поддерживается — иначе no-op.
+    if hasattr(webview, "on_message"):
+        try:
+            webview.on_message = on_message
+        except Exception:  # noqa: BLE001
+            pass
 
     async def open_url(_=None) -> None:
         url = _normalize_url(url_field.value or "")
