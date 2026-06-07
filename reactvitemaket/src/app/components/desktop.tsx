@@ -745,12 +745,24 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
 
   const regionsBody = <RegionsEditor mobile={mobile} />;
 
+  // P11: значения — точно те, что принимает бэкенд (UserRoleUpdate pattern).
+  // В UI подписи могут отличаться, но value идёт прямо в PATCH /users/{id}/role.
   const uniqueRoles = [
     { value: "citizen", label: "Гражданин" },
-    { value: "editor", label: "Редактор" },
-    { value: "admin", label: "Администратор" },
+    { value: "content_editor", label: "Редактор" },
+    { value: "platform_admin", label: "Администратор" },
   ];
-  const roleValue = (raw: string) => (uniqueRoles.some(r => r.value === raw) ? raw : "citizen");
+  // Бэкенд для уже загруженных пользователей присылает role_id в этих же
+  // терминах. Если когда-нибудь придёт локальный/мок-юзер с устаревшим
+  // значением ("admin"/"editor") — смаппим в бэковое.
+  const LEGACY_ROLE_MAP: Record<string, string> = {
+    admin: "platform_admin",
+    editor: "content_editor",
+  };
+  const roleValue = (raw: string) => {
+    const normalized = LEGACY_ROLE_MAP[raw] ?? raw;
+    return uniqueRoles.some(r => r.value === normalized) ? normalized : "citizen";
+  };
   const usersBody = admin.users.length === 0 ? sectionEmpty(<Users size={20} />, "Доступно администратору", "Список пользователей и ролей виден только администратору платформы.") : (
     <Card className="p-0">
       <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
