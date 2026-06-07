@@ -1,5 +1,81 @@
 # Журнал изменений
 
+## 2026-06-07 (React/WebView P3 — welcome, login и register)
+
+### Что изменено
+
+- `reactvitemaket/src/app/pages.tsx` — `/welcome` расширен до полноценной входной страницы: понятное позиционирование продукта, блок личного плана, разделение «Проблема / Жизненный сценарий / Моя ситуация», направления помощи и шаги работы.
+- `reactvitemaket/src/app/pages.tsx` — фон `/welcome` растянут на всю страницу, декоративные слои больше не выглядят случайно обрезанными на desktop.
+- `reactvitemaket/src/app/pages.tsx` — `/login` и `/register` получили desktop/tablet split-layout: слева смысловой блок с преимуществами, справа рабочая форма; mobile-композиция сохранена компактной.
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md`, `docs/TASKS.md`, `docs/PROJECT_STATUS.md` — обновлён статус P3.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `/welcome` — ✅ новый входной экран отображается без error overlay.
+- Browser check `/login` — ✅ форма входа и информационный desktop-блок отображаются с первого открытия.
+- Browser check `/register` — ✅ форма регистрации и информационный desktop-блок отображаются с первого открытия.
+
+---
+
+## 2026-06-07 (React/WebView P2 — каталог проблем и жизненных сценариев)
+
+### Что изменено
+
+- `reactvitemaket/src/app/pages.tsx` — общий `/catalog` стал каталогом помощи с режимами «Все», «Проблемы» и «Жизненные сценарии».
+- `reactvitemaket/src/app/pages.tsx` — добавлена обработка query-параметров `q`, `category` и `type`; старый маршрут `/scenarios` открывает каталог сразу в режиме жизненных сценариев.
+- `reactvitemaket/src/app/App.tsx` — переходы с главной по категориям «Семья», «Работа», «Здоровье» теперь ведут в каталог с выбранным фильтром.
+- `reactvitemaket/src/app/App.tsx`, `reactvitemaket/src/app/components/desktop.tsx`, `reactvitemaket/src/app/components/content-editor.tsx`, `reactvitemaket/src/app/components/extra-screens.tsx` — уточнены формулировки: проблема, жизненный сценарий и моя ситуация больше не смешиваются в ключевых местах интерфейса.
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md`, `docs/TASKS.md`, `docs/PROJECT_STATUS.md` — обновлён статус P2.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `/catalog` — ✅ видны режимы «Все», «Проблемы», «Жизненные сценарии» и карточки обоих типов.
+- Browser check `/catalog?category=family&type=all` — ✅ фильтр категории применяется из URL.
+- Browser check `/scenarios` — ✅ открывается режим жизненных сценариев без карточек проблем.
+- Browser check `/catalog?type=problem` — ✅ открывается режим проблем без карточек сценариев.
+
+---
+
+## 2026-06-07 (WebView-shell P1 — загрузка, ошибки сети и ориентация)
+
+### Что изменено
+
+- `src/mobile_webview.py` — старый технический экран подключения заменён на нативные пользовательские состояния: ввод адреса приложения, «Загрузка приложения», «Нет подключения к интернету» и «Сервис временно недоступен».
+- `src/mobile_webview.py` — добавлена кнопка «Попробовать снова», которая повторно проверяет подключение и перезагружает WebView.
+- `src/mobile_webview.py` — технические сообщения `React/Vite/WebView`, чеклист запуска и debug-тест скрыты из пользовательского UI; debug-тест доступен только через `BELPOMOSHNIK_WEBVIEW_DEBUG=1`.
+- `src/mobile_webview.py` — добавлена нативная блокировка портретной ориентации через `set_allowed_device_orientations` только для iOS/Android phone viewport.
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md`, `docs/TASKS.md`, `docs/PROJECT_STATUS.md`, `docs/DECISIONS.md` — обновлён статус P1.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- Ручная проверка на реальном телефоне ещё требуется: offline, server-error, retry и портретная ориентация.
+
+---
+
+## 2026-06-07 (React/WebView — план финальной доводки и P0-стабилизация)
+
+### Что изменено
+
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md` — добавлен актуальный рабочий план после полного переноса UI на React/Vite и выделения Flet в WebView-оболочку.
+- `AGENTS.md` — добавлено правило читать новый план перед задачами по React/WebView-доводке.
+- `docs/TASKS.md` — добавлен этап 22 с приоритетами P0-P12: критичные маршруты, WebView-состояния, профиль, адреса, источники, настройки, админ-аналитика, контент и проверка.
+- `docs/PROJECT_STATUS.md` — обновлён активный курс проекта на React/Vite + FastAPI + WebView-shell.
+- `docs/DECISIONS.md` — зафиксировано архитектурное решение: React остаётся основным UI, Flet используется только как тонкая WebView-оболочка.
+- `reactvitemaket/src/app/pages.tsx` — карточки закон-апдейтов в «Новостях» теперь открывают `/law-detail/:id`; внутри «Новостей» добавлен переход к реестру официальных источников.
+- `reactvitemaket/src/app/App.tsx` — отдельный пункт «Источники» убран из desktop header/sidebar, чтобы реестр источников открывался через «Новости».
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- Browser check `http://127.0.0.1:8560/settings` — ✅ настройки отображаются с первого открытия.
+- Browser check `http://127.0.0.1:8560/news` — ✅ вход в «Официальные источники» виден внутри раздела, отдельного пункта «Источники» в header нет.
+- Browser click по закон-апдейту — ✅ переход на `/law-detail/law-4`, детальная страница показывает блок «Что изменилось».
+
+---
+
 ## 2026-06-04 (React/Vite — backend bridge ситуаций и задач)
 
 ### Что изменено

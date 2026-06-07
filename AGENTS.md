@@ -8,6 +8,7 @@
 - Перед изменениями проверять `docs/PROJECT_STATUS.md` и `docs/TASKS.md`.
 - Перед крупными задачами по закрытию ТЗ читать `docs/TZ_COMPLETION_ROADMAP.md`.
 - Перед задачами по переносу интерфейса на React/Vite читать `docs/REACT_MIGRATION_PLAN.md` и `docs/REACT_MIGRATION_AUDIT.md`.
+- Перед задачами по доводке React/WebView после миграции читать `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md`.
 - Если задача крупная, сначала кратко зафиксировать план действий.
 - Не делать огромные изменения за один раз без необходимости.
 
@@ -29,6 +30,7 @@
 - Без отдельной задачи не переписывать backend-стек и не ломать API-контракты.
 - `docs/TZ_COMPLETION_ROADMAP.md` является рабочим планом развития после First Beta.
 - `docs/REACT_MIGRATION_PLAN.md` описывает завершённый переход UI на React/Vite.
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md` является актуальным планом доводки React/WebView-версии: стабильность WebView, маршруты, профиль, источники, настройки, админ-аналитика и финальное закрытие ТЗ.
 
 ## Поведение AI-агента
 
