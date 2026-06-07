@@ -100,7 +100,17 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     // не скроллится у гостя». overflow-x-hidden защищает от горизонтального
     // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
     // высоту viewport и плюс естественный overflow.
-    <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
+    <div
+      className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]"
+      style={{
+        // Fallback-значения CSS-переменных до рендера header/nav.
+        // Сами header и nav переопределят их в своих style (см. MobileBrandBar
+        // и MobileNav). Это гарантирует, что контент сразу получит правильный
+        // padding, даже если header/nav ещё не замаунтились.
+        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+        ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
+      }}
+    >
       {/* P12: MobileBrandBar — fixed top-0 (НЕ sticky), потому что iOS
           WKWebView ломает position: sticky когда любой предок имеет
           overflow-x-hidden (что у нас есть для защиты от горизонтального
@@ -108,7 +118,12 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           Высота берётся из CSS-переменной --belp-mobile-header-h, которую
           выставляет сам header (см. MobileBrandBar). */}
       <MobileBrandBar />
-      <div style={{ paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))" }}>
+      <div
+        style={{
+          paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))",
+          paddingBottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
+        }}
+      >
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
             на mobile это давало визуальный «флэш пустоты» при переходе на
             /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
@@ -124,6 +139,24 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           </motion.div>
         </AnimatePresence>
       </div>
+      {/* Fade-gradient под таб-баром: контент визуально уходит в дымку.
+          Светлая тема — к #F6F7FB, тёмная — к #07080C. Условный рендер: только
+          когда showBottomNav. Высота 3rem даёт плавный переход. */}
+      {showBottomNav && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 z-20"
+          style={{
+            bottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
+            height: "3rem",
+            background: "linear-gradient(to top, #F6F7FB 0%, rgba(246,247,251,0) 100%)",
+          }}
+        >
+          <style>{`.dark > div > div[aria-hidden] {
+            background: linear-gradient(to top, #07080C 0%, rgba(7,8,12,0) 100%) !important;
+          }`}</style>
+        </div>
+      )}
       {showBottomNav && <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />
       <GuestGuardModal
@@ -333,8 +366,16 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
     <>
       {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
           чтобы он оставался на месте при нативном page-scroll (когда shell
-          длиннее viewport, иначе нав повисает посреди контента). */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
+          длиннее viewport, иначе нав повисает посреди контента).
+          CSS-переменная --belp-mobile-nav-h синхронизирует padding-bottom
+          контента в MobileShell, чтобы последние элементы не обрезались. */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4"
+        style={{
+          paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
+          ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
           {left.map((t) => renderTab(t))}
           <div className="w-16 shrink-0" />
