@@ -29,6 +29,39 @@ type Page =
   | "home" | "situations" | "situation" | "documents" | "legal" | "notifications"
   | "profile" | "catalog" | "scenario" | "mysituation" | "settings" | "learning" | "admin" | "finance" | "news" | "sources";
 
+/* Top-level (корневые) маршруты — здесь показываем нижнее меню MobileNav
+   и НЕ показываем back-кнопку. Это «главные» разделы приложения, в которые
+   пользователь возвращается тапом по таб-бару. */
+const TOP_LEVEL_ROUTES = new Set<string>([
+  "/", "/catalog", "/scenarios", "/situations", "/documents",
+  "/finance", "/news", "/notifications", "/profile", "/about",
+  "/onboarding", "/learning", "/problems",
+]);
+
+/* Auth-страницы: ни MobileShell, ни MobileNav, ни back-кнопка. */
+const AUTH_ROUTES = new Set<string>(["/login", "/register", "/welcome"]);
+
+/* Hidden nav: админ/редактор — это служебные разделы, в таб-баре не нужны. */
+const NAV_HIDDEN_ROUTES = new Set<string>(["/admin", "/editor", "/extremist"]);
+
+function isTopLevelRoute(pathname: string): boolean {
+  // Служебные / auth / скрытые разделы — не top-level.
+  if (isAuthPage(pathname) || isNavHidden(pathname)) return false;
+  // Любой /scenarios/:id, /situations/:id, /problem-detail/:id, /law-detail/:id — DETAIL.
+  if (/^\/(scenarios|situations|problem-detail|law-detail)\/[^/]+/.test(pathname)) return false;
+  // Точное совпадение с top-level маршрутами.
+  if (TOP_LEVEL_ROUTES.has(pathname)) return true;
+  return false;
+}
+
+function isAuthPage(pathname: string): boolean {
+  return AUTH_ROUTES.has(pathname);
+}
+
+function isNavHidden(pathname: string): boolean {
+  return NAV_HIDDEN_ROUTES.has(pathname);
+}
+
 /* ============================================================
    MOBILE APP
    ============================================================ */
@@ -47,6 +80,18 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     }
     return true;
   };
+
+  const showBottomNav = isTopLevelRoute(location.pathname);
+  const showMobileShell = !isAuthPage(location.pathname);
+
+  if (!showMobileShell) {
+    // /login, /register, /welcome — без MobileShell, без MobileNav, без MobileTopBar.
+    return (
+      <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
+        <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+      </div>
+    );
+  }
 
   return (
     // На mobile скроллим страницу нативно (не вложенным overflow-auto) — это
@@ -73,7 +118,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           </motion.div>
         </AnimatePresence>
       </div>
-      <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />
+      {showBottomNav && <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />
       <GuestGuardModal
         open={guardOpen}
@@ -137,10 +182,10 @@ function mobileTitleFromPath(pathname: string): string {
 export function MobileBrandBar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isHome =
-    location.pathname === "/" ||
-    location.pathname === "/onboarding" ||
-    location.pathname === "/welcome";
+  // Top-level (главные разделы: /, /news, /profile, /catalog...) — НЕ back,
+  // показываем логотип/название. Detail (/scenarios/:id, /situations/:id,
+  // /problem-detail/:id, /law-detail/:id) — back-кнопка.
+  const isTopLevel = isTopLevelRoute(location.pathname);
   const title = mobileTitleFromPath(location.pathname);
   return (
     <div
@@ -149,7 +194,7 @@ export function MobileBrandBar() {
     >
       {/* Левая зона: 40px */}
       <div className="flex w-10 shrink-0 items-center">
-        {isHome ? (
+        {isTopLevel ? (
           <button
             onClick={() => navigate("/")}
             aria-label="На главную"
@@ -168,9 +213,9 @@ export function MobileBrandBar() {
         )}
       </div>
 
-      {/* Центр: title (или лого+имя на главной) */}
+      {/* Центр: title (или лого+имя на top-level) */}
       <div className="min-w-0 flex-1 text-center">
-        {isHome ? (
+        {isTopLevel && location.pathname === "/" ? (
           <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
             Белпомощник
           </div>
@@ -1930,6 +1975,8 @@ export function RootLayout() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSignal, setAdminSignal] = useState(0);
   const isMobile = layout === "mobile";
+  const location = useLocation();
+  const isAuthRoute = isAuthPage(location.pathname);
 
   const dark = themeMode === "dark" || (themeMode === "system" && systemDark);
   const setDark = (d: boolean) => setThemeMode(d ? "dark" : "light");
@@ -1973,6 +2020,10 @@ export function RootLayout() {
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
             {layout === "mobile" ? <MobileShell dark={dark} setDark={setDark} />
               : layout === "desktop" ? <DesktopHeaderShell />
+              // На tablet на /login, /register, /welcome — без боковой DesktopShell
+              // (там рисуется только центрированная auth-карточка). На остальных
+              // страницах tablet = DesktopShell с левым сайдбаром.
+              : isAuthRoute ? <DesktopAuthShell />
               : <DesktopShell dark={dark} setDark={setDark} />}
             <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
             {!isMobile && <AssistantFab />}
@@ -1981,6 +2032,28 @@ export function RootLayout() {
         </div>
       </ShellContext.Provider>
     </AppStoreProvider>
+  );
+}
+
+/* Tablet-режим на auth-страницах (/login, /register, /welcome): без боковой
+   DesktopShell и без шапки. Только центрированный контент auth-формы на
+   нейтральном фоне. */
+function DesktopAuthShell() {
+  const location = useLocation();
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[#F4F5FA] p-6 dark:bg-[#05060A]">
+      <div className="w-full max-w-[440px]">
+        <div className="mb-6 flex items-center justify-center">
+          <Logo size={36} />
+        </div>
+        {/* Здесь Outlet рендерится через <Outlet /> в RootLayout? Нет — RootLayout
+            рендерит <Outlet /> внутри выбранного shell-компонента. Чтобы не ломать
+            текущий контракт, передаём pathname, чтобы страница могла его
+            использовать. Но в нашей текущей структуре auth-shell должен сам
+            рендерить <Outlet />. */}
+        <Outlet key={location.pathname} />
+      </div>
+    </div>
   );
 }
 
