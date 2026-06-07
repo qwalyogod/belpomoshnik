@@ -709,3 +709,35 @@ class ArticleViewDaily(Base):
 
     day: Mapped[str] = mapped_column(String(10), primary_key=True)  # yyyy-mm-dd
     count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class ExtremistEntry(Base, TimestampMixin):
+    """P7 — Каркас раздела «Экстремистский контент».
+
+    Это юридически чувствительная таблица. Любая запись ОБЯЗАНА иметь
+    проверенный официальный source_url. Контент хранится в статусе
+    ``draft`` по умолчанию; перевод в published выполняется после ручной
+    проверки официального источника.
+    """
+
+    __tablename__ = "extremist_entries"
+    __table_args__ = (
+        Index("ix_extremist_entries_status", "status"),
+        Index("ix_extremist_entries_category", "category"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    # kind: registry | news | explanation
+    category: Mapped[str] = mapped_column(String(32), nullable=False, default="registry")
+    # Обязательный URL официального источника
+    source_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    source_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    included_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_checked_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    short_description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # JSON-словарь: {"content_types": ["social", "channels", "media", ...]}.
+    # Храним как строку, чтобы не зависеть от диалекта JSON-типа.
+    filters_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    # draft | published. По умолчанию draft: контент не верифицирован.
+    status: Mapped[str] = mapped_column(String(16), default="draft", nullable=False)

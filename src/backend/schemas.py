@@ -555,3 +555,64 @@ class ArticleUpdate(BaseModel):
 
 class ArticleModerate(BaseModel):
     action: str  # publish | reject | report | unreport
+
+
+# ---------------------------------------------------------------------------
+# P7 — Каркас раздела «Экстремистский контент» (только структура, без данных)
+# ---------------------------------------------------------------------------
+
+EXTREMIST_CATEGORIES = ("registry", "news", "explanation")
+EXTREMIST_STATUSES = ("draft", "published")
+EXTREMIST_CONTENT_TYPES = (
+    "social",
+    "channels",
+    "media",
+    "persons",
+    "organizations",
+    "music",
+    "other",
+)
+
+
+class ExtremistEntryBase(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    category: str = Field(default="registry", max_length=32)
+    # Pydantic HttpUrl — жёсткая валидация формата. Поле обязательно.
+    source_url: HttpUrl
+    source_name: str = Field(default="", max_length=255)
+    included_at: datetime | None = None
+    last_checked_at: datetime | None = None
+    short_description: str = Field(default="", max_length=4000)
+    filters_json: str = Field(default="{}", max_length=4000)
+    status: str = Field(default="draft", max_length=16)
+
+
+class ExtremistEntryCreate(ExtremistEntryBase):
+    pass
+
+
+class ExtremistEntryUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=255)
+    category: str | None = Field(default=None, max_length=32)
+    source_url: HttpUrl | None = None
+    source_name: str | None = Field(default=None, max_length=255)
+    included_at: datetime | None = None
+    last_checked_at: datetime | None = None
+    short_description: str | None = Field(default=None, max_length=4000)
+    filters_json: str | None = Field(default=None, max_length=4000)
+    status: str | None = Field(default=None, max_length=16)
+
+
+class ExtremistEntryOut(ORMModel):
+    id: int
+    title: str
+    category: str
+    source_url: str
+    source_name: str
+    included_at: datetime | None = None
+    last_checked_at: datetime | None = None
+    short_description: str
+    filters_json: str
+    status: str
+    created_at: datetime
+    updated_at: datetime

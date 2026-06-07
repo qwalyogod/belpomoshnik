@@ -51,6 +51,10 @@ class UserProfileOut(BaseModel):
     has_car: bool = False
     is_renter: bool = False
     interest_tags: list[str] = Field(default_factory=list)
+    # v1.1 (P4): до 5 адресов пользователя (label / region / district /
+    # city / street / isPrimary). Хранится как JSON-строка, в адаптере
+    # парсится в массив объектов.
+    addresses: list[dict] = Field(default_factory=list)
 
 
 class UserProfileUpdate(BaseModel):
@@ -65,6 +69,9 @@ class UserProfileUpdate(BaseModel):
     has_car: bool | None = None
     is_renter: bool | None = None
     interest_tags: list[str] | None = None
+    # v1.1 (P4): список адресов. Бэк принимает уже валидный массив,
+    # нормализует и сериализует обратно в JSON-строку для хранения.
+    addresses: list[dict] | None = None
 
 
 class UserDocumentIn(BaseModel):
@@ -130,6 +137,12 @@ def _profile_out(user: User) -> UserProfileOut:
             tags = []
     except (json.JSONDecodeError, TypeError):
         tags = []
+    try:
+        addresses = json.loads(user.addresses_json) if user.addresses_json else []
+        if not isinstance(addresses, list):
+            addresses = []
+    except (json.JSONDecodeError, TypeError):
+        addresses = []
     return UserProfileOut(
         id=user.id,
         email=user.email,
@@ -145,6 +158,7 @@ def _profile_out(user: User) -> UserProfileOut:
         has_car=user.has_car,
         is_renter=user.is_renter,
         interest_tags=tags,
+        addresses=addresses,
     )
 
 
@@ -174,10 +188,16 @@ def update_profile(
 ):
     data = payload.model_dump(exclude_none=True)
     tags = data.pop("interest_tags", None)
+    addresses = data.pop("addresses", None)
     for field, value in data.items():
         setattr(user, field, value)
     if tags is not None:
         user.interest_tags = json.dumps(tags, ensure_ascii=False)
+    if addresses is not None:
+        user.addresses_json = json.dumps(
+            _validate_addresses_payload(addresses),
+            ensure_ascii=False,
+        )
     db.commit()
     db.refresh(user)
     return _profile_out(user)
@@ -281,6 +301,57 @@ def _validate_doc_payload(payload: dict) -> dict:
         normalized.append({"name": name, "value": value})
     payload["custom_fields_json"] = json.dumps(normalized, ensure_ascii=False)
     return payload
+
+
+def _validate_addresses_payload(addresses: list) -> list[dict]:
+    """v1.1 (P4): нормализовать список адресов пользователя (до 5 шт.).
+
+    Каждый адрес — dict с полями id, label, region, district, city, street,
+    isPrimary. Невалидные элементы тихо отбрасываются; в БД уходит
+    только один primary (если заявлено несколько — последний).
+    """
+    if not isinstance(addresses, list):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="addresses должен быть массивом.",
+        )
+    if len(addresses) > 5:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Можно сохранить не больше 5 адресов.",
+        )
+    normalized: list[dict] = []
+    seen_ids: set[str] = set()
+    primary_seen = False
+    for item in addresses:
+        if not isinstance(item, dict):
+            continue
+        entry = {
+            "id": str(item.get("id", "")).strip()[:64],
+            "label": str(item.get("label", "")).strip()[:80],
+            "region": str(item.get("region", "")).strip()[:120],
+            "district": str(item.get("district", "")).strip()[:120],
+            "city": str(item.get("city", "")).strip()[:120],
+            "street": str(item.get("street", "")).strip()[:255],
+            "isPrimary": bool(item.get("isPrimary", False)),
+        }
+        # Пустые/повторные id убираем — фронт генерирует uid-ы через свою логику.
+        if not entry["id"] or entry["id"] in seen_ids:
+            continue
+        # Пропускаем совсем пустые записи (без label и без street).
+        if not entry["label"] and not entry["street"] and not entry["city"]:
+            continue
+        seen_ids.add(entry["id"])
+        # Гарантируем, что primary только один.
+        if entry["isPrimary"] and primary_seen:
+            entry["isPrimary"] = False
+        elif entry["isPrimary"]:
+            primary_seen = True
+        normalized.append(entry)
+    # Если ни один не помечен primary — делаем первый.
+    if normalized and not primary_seen:
+        normalized[0]["isPrimary"] = True
+    return normalized
 
 
 @router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
