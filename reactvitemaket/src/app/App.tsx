@@ -104,9 +104,11 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       {/* P12: MobileBrandBar — fixed top-0 (НЕ sticky), потому что iOS
           WKWebView ломает position: sticky когда любой предок имеет
           overflow-x-hidden (что у нас есть для защиты от горизонтального
-          дрейфа). Поэтому контенту ниже нужен явный padding-top. */}
+          дрейфа). Поэтому контенту ниже нужен явный padding-top.
+          Высота берётся из CSS-переменной --belp-mobile-header-h, которую
+          выставляет сам header (см. MobileBrandBar). */}
       <MobileBrandBar />
-      <div style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}>
+      <div style={{ paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))" }}>
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
             на mobile это давало визуальный «флэш пустоты» при переходе на
             /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
@@ -195,7 +197,14 @@ export function MobileBrandBar() {
   return (
     <div
       className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
-      style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+      style={{
+        paddingTop: "calc(0.75rem + env(safe-area-inset-top))",
+        // Высота хедера = padding-top (12px + safe-area) + h-10 (40px)
+        // + pb-3 (12px) + border (1px) = ~3.85rem + safe-area.
+        // CSS-переменная для синхронизации padding-top контента
+        // в MobileShell (см. ниже).
+        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+      }}
     >
       {/* Левая зона: 40px */}
       <div className="flex w-10 shrink-0 items-center">
