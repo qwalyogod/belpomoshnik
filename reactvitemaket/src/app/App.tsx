@@ -1906,6 +1906,17 @@ function OnboardingGate() {
   return null;
 }
 
+/* v1.1 (P8): AccessibilityBridge — применяет настройки к DOM.
+   Должен рендериться ВНУТРИ <AppStoreProvider>, поэтому это отдельный
+   компонент, который <RootLayout> вкладывает сразу после провайдера. */
+function AccessibilityBridge() {
+  const { settings } = useStore();
+  useEffect(() => {
+    applyAccessibilitySettings(settings);
+  }, [settings]);
+  return null;
+}
+
 export function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     try { return (localStorage.getItem("themeMode") as ThemeMode) || "system"; } catch { return "system"; }
@@ -1937,13 +1948,6 @@ export function RootLayout() {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  // v1.1 (P8): real accessibility — применяем font-scale / high-contrast
-  // к DOM, когда меняются настройки пользователя.
-  const { settings } = useStore();
-  useEffect(() => {
-    applyAccessibilitySettings(settings);
-  }, [settings]);
-
   useEffect(() => {
     const check = () => {
       const w = window.innerWidth;
@@ -1957,6 +1961,11 @@ export function RootLayout() {
   return (
     <AppStoreProvider>
       <ShellContext.Provider value={{ isMobile, dark, setDark, themeMode, setThemeMode, openAssistant: () => setAssistantOpen(true), adminOpen, adminSignal, openAdmin: () => { setAdminOpen(true); setAdminSignal(s => s + 1); }, closeAdmin: () => setAdminOpen(false) }}>
+        {/* v1.1 (P8): применяем font-scale / high-contrast, когда меняются
+            настройки пользователя. Этот компонент обязан рендериться ВНУТРИ
+            <AppStoreProvider>, поэтому живёт в return-дереве RootLayout, а не
+            в его теле. */}
+        <AccessibilityBridge />
         <OnboardingGate />
         <div className={dark ? "dark" : ""}>
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
