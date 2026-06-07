@@ -101,12 +101,12 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
     // высоту viewport и плюс естественный overflow.
     <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      {/* v0.9: brand-bar (лого+имя на главной, только кнопка уведомлений
-          на остальных страницах) — sticky сверху, в нём же учтён
-          safe-area-inset-top, поэтому общий paddingTop shell-у
-          больше не нужен. */}
+      {/* P12: MobileBrandBar — fixed top-0 (НЕ sticky), потому что iOS
+          WKWebView ломает position: sticky когда любой предок имеет
+          overflow-x-hidden (что у нас есть для защиты от горизонтального
+          дрейфа). Поэтому контенту ниже нужен явный padding-top. */}
       <MobileBrandBar />
-      <div>
+      <div style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}>
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
             на mobile это давало визуальный «флэш пустоты» при переходе на
             /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
@@ -194,7 +194,7 @@ export function MobileBrandBar() {
   const title = mobileTitleFromPath(location.pathname);
   return (
     <div
-      className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
       style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
     >
       {/* Левая зона: 40px */}
