@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 import { ShellContext, MobileTopBar } from "./App";
 import { useStore, DOC_TYPE_LABEL, maskDocumentNumber } from "./data/store";
@@ -6,11 +6,15 @@ import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
-import { CategoryId, Problem, Scenario, UserDocument, ExtremistEntry, ExtremistCategory, ExtremistStatus, ExtremistContentType, EXTREMIST_CATEGORY_LABEL, EXTREMIST_STATUS_LABEL, EXTREMIST_CONTENT_TYPE_LABEL } from "./data/types";
+import {
+  CategoryId, Problem, Scenario, UserDocument, ExtremistEntry, ExtremistCategory, ExtremistStatus, ExtremistContentType,
+  EXTREMIST_CATEGORY_LABEL, EXTREMIST_STATUS_LABEL, EXTREMIST_CONTENT_TYPE_LABEL,
+  NoteCategory, NOTE_CATEGORIES,
+} from "./data/types";
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
@@ -2308,6 +2312,405 @@ export function FinancePage() {
         <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Следите за сроками оплаты, передачи показаний и налоговыми обязательствами</p>
       </div>
       <div className="mt-6 max-w-[920px]"><FinanceBody /></div>
+    </div>
+  );
+}
+
+/* ============================================================
+   P7: ExtremistPage — каркас раздела «Экстремистский контент».
+   Только скелет: пустое состояние, фильтры, форма добавления.
+   Никаких реальных данных, имён или ссылок. Контент добавится
+   отдельным этапом после проверки официальных источников.
+   ============================================================ */
+
+const EXTREMIST_ALL_CONTENT_TYPES: ExtremistContentType[] = [
+  "social", "channels", "media", "persons", "organizations", "music", "other",
+];
+
+type ExtremistForm = {
+  title: string;
+  category: ExtremistCategory;
+  sourceUrl: string;
+  sourceName: string;
+  includedAt: string;
+  lastCheckedAt: string;
+  shortDescription: string;
+  contentTypes: ExtremistContentType[];
+  status: ExtremistStatus;
+};
+
+const emptyExtremistForm = (): ExtremistForm => ({
+  title: "",
+  category: "registry",
+  sourceUrl: "",
+  sourceName: "",
+  includedAt: "",
+  lastCheckedAt: "",
+  shortDescription: "",
+  contentTypes: [],
+  status: "draft",
+});
+
+function isValidHttpUrl(value: string): boolean {
+  if (!value) return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function ExtremistPage() {
+  const { isMobile } = useContext(ShellContext);
+  const { role } = useStore();
+  const navigate = useNavigate();
+  const canEdit = role === "editor" || role === "admin";
+
+  // P7: локальный пустой список. Реальные записи подгрузятся из API
+  // отдельным этапом — здесь только структура и UI.
+  const [entries] = useState<ExtremistEntry[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"all" | ExtremistStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | ExtremistContentType>("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<ExtremistForm>(emptyExtremistForm);
+  const [formError, setFormError] = useState("");
+
+  const filtered = entries.filter((e) => {
+    if (statusFilter !== "all" && e.status !== statusFilter) return false;
+    if (typeFilter !== "all" && !e.contentTypes.includes(typeFilter)) return false;
+    return true;
+  });
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setForm(emptyExtremistForm());
+    setFormError("");
+  };
+
+  const submitForm = () => {
+    setFormError("");
+    if (form.title.trim().length < 2) {
+      setFormError("Введите название (минимум 2 символа).");
+      return;
+    }
+    if (!isValidHttpUrl(form.sourceUrl)) {
+      setFormError("Укажите корректный URL официального источника (http(s)://…). Это обязательное поле.");
+      return;
+    }
+    // P7: запись пока сохраняется только в локальной форме. Сохранение на
+    // backend появится следующим этапом — после проверки официальных источников.
+    closeForm();
+  };
+
+  const headerBlock = (
+    <div className="rounded-2xl border border-red-200/70 bg-red-50 p-4 dark:border-red-500/25 dark:bg-red-500/10">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300">
+          <AlertTriangle size={17} />
+        </span>
+        <div>
+          <div className="tracking-tight text-red-900 dark:text-red-200" style={{ fontSize: 15 }}>
+            Информация справочная. Актуальность проверяется на официальном ресурсе.
+          </div>
+          <p className="mt-1 text-[13px] leading-relaxed text-red-800/85 dark:text-red-200/75">
+            Раздел «Экстремистский контент» содержит только записи с проверенным официальным
+            источником и датой проверки. Без подтверждения данные в раздел не добавляются.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const filtersBlock = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setStatusFilter("all")}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${statusFilter === "all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}
+        >Все статусы</button>
+        {(Object.keys(EXTREMIST_STATUS_LABEL) as ExtremistStatus[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${statusFilter === s ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}
+          >{EXTREMIST_STATUS_LABEL[s]}</button>
+        ))}
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+        <button
+          onClick={() => setTypeFilter("all")}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${typeFilter === "all" ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}
+        >Все типы</button>
+        {EXTREMIST_ALL_CONTENT_TYPES.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTypeFilter(t)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${typeFilter === t ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}
+          >{EXTREMIST_CONTENT_TYPE_LABEL[t]}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const emptyBlock = (
+    <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
+      <div>
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/15 dark:text-red-300">
+          <AlertTriangle size={20} />
+        </div>
+        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 16 }}>
+          Список пуст
+        </div>
+        <div className="mt-1 max-w-[42ch] text-[13px] tracking-tight text-black/55 dark:text-white/55">
+          Контент добавляется после проверки официальных источников.
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setFormOpen(true)}
+            className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
+          >
+            <Plus size={14} /> Добавить запись
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const accessGuard = (
+    <div className="mx-auto w-full max-w-[720px] px-5 py-10">
+      <div className="rounded-[28px] border border-black/[0.08] bg-white p-6 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+        <div className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#0056FF]">Доступ ограничен</div>
+        <h1 className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 28, lineHeight: 1.1 }}>
+          Раздел «Экстремистский контент» доступен только редактору или администратору
+        </h1>
+        <p className="mt-3 max-w-[560px] text-[15px] leading-relaxed text-black/60 dark:text-white/60">
+          Этот раздел содержит юридически чувствительную информацию. Откройте его в роли редактора
+          контента или администратора, чтобы посмотреть и дополнить записи.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mt-5 rounded-2xl bg-[#0056FF] px-5 py-3 text-[14px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
+        >
+          Вернуться на главную
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!canEdit) return accessGuard;
+
+  const formModal = formOpen && (
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeForm}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl dark:bg-[#0F1117] sm:rounded-[28px] sm:p-6 [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">P7 · каркас</div>
+            <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 19 }}>Новая запись</div>
+          </div>
+          <button onClick={closeForm} className="grid h-9 w-9 place-items-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
+            <X size={15} className="text-black dark:text-white" />
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <label className="block">
+            <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Название *</span>
+            <input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Например: запись реестра"
+              className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Тип материала</span>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value as ExtremistCategory })}
+                className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+              >
+                {(Object.keys(EXTREMIST_CATEGORY_LABEL) as ExtremistCategory[]).map((c) => (
+                  <option key={c} value={c}>{EXTREMIST_CATEGORY_LABEL[c]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Статус</span>
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value as ExtremistStatus })}
+                className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+              >
+                {(Object.keys(EXTREMIST_STATUS_LABEL) as ExtremistStatus[]).map((s) => (
+                  <option key={s} value={s}>{EXTREMIST_STATUS_LABEL[s]}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">
+              URL официального источника *
+            </span>
+            <input
+              value={form.sourceUrl}
+              onChange={(e) => setForm({ ...form, sourceUrl: e.target.value })}
+              placeholder="https://…"
+              inputMode="url"
+              className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Название источника</span>
+            <input
+              value={form.sourceName}
+              onChange={(e) => setForm({ ...form, sourceName: e.target.value })}
+              placeholder="Например: pravo.by"
+              className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Дата включения</span>
+              <input
+                type="date"
+                value={form.includedAt}
+                onChange={(e) => setForm({ ...form, includedAt: e.target.value })}
+                className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Дата проверки</span>
+              <input
+                type="date"
+                value={form.lastCheckedAt}
+                onChange={(e) => setForm({ ...form, lastCheckedAt: e.target.value })}
+                className="mt-1.5 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Краткое пояснение</span>
+            <textarea
+              value={form.shortDescription}
+              onChange={(e) => setForm({ ...form, shortDescription: e.target.value })}
+              placeholder="Короткое описание для контекста."
+              rows={3}
+              className="mt-1.5 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+          </label>
+
+          <div>
+            <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Тип контента (мульти-выбор)</span>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {EXTREMIST_ALL_CONTENT_TYPES.map((t) => {
+                const on = form.contentTypes.includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      const next = on
+                        ? form.contentTypes.filter((x) => x !== t)
+                        : [...form.contentTypes, t];
+                      setForm({ ...form, contentTypes: next });
+                    }}
+                    className={`rounded-full px-3 py-1.5 text-[12px] tracking-tight ${on ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}
+                  >
+                    {EXTREMIST_CONTENT_TYPE_LABEL[t]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {formError && (
+            <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700 dark:bg-red-500/10 dark:text-red-200">
+              {formError}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              onClick={closeForm}
+              className="rounded-xl px-4 py-2.5 text-[14px] tracking-tight text-black/70 dark:text-white/70"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={submitForm}
+              className="rounded-xl bg-[#0056FF] px-5 py-2.5 text-[14px] font-medium tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
+            >
+              Сохранить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
+        <MobileTopBar title="Экстремистский контент" onBack={() => navigate(-1)} right={
+          canEdit ? <button onClick={() => setFormOpen(true)} className="grid h-10 w-10 place-items-center rounded-full bg-[#0056FF] text-white shadow-sm"><Plus size={16} /></button> : undefined
+        } />
+        <div className="space-y-4 px-5">
+          {headerBlock}
+          <div>
+            <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>
+              Экстремистский контент — реестр (справочно)
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed text-black/55 dark:text-white/55">
+              Все записи проходят проверку по официальным источникам. Без неё раздел остаётся пустым.
+            </p>
+          </div>
+          {filtersBlock}
+          {filtered.length === 0 ? emptyBlock : null}
+        </div>
+        {formModal}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Справочно · юридически чувствительный раздел</div>
+          <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>
+            Экстремистский контент — реестр
+          </div>
+          <p className="mt-2 max-w-[620px] tracking-tight text-black/60 dark:text-white/60">
+            Все записи проходят проверку по официальным источникам. Без неё раздел остаётся пустым.
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setFormOpen(true)}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
+          >
+            <Plus size={14} /> Добавить запись
+          </button>
+        )}
+      </div>
+
+      <div className="mt-6 max-w-[920px] space-y-5">
+        {headerBlock}
+        {filtersBlock}
+        {filtered.length === 0 ? emptyBlock : null}
+      </div>
+      {formModal}
     </div>
   );
 }

@@ -299,6 +299,11 @@ export const INITIAL_PROFILE: UserProfile = {
     { id: "a1", title: "Первая ситуация создана" },
     { id: "a2", title: "Все документы добавлены" },
   ],
+  // v1.1 (P4): дефолтные значения для новых полей профиля. addresses и
+  // preferredSourceIds пустые, чтобы не подменять пользовательские данные.
+  avatarDataUrl: undefined,
+  addresses: [],
+  preferredSourceIds: [],
 };
 
 export const INITIAL_SETTINGS: Settings = {

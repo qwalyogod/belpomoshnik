@@ -219,6 +219,38 @@ export interface UserProfile {
   interests: string[];
   learningProgress: number;    // 0..100
   achievements: { id: string; title: string }[];
+  // v1.1 (P4): аватарка в виде base64 data URL. Хранится ТОЛЬКО в
+  // localStorage (на бэк не отправляем — лишняя нагрузка и PII).
+  avatarDataUrl?: string;
+  // v1.1 (P4): до 5 адресов пользователя (label + регион/район/город/улица).
+  // Один помечается isPrimary. На бэк ходит как addresses_json.
+  addresses: UserAddress[];
+  // v1.1 (P4): id предпочтительных источников новостей (OFFICIAL_SOURCES).
+  // Локальная фишка — хранится ТОЛЬКО в localStorage.
+  preferredSourceIds: string[];
+}
+
+export interface UserAddress {
+  id: string;
+  label: string;
+  region: string;
+  district: string;
+  city: string;
+  street: string;
+  isPrimary: boolean;
+}
+
+export const NOTE_CATEGORIES = ["Общее", "Документы", "Семья", "Здоровье"] as const;
+export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
+
+export interface UserNote {
+  id: string;
+  text: string;
+  category: NoteCategory;
+  /** ISO дата напоминания (yyyy-mm-dd или полный ISO). */
+  reminderAt?: string;
+  done: boolean;
+  createdAt: string;
 }
 
 export interface Settings {

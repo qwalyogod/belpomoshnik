@@ -5,7 +5,7 @@ import { ShellContext, RootLayout } from "./App";
 import { MobileHome, DesktopHome } from "./App";
 import { AdminPanel } from "./components/desktop";
 import { ScenarioDetail, MySituationDetail, SettingsPage, LearningPage } from "./components/extra-screens";
-import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage, OnboardingPage, WelcomePage } from "./pages";
+import { CatalogPage, SituationsPage, DocumentsPage, LegalPage, LawDetailPage, NotificationsPage, ProfilePage, ProblemDetailPage, LoginPage, RegisterPage, AboutPage, ProblemsPage, FinancePage, NewsPage, OnboardingPage, WelcomePage, ExtremistPage } from "./pages";
 
 function ResponsivePage({ mobile: MobileComp, desktop: DesktopComp }: { mobile: React.ElementType; desktop: React.ElementType }) {
   const { isMobile, dark, setDark } = React.useContext(ShellContext);
@@ -164,7 +164,10 @@ export const router = createBrowserRouter([
       { path: "welcome", element: <WelcomePage /> },
       { path: "problems", element: <ProblemsPage /> },
       { path: "admin", element: <AdminPageWrapper /> },
-      { path: "editor", element: <EditorPageWrapper /> }
+      { path: "editor", element: <EditorPageWrapper /> },
+      // P7: юридически чувствительный раздел. Доступ — только editor/admin
+      // (проверка внутри самой страницы по роли). В основное меню не добавлен.
+      { path: "extremist", element: <ExtremistPage /> }
     ]
   }
 ]);
