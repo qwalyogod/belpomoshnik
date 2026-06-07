@@ -519,9 +519,111 @@ def admin_users(_: str = Depends(require_role("platform_admin")), db: Session = 
         schemas.UserAdminOut(
             id=u.id, email=u.email, name=u.name, role_id=u.role_id,
             is_active=u.is_active, city=u.city, region=u.region,
+            created_at=u.created_at,
         )
         for u in users
     ]
+
+
+@router.get("/users/{user_id}", response_model=schemas.UserAdminOut)
+def admin_get_user(
+    user_id: int,
+    _: str = Depends(require_role("platform_admin")),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+    return schemas.UserAdminOut(
+        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
+        is_active=user.is_active, city=user.city, region=user.region,
+        created_at=user.created_at,
+    )
+
+
+@router.patch("/users/{user_id}/role", response_model=schemas.UserAdminOut)
+def admin_update_user_role(
+    user_id: int,
+    payload: schemas.UserRoleUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P11 — Изменить роль пользователя. Admin не может снять admin с самого себя."""
+    user = _must_get(db, User, user_id, "Пользователь не найден")
+    if actor == user.email and payload.role != "platform_admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя снять с себя роль администратора.",
+        )
+    previous = user.role_id
+    user.role_id = payload.role
+    db.commit()
+    db.refresh(user)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Роль пользователя {user.email}: {previous} → {payload.role}",
+        event_type="role_change",
+    )
+    return schemas.UserAdminOut(
+        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
+        is_active=user.is_active, city=user.city, region=user.region,
+        created_at=user.created_at,
+    )
+
+
+@router.patch("/users/{user_id}/active", response_model=schemas.UserAdminOut)
+def admin_update_user_active(
+    user_id: int,
+    payload: schemas.UserActiveUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P11 — Бан/разбан (is_active). Admin не может забанить сам себя."""
+    user = _must_get(db, User, user_id, "Пользователь не найден")
+    if actor == user.email and not payload.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя заблокировать самого себя.",
+        )
+    user.is_active = payload.is_active
+    db.commit()
+    db.refresh(user)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"{'Разблокирован' if payload.is_active else 'Заблокирован'}: {user.email}",
+        event_type="user_active_change",
+    )
+    return schemas.UserAdminOut(
+        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
+        is_active=user.is_active, city=user.city, region=user.region,
+        created_at=user.created_at,
+    )
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P11 — Удалить пользователя. Admin не может удалить сам себя."""
+    user = _must_get(db, User, user_id, "Пользователь не найден")
+    if actor == user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя удалить самого себя.",
+        )
+    email = user.email
+    db.delete(user)
+    db.commit()
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Удалён пользователь: {email}",
+        event_type="delete",
+    )
 
 
 # ---------------------------------------------------------------------------

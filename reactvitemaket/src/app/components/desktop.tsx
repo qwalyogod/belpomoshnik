@@ -250,7 +250,7 @@ const WEEK_BASE = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, addCategory, updateCategory, deleteCategory, setAdminUserRole, setAdminUserActive } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, addCategory, updateCategory, deleteCategory, setAdminUserRole, setAdminUserActive, deleteAdminUser, currentUser } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -782,12 +782,28 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                   <Pill tone={u.isActive ? "ok" : "warn"}>{u.isActive ? "Активен" : "Заблокирован"}</Pill>
                 </td>
                 <td className="whitespace-nowrap py-3.5 pr-5 text-right">
-                  <button
-                    onClick={() => setAdminUserActive(u.id, !u.isActive)}
-                    className={`inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors ${u.isActive ? "border-red-500/30 text-red-500 hover:bg-red-500/[0.08]" : "border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/[0.08] dark:text-emerald-400"}`}
-                  >
-                    <Ban size={12} /> {u.isActive ? "Заблокировать" : "Разблокировать"}
-                  </button>
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      onClick={() => setAdminUserActive(u.id, !u.isActive)}
+                      disabled={u.email === currentUser.email}
+                      title={u.email === currentUser.email ? "Нельзя заблокировать самого себя" : ""}
+                      className={`inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${u.isActive ? "border-red-500/30 text-red-500 hover:bg-red-500/[0.08]" : "border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/[0.08] dark:text-emerald-400"}`}
+                    >
+                      <Ban size={12} /> {u.isActive ? "Заблокировать" : "Разблокировать"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Удалить пользователя ${u.email}? Это действие нельзя отменить.`)) {
+                          deleteAdminUser(u.id);
+                        }
+                      }}
+                      disabled={u.email === currentUser.email}
+                      title={u.email === currentUser.email ? "Нельзя удалить самого себя" : ""}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] tracking-tight text-black/55 transition-colors hover:border-red-500/40 hover:bg-red-500/[0.08] hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-white/55"
+                    >
+                      <Trash2 size={12} /> Удалить
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

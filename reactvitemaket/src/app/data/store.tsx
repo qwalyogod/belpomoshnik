@@ -146,6 +146,7 @@ type Store = {
   // admin user management
   setAdminUserRole: (id: string, role: string) => void;
   setAdminUserActive: (id: string, active: boolean) => void;
+  deleteAdminUser: (id: string) => void;
 
   // helpers
   scenarioById: (id: string) => Scenario | undefined;
@@ -603,24 +604,86 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setMutableCategories(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  // --- Authorities CRUD ---
+  // --- Authorities CRUD (P11) с backend sync.
+  // Маппер из локального Institution (name/...) в backend payload (title/...).
+  const toAuthorityPayload = (item: Partial<Institution>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    if (item.name !== undefined) out.title = item.name;
+    if (item.address !== undefined) out.address = item.address;
+    if (item.city !== undefined) out.city = item.city;
+    if (item.region !== undefined) out.region = item.region;
+    if (item.phone !== undefined) out.phone = item.phone;
+    if (item.hours !== undefined) out.working_hours = item.hours;
+    return out;
+  };
   const addAuthority = useCallback((item: Omit<Institution, "id">) => {
-    setAuthorities(prev => [{ ...item, id: uid("inst") }, ...prev]);
-  }, []);
+    const localId = uid("inst");
+    setAuthorities(prev => [{ ...item, id: localId }, ...prev]);
+    const token = authSession?.access_token;
+    if (!token) return;
+    apiClient.createAdminAuthority<Record<string, unknown>>(token, toAuthorityPayload(item))
+      .then(saved => {
+        setAuthorities(prev => prev.map(a => a.id === localId ? { ...a, id: String(saved.id ?? localId) } : a));
+      })
+      .catch(error => console.warn("Authority created locally; backend create failed.", error));
+  }, [authSession?.access_token]);
   const updateAuthority = useCallback((id: string, patch: Partial<Institution>) => {
     setAuthorities(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
-  }, []);
+    const token = authSession?.access_token;
+    if (!token) return;
+    if (!/^\d+$/.test(id)) return;
+    apiClient.updateAdminAuthority<unknown>(token, Number(id), toAuthorityPayload(patch))
+      .catch(error => console.warn("Authority updated locally; backend update failed.", error));
+  }, [authSession?.access_token]);
   const deleteAuthority = useCallback((id: string) => {
     setAuthorities(prev => prev.filter(a => a.id !== id));
-  }, []);
+    const token = authSession?.access_token;
+    if (!token) return;
+    if (!/^\d+$/.test(id)) return;
+    apiClient.deleteAdminAuthority<unknown>(token, Number(id))
+      .catch(error => console.warn("Authority deleted locally; backend delete failed.", error));
+  }, [authSession?.access_token]);
 
-  // --- Admin user management (local-first; API sync later) ---
+  // --- Admin user management (P11): role/active через backend, локальный optimistic update.
   const setAdminUserRole = useCallback((id: string, role: string) => {
     setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
-  }, []);
+    const token = authSession?.access_token;
+    if (!token) return;
+    if (!/^\d+$/.test(id)) return;
+    apiClient.updateAdminUserRole<Record<string, unknown>>(token, Number(id), role)
+      .then(updated => {
+        setAdminUsers(prev => prev.map(u => u.id === id ? {
+          ...u,
+          role: String(updated.role_id ?? u.role),
+        } : u));
+      })
+      .catch(error => console.warn("Role update failed locally; backend call failed.", error));
+  }, [authSession?.access_token]);
   const setAdminUserActive = useCallback((id: string, active: boolean) => {
     setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: active } : u));
-  }, []);
+    const token = authSession?.access_token;
+    if (!token) return;
+    if (!/^\d+$/.test(id)) return;
+    apiClient.updateAdminUserActive<Record<string, unknown>>(token, Number(id), active)
+      .catch(error => console.warn("Active toggle failed locally; backend call failed.", error));
+  }, [authSession?.access_token]);
+  const deleteAdminUser = useCallback((id: string) => {
+    const token = authSession?.access_token;
+    if (!token) {
+      setAdminUsers(prev => prev.filter(u => u.id !== id));
+      return;
+    }
+    if (!/^\d+$/.test(id)) {
+      setAdminUsers(prev => prev.filter(u => u.id !== id));
+      return;
+    }
+    apiClient.deleteAdminUser<unknown>(token, Number(id))
+      .then(() => setAdminUsers(prev => prev.filter(u => u.id !== id)))
+      .catch(error => {
+        console.warn("User delete failed; backend call failed.", error);
+        window.alert("Не удалось удалить пользователя. Проверьте, что это не вы.");
+      });
+  }, [authSession?.access_token]);
 
   // Resolve the backend numeric user id (for proposer matching + block targeting).
   useEffect(() => {
@@ -1635,7 +1698,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
@@ -1657,7 +1720,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory, mutableCategories,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
     requireAccount, guestGuardSignal, dismissGuestGuard,

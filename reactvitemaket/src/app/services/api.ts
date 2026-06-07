@@ -182,6 +182,28 @@ export const apiClient = {
   getAuthorities: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/authorities", options),
   getLawUpdates: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/law-updates", options),
 
+  // Admin: учреждения (authorities)
+  createAdminAuthority: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/authorities", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateAdminAuthority: <T>(accessToken: string, id: number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/authorities/${id}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteAdminAuthority: <T>(accessToken: string, id: number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/authorities/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+
   getUserProfile: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/user/profile", { headers: authHeaders(accessToken), ...options }),
   updateUserProfile: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
@@ -426,6 +448,28 @@ export const apiClient = {
     requestJson<T>("/api/admin/scenarios", { headers: authHeaders(accessToken), ...options }),
   getAdminUsers: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/users", { headers: authHeaders(accessToken), ...options }),
+  getAdminUser: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}`, { headers: authHeaders(accessToken), ...options }),
+  updateAdminUserRole: <T>(accessToken: string, userId: number, role: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/role`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ role }),
+      ...options,
+    }),
+  updateAdminUserActive: <T>(accessToken: string, userId: number, isActive: boolean, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/active`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ is_active: isActive }),
+      ...options,
+    }),
+  deleteAdminUser: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
   getAuditLogs: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/audit-logs", { headers: authHeaders(accessToken), ...options }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>

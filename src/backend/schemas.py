@@ -171,6 +171,8 @@ class AuthorityUpdate(BaseModel):
     address: str | None = None
     working_hours: str | None = None
     type: str | None = None
+    region: str | None = None
+    city: str | None = None
 
 
 class DeadlineBase(BaseModel):
@@ -455,6 +457,17 @@ class UserAdminOut(BaseModel):
     is_active: bool
     city: str = ""
     region: str = ""
+    created_at: datetime | None = None
+
+
+class UserRoleUpdate(BaseModel):
+    """P11 — изменение роли пользователя (citizen/content_editor/platform_admin)."""
+    role: str = Field(pattern="^(citizen|content_editor|platform_admin)$")
+
+
+class UserActiveUpdate(BaseModel):
+    """P11 — бан/разбан (is_active)."""
+    is_active: bool
 
 
 class EmailNotificationOut(ORMModel):
