@@ -1,5 +1,33 @@
 # Журнал изменений
 
+## 2026-06-07 (React/WebView — P4–P10 закрыты: профиль, адреса, заметки, a11y, push, ЖКХ/налоги summary, честная админка)
+
+### Что изменено
+
+- `src/backend/models.py` — добавлена `UserNote` (text, category, reminder_at, done) с relationship на `User`.
+- `src/backend/migrations/0014_user_notes.sql` — новая таблица `user_notes` с индексами по user_id / done / reminder_at.
+- `src/backend/schemas.py` — Pydantic v2 схемы `UserNoteCreate / UserNoteUpdate / UserNoteOut` и константа `USER_NOTE_CATEGORIES`.
+- `src/backend/api/user.py` — CRUD `/api/user/notes` (GET, POST, PUT, DELETE) с валидацией категории и ISO-даты; модель и relationship подключены.
+- `reactvitemaket/src/app/services/api.ts` — добавлены методы `getUserNotes / createUserNote / updateUserNote / deleteUserNote`.
+- `reactvitemaket/src/app/data/adapters.ts` — `adaptUserNote` + `userNotePayload` (text/category/reminder_at/done, reminder_at приводится к yyyy-mm-dd).
+- `reactvitemaket/src/app/data/store.tsx` — `addNote / updateNote / toggleNote / removeNote` теперь синхронизируются с backend; добавлен fetch-effect после JWT-входа.
+- `reactvitemaket/src/app/services/institutions.ts` — новая `matchInstitutionsForAddresses(institutions, addresses[])` возвращает по группе учреждений на каждый адрес, дедуплицирует внутри группы, сортирует по релевантности.
+- `reactvitemaket/src/app/services/a11y.ts` (новый) — `applyAccessibilitySettings` ставит реальный `font-size: 18px` и инжектирует high-contrast стили; `isNative()` детектит Capacitor/Flet/WebView; `Notification.permission` API для push; `isBiometricAvailable()` возвращает true только в native-оболочке.
+- `reactvitemaket/src/app/App.tsx` — корневой effect применяет a11y к DOM при изменении настроек; `MobileHome` получил карточку «Мои заметки» рядом с «Мои ситуации».
+- `reactvitemaket/src/app/pages.tsx` — `FinanceBody` получил 3-card summary (ближайший / просрочки / сумма месяца) на основе реальных utilityAccounts и taxes.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — SettingsPage: push-row использует `Notification.requestPermission` со статус-pill и кнопкой «Тест» при granted; Face/Touch ID строка показывается только в native-оболочке.
+- `reactvitemaket/src/app/components/desktop.tsx` — `AdminPanel`: убраны синтетические `SAMPLE_ADMIN_STATS / SAMPLE_ADMIN_ROWS / SAMPLE_TOP_MATERIALS` и псевдо-рандомные просмотры; честный пустой state при отсутствии реальных данных.
+- `docs/PROJECT_STATUS.md` — обновлены статусы P4–P10.
+
+### Результат проверки
+
+- `pnpm build` — ✅ без ошибок.
+- `python -m compileall src` — ✅ без ошибок.
+- Backend: UserNote + миграция 0014 применятся через `backend.bootstrap` (idempotent).
+- P4 frontend-sync: заметки пользователя догружаются при JWT-входе, создание/обновление/удаление синхронизируются с `/api/user/notes` при наличии токена; local fallback остаётся рабочим.
+
+---
+
 ## 2026-06-07 (React/WebView P3 — welcome, login и register)
 
 ### Что изменено
