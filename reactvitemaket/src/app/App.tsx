@@ -85,6 +85,11 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   const showBottomNav = isTopLevelRoute(location.pathname);
   const showMobileShell = !isAuthPage(location.pathname);
 
+  // Цвет фона shell-а для fade-gradient. Зависит от темы:
+  //   light: #F6F7FB (светло-серый)
+  //   dark:  #07080C (почти-чёрный)
+  const fadeColor = dark ? "#07080C" : "#F6F7FB";
+
   if (!showMobileShell) {
     // /login, /register, /welcome — без MobileShell, без MobileNav, без MobileTopBar.
     return (
@@ -141,21 +146,20 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       </div>
       {/* Fade-gradient под таб-баром: контент визуально уходит в дымку.
           Светлая тема — к #F6F7FB, тёмная — к #07080C. Условный рендер: только
-          когда showBottomNav. Высота 3rem даёт плавный переход. */}
+          когда showBottomNav. Высота 5rem, плотный градиент — элементы
+          контента плавно растворяются в фоне при подходе к таб-бару. */}
       {showBottomNav && (
         <div
           aria-hidden
           className="pointer-events-none fixed inset-x-0 z-20"
           style={{
             bottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
-            height: "3rem",
-            background: "linear-gradient(to top, #F6F7FB 0%, rgba(246,247,251,0) 100%)",
+            height: "5rem",
+            // Плотный градиент: 100% непрозрачности на старте (у таб-бара),
+            // 0% на 5rem выше. rgba последний аргумент = текущий fadeColor.
+            background: `linear-gradient(to top, ${fadeColor} 0%, ${fadeColor}cc 30%, ${fadeColor}66 70%, ${fadeColor}00 100%)`,
           }}
-        >
-          <style>{`.dark > div > div[aria-hidden] {
-            background: linear-gradient(to top, #07080C 0%, rgba(7,8,12,0) 100%) !important;
-          }`}</style>
-        </div>
+        />
       )}
       {showBottomNav && <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />
