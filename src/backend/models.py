@@ -445,6 +445,9 @@ class User(Base, TimestampMixin):
     has_car: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_renter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     interest_tags: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    # v1.1 (P4): JSON-массив адресов пользователя (до 5 шт.). Валидация
+    # и нормализация — в api/user.py, здесь только ограничение длины.
+    addresses_json: Mapped[str] = mapped_column(String(2000), default="[]", nullable=False)
     settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
