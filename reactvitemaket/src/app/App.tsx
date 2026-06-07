@@ -308,8 +308,8 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
     );
   };
   const left: { id: Page; i: React.ReactNode; n: string }[] = [
-    { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
     { id: "home", i: <Home size={20} />, n: "Главная" },
+    { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
   ];
   const right: { id: Page; i: React.ReactNode; n: string }[] = [
     { id: "news", i: <Newspaper size={20} />, n: "Новости" },
@@ -899,8 +899,8 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
 // /news (см. routes.tsx). В v0.7 лента новостей объединит обычные новости
 // и закон-апдейты.
 const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string }[] = [
-  { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
   { id: "home", icon: <Home size={16} />, label: "Главная" },
+  { id: "catalog", icon: <LayoutGrid size={16} />, label: "Каталог" },
   { id: "situations", icon: <FileText size={16} />, label: "Ситуации", badge: "3" },
   { id: "documents", icon: <Shield size={16} />, label: "Документы" },
   { id: "finance", icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
@@ -1085,8 +1085,8 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </div>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Личный кабинет</div>
-        {item("catalog", <LayoutGrid size={16} />, "Каталог")}
         {item("home", <Home size={16} />, "Главная")}
+        {item("catalog", <LayoutGrid size={16} />, "Каталог")}
         {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
         {item("documents", <Shield size={16} />, "Документы")}
         {item("news", <Newspaper size={16} />, "Новости")}
