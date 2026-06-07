@@ -62,7 +62,7 @@ export function ConnectionBanner() {
               <div className="truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">
                 {status === "offline"
                   ? "Проверьте Wi-Fi или мобильные данные"
-                  : "Не удаётся связаться с сервером"}
+                  : "Проверьте адрес сервера и доступ сети"}
               </div>
             </div>
             <button
