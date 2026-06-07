@@ -1562,7 +1562,7 @@ function articleToDraft(a: Article): Partial<ContentDraft> {
     sourceUrl: a.sourceUrl, date: a.date, author: a.author.name,
   };
 }
-const ARTICLE_KIND_LABEL: Record<string, string> = { news: "Новость", scenario: "Ситуация", problem: "Проблема" };
+const ARTICLE_KIND_LABEL: Record<string, string> = { news: "Новость", scenario: "Жизненный сценарий", problem: "Проблема" };
 
 function ArticleReaderModal({ article, onClose, onEdit }: { article: Article; onClose: () => void; onEdit?: (a: Article) => void }) {
   const { registerView } = useStore();
@@ -1717,7 +1717,7 @@ export function MyContributions() {
   const mine = articles.filter((a) => a.author.proposerId === meId || a.author.proposerId === currentUser.id);
   if (currentUser.role === "guest" || mine.length === 0) return null;
 
-  const kindLabel = (k: string) => (k === "news" ? "Новость" : k === "problem" ? "Проблема" : "Ситуация");
+  const kindLabel = (k: string) => (k === "news" ? "Новость" : k === "problem" ? "Проблема" : "Жизненный сценарий");
   const statusMeta = (s: string): { l: string; tone: "ok" | "lavender" | "warn" | "ghost" } =>
     s === "published" ? { l: "Опубликовано", tone: "ok" } :
     s === "review" ? { l: "На проверке", tone: "lavender" } :

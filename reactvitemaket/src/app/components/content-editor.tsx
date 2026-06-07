@@ -39,10 +39,10 @@ const KIND_META: Record<ContentKind, { icon: React.ReactNode; title: string; sub
   },
   scenario: {
     icon: <FileText size={15} />,
-    title: "Ситуации и пошаговые сценарии",
-    sub: "Жизненные ситуации с понятными шагами, документами и адресами учреждений.",
-    titlePh: "Название ситуации",
-    one: "ситуацию",
+    title: "Жизненные сценарии",
+    sub: "Пошаговые маршруты с задачами, документами и адресами учреждений.",
+    titlePh: "Название сценария",
+    one: "жизненный сценарий",
     category: "Семья",
   },
   problem: {
@@ -57,7 +57,7 @@ const KIND_META: Record<ContentKind, { icon: React.ReactNode; title: string; sub
 
 const KIND_SWITCH: { id: ContentKind; label: string }[] = [
   { id: "news", label: "Новости" },
-  { id: "scenario", label: "Ситуации" },
+  { id: "scenario", label: "Жизненные сценарии" },
   { id: "problem", label: "Проблемы" },
 ];
 

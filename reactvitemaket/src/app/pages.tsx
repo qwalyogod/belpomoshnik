@@ -1,16 +1,16 @@
-import React, { useContext, useState } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router";
+import React, { useCallback, useContext, useEffect, useState } from "react";
+import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 import { ShellContext, MobileTopBar } from "./App";
 import { useStore, DOC_TYPE_LABEL, maskDocumentNumber } from "./data/store";
 import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper, Sparkles
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
-import { UserDocument } from "./data/types";
+import { CategoryId, Problem, Scenario, UserDocument, ExtremistEntry, ExtremistCategory, ExtremistStatus, ExtremistContentType, EXTREMIST_CATEGORY_LABEL, EXTREMIST_STATUS_LABEL, EXTREMIST_CONTENT_TYPE_LABEL } from "./data/types";
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
@@ -64,48 +64,145 @@ const roleLabel = (id: string) => {
   } as Record<string,string>)[id] ?? id;
 }
 
+type CatalogMode = "all" | "problem" | "scenario";
+type CatalogItem = {
+  id: string;
+  kind: "problem" | "scenario";
+  title: string;
+  category: CategoryId;
+  description: string;
+  meta: string;
+  route: string;
+};
+
+const catalogModes: { id: CatalogMode; title: string; description: string }[] = [
+  { id: "all", title: "Все", description: "Проблемы и жизненные сценарии" },
+  { id: "problem", title: "Проблемы", description: "Быстрые справочные карточки" },
+  { id: "scenario", title: "Жизненные сценарии", description: "Пошаговые личные планы" },
+];
+
+const normalizeCatalogMode = (value: string | null, fallback: CatalogMode): CatalogMode => {
+  return value === "problem" || value === "scenario" || value === "all" ? value : fallback;
+};
+
+const scenarioTaskCount = (scenario: Scenario) => {
+  return scenario.taskCount ?? scenario.stages.reduce((total, stage) => total + stage.tasks.length, 0);
+};
+
+const toCatalogItems = (problems: Problem[], scenarios: Scenario[]): CatalogItem[] => {
+  const problemItems: CatalogItem[] = problems.map((problem) => ({
+    id: problem.id,
+    kind: "problem",
+    title: problem.title,
+    category: problem.category,
+    description: problem.shortDescription,
+    meta: `Быстрая справка · ${problem.steps.length} шагов`,
+    route: `/problem-detail/${problem.id}`,
+  }));
+  const scenarioItems: CatalogItem[] = scenarios.map((scenario) => ({
+    id: scenario.id,
+    kind: "scenario",
+    title: scenario.title,
+    category: scenario.category,
+    description: scenario.shortDescription,
+    meta: `Пошаговый план · ${scenario.estimatedTime} · ${scenarioTaskCount(scenario)} задач`,
+    route: `/scenarios/${scenario.id}`,
+  }));
+  return [...problemItems, ...scenarioItems];
+};
+
 export function CatalogPage() {
   const { isMobile } = useContext(ShellContext);
-  const { scenarios, categories } = useStore();
+  const { scenarios, problems, categories } = useStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialParams = new URLSearchParams(location.search);
+  const defaultMode = location.pathname.startsWith("/scenarios") ? "scenario" : "all";
   const [q, setQ] = useState("");
-  const [activeCat, setActiveCat] = useState("all");
+  const [activeCat, setActiveCat] = useState(() => initialParams.get("category") ?? "all");
+  const [activeMode, setActiveMode] = useState<CatalogMode>(() => normalizeCatalogMode(initialParams.get("type"), defaultMode));
 
-  const filtered = scenarios.filter(s => {
-    if (activeCat !== "all" && s.category !== activeCat) return false;
-    if (q && !s.title.toLowerCase().includes(q.toLowerCase())) return false;
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nextDefault = location.pathname.startsWith("/scenarios") ? "scenario" : "all";
+    setQ(params.get("q") ?? "");
+    setActiveCat(params.get("category") ?? "all");
+    setActiveMode(normalizeCatalogMode(params.get("type"), nextDefault));
+  }, [location.pathname, location.search]);
+
+  const updateCatalogUrl = (next: { q?: string; category?: string; type?: CatalogMode }) => {
+    const nextQuery = next.q ?? q;
+    const nextCategory = next.category ?? activeCat;
+    const nextMode = next.type ?? activeMode;
+    setQ(nextQuery);
+    setActiveCat(nextCategory);
+    setActiveMode(nextMode);
+
+    const params = new URLSearchParams();
+    if (nextQuery.trim()) params.set("q", nextQuery.trim());
+    if (nextCategory !== "all") params.set("category", nextCategory);
+    if (nextMode !== "all") params.set("type", nextMode);
+    const queryString = params.toString();
+    navigate(`/catalog${queryString ? `?${queryString}` : ""}`, { replace: true });
+  };
+
+  const catalogItems = toCatalogItems(problems, scenarios);
+  const filtered = catalogItems.filter(item => {
+    if (activeMode !== "all" && item.kind !== activeMode) return false;
+    if (activeCat !== "all" && item.category !== activeCat) return false;
+    if (q && !matchesQuery(q, [item.title, item.description, catLabel(item.category), item.kind === "problem" ? "проблема" : "жизненный сценарий"])) return false;
     return true;
   });
+  const pageTitle = activeMode === "problem" ? "Каталог проблем" : activeMode === "scenario" ? "Жизненные сценарии" : "Каталог помощи";
+  const pageLead = activeMode === "problem"
+    ? "Короткие справочные карточки для вопросов, где нужен быстрый ответ и список действий."
+    : activeMode === "scenario"
+      ? "Длительные жизненные сценарии: этапы, задачи, документы, сроки и персональный прогресс."
+      : "Выберите короткую проблему или жизненный сценарий. Проблема даёт быстрый план, сценарий создаёт личную ситуацию с задачами.";
+  const searchPlaceholder = activeMode === "problem" ? "Найти проблему" : activeMode === "scenario" ? "Найти сценарий" : "Найти проблему или сценарий";
 
   if (isMobile) {
     return (
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
-        <MobileTopBar title="Каталог ситуаций" onBack={() => navigate(-1)} />
+        <MobileTopBar title={pageTitle} onBack={() => navigate(-1)} />
         <div className="px-5">
+          <div className="mb-4 rounded-3xl border border-black/[0.06] bg-white p-4 dark:border-white/[0.06] dark:bg-[#0F1117]">
+            <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>{pageTitle}</div>
+            <div className="mt-1 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">{pageLead}</div>
+          </div>
           <div className="flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-[#0F1117]">
             <Search size={16} className="text-black/40 dark:text-white/40" />
-            <input placeholder="Найти ситуацию" value={q} onChange={e => setQ(e.target.value)} className="flex-1 bg-transparent tracking-tight outline-none placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40" />
+            <input placeholder={searchPlaceholder} value={q} onChange={e => updateCatalogUrl({ q: e.target.value })} className="flex-1 bg-transparent tracking-tight outline-none placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40" />
           </div>
-          <div className="mt-3"><ProposeButton kind="scenario" className="w-full justify-center" /></div>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
-            <button onClick={() => setActiveCat("all")} className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${activeCat==="all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>Все</button>
-            {categories.map(c => (
-              <button key={c.id} onClick={() => setActiveCat(c.id)} className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${activeCat===c.id ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>{c.name}</button>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {catalogModes.map(mode => (
+              <button key={mode.id} onClick={() => updateCatalogUrl({ type: mode.id })} className={`rounded-2xl px-3 py-2 text-center text-[12px] tracking-tight transition-colors ${activeMode === mode.id ? "bg-[#0056FF] text-white" : "bg-white text-black/65 dark:bg-white/[0.06] dark:text-white/65"}`}>
+                {mode.title}
+              </button>
             ))}
           </div>
-          {filtered.length === 0 && <div className="mt-10 text-center text-[13px] text-black/55 dark:text-white/55">Сценарии не найдены</div>}
+          <div className="mt-3">
+            <ProposeButton kind={activeMode === "problem" ? "problem" : "scenario"} className="w-full justify-center" />
+          </div>
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+            <button onClick={() => updateCatalogUrl({ category: "all" })} className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${activeCat==="all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>Все</button>
+            {categories.map(c => (
+              <button key={c.id} onClick={() => updateCatalogUrl({ category: c.id })} className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${activeCat===c.id ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>{c.name}</button>
+            ))}
+          </div>
+          {filtered.length === 0 && <div className="mt-10 text-center text-[13px] text-black/55 dark:text-white/55">Материалы не найдены. Попробуйте изменить тип, категорию или запрос.</div>}
           <div className="mt-5 grid grid-cols-1 gap-3">
-            {filtered.map((s, i) => (
-              <button key={s.id} onClick={() => navigate(`/scenarios/${s.id}`)} className="block text-left w-full">
+            {filtered.map((item, i) => (
+              <button key={`${item.kind}-${item.id}`} onClick={() => navigate(item.route)} className="block text-left w-full">
                 <Card interactive className="p-4 flex gap-4 items-center">
                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl"
                     style={{ background: i % 2 ? "#E3E7FC" : "linear-gradient(135deg,#0056FF,#2277FF)", color: i % 2 ? "#0056FF" : "white" }}>
-                    <CatIcon cat={s.category} />
+                    <CatIcon cat={item.category} />
                   </div>
-                  <div>
-                    <div className="text-[11px] text-[#0056FF] mb-1">{catLabel(s.category)}</div>
-                    <div className="tracking-tight text-black dark:text-white leading-tight">{s.title}</div>
-                    <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">{s.estimatedTime} · {s.difficulty === "easy" ? "Простой" : "Сложный"}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] text-[#0056FF] mb-1">{item.kind === "problem" ? "Проблема" : "Жизненный сценарий"} · {catLabel(item.category)}</div>
+                    <div className="tracking-tight text-black dark:text-white leading-tight">{item.title}</div>
+                    <div className="mt-1 line-clamp-2 text-[12px] tracking-tight text-black/50 dark:text-white/50">{item.meta}</div>
                   </div>
                 </Card>
               </button>
@@ -120,41 +217,51 @@ export function CatalogPage() {
   return (
     <div className="p-8">
       <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Каталог</div>
-      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Жизненные сценарии</div>
+      <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>{pageTitle}</div>
       <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">
-        Выберите ситуацию, и приложение покажет пошаговый план действий.
+        {pageLead}
       </p>
       
-      <div className="mt-6 flex gap-3 items-center max-w-[640px]">
+      <div className="mt-6 grid max-w-[820px] grid-cols-3 gap-3">
+        {catalogModes.map(mode => (
+          <button key={mode.id} onClick={() => updateCatalogUrl({ type: mode.id })} className={`rounded-3xl border px-4 py-4 text-left transition-colors ${activeMode === mode.id ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:border-[#7FA8FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.06] bg-white text-black/70 hover:bg-black/[0.02] dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white/70 dark:hover:bg-white/[0.06]"}`}>
+            <div className="text-[14px] font-medium tracking-tight">{mode.title}</div>
+            <div className="mt-1 text-[12px] tracking-tight opacity-70">{mode.description}</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 flex gap-3 items-center max-w-[720px]">
         <div className="flex flex-1 items-center gap-3 rounded-2xl border border-black/[0.06] bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-[#0F1117]">
           <Search size={16} className="text-black/40 dark:text-white/40" />
-          <input placeholder="Найти сценарий" value={q} onChange={e => setQ(e.target.value)} className="flex-1 bg-transparent tracking-tight outline-none placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40" />
+          <input placeholder={searchPlaceholder} value={q} onChange={e => updateCatalogUrl({ q: e.target.value })} className="flex-1 bg-transparent tracking-tight outline-none placeholder:text-black/40 dark:text-white dark:placeholder:text-white/40" />
         </div>
-        <ProposeButton kind="scenario" className="shrink-0 self-stretch" />
+        <ProposeButton kind={activeMode === "problem" ? "problem" : "scenario"} className="shrink-0 self-stretch" />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        <button onClick={() => setActiveCat("all")} className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${activeCat==="all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>Все</button>
+        <button onClick={() => updateCatalogUrl({ category: "all" })} className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${activeCat==="all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>Все</button>
         {categories.map(c => (
-          <button key={c.id} onClick={() => setActiveCat(c.id)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${activeCat===c.id ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>{c.name}</button>
+          <button key={c.id} onClick={() => updateCatalogUrl({ category: c.id })} className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${activeCat===c.id ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>{c.name}</button>
         ))}
       </div>
       
-      <div className="mt-8"><EditorialFeed kind="scenario" title="Ситуации от редакции и пользователей" /></div>
-      {filtered.length === 0 && <div className="mt-10 text-[14px] text-black/55 dark:text-white/55">Сценарии не найдены. Попробуйте изменить запрос или категорию.</div>}
+      <div className="mt-8"><EditorialFeed kind={activeMode === "problem" ? "problem" : "scenario"} title={activeMode === "problem" ? "Проблемы от редакции и пользователей" : "Жизненные сценарии от редакции и пользователей"} /></div>
+      {filtered.length === 0 && <div className="mt-10 text-[14px] text-black/55 dark:text-white/55">Материалы не найдены. Попробуйте изменить тип, категорию или запрос.</div>}
       
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((s, i) => (
-          <button key={s.id} className="text-left" onClick={() => navigate(`/scenarios/${s.id}`)}>
+        {filtered.map((item, i) => (
+          <button key={`${item.kind}-${item.id}`} className="text-left" onClick={() => navigate(item.route)}>
             <Card interactive className="p-5 flex flex-col h-full">
               <div className="grid h-12 w-12 place-items-center rounded-2xl" style={{ background: i % 2 ? "#E3E7FC" : "linear-gradient(135deg,#0056FF,#2277FF)", color: i % 2 ? "#0056FF" : "white" }}>
-                <CatIcon cat={s.category} />
+                <CatIcon cat={item.category} />
               </div>
-              <div className="mt-8 tracking-tight text-black dark:text-white" style={{ fontSize: 16, lineHeight: 1.2 }}>{s.title}</div>
-              <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">{catLabel(s.category)}</div>
+              <div className="mt-8 tracking-tight text-black dark:text-white" style={{ fontSize: 16, lineHeight: 1.2 }}>{item.title}</div>
+              <div className="mt-1 text-[12px] tracking-tight text-[#0056FF]">{item.kind === "problem" ? "Проблема" : "Жизненный сценарий"} · {catLabel(item.category)}</div>
+              <div className="mt-3 line-clamp-3 text-[13px] tracking-tight text-black/60 dark:text-white/60">{item.description}</div>
               <div className="mt-4 flex flex-col gap-1 text-[12px] tracking-tight text-black/55 dark:text-white/55">
-                <span>Срок: {s.estimatedTime}</span>
-                <span>Задач: {s.taskCount ?? s.stages.reduce((n, st) => n + st.tasks.length, 0)}</span>
+                <span>{item.meta}</span>
+                <span>{item.kind === "problem" ? "Открыть карточку проблемы" : "Открыть сценарий"}</span>
               </div>
             </Card>
           </button>
@@ -488,91 +595,168 @@ const ONBOARDING_STEPS = [
    ============================================================ */
 export function WelcomePage() {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState<string>("documents");
-  const [activeStep, setActiveStep] = useState<number>(0);
+  const [activeStep, setActiveStep] = useState(0);
 
-  // Демо-карточки сценариев для блока «Попробуйте»
-  const DEMO_CATEGORIES = [
-    { id: "documents", label: "Документы", icon: <Shield size={18} />, color: "from-[#001A66] to-[#0056FF]" },
-    { id: "housing", label: "ЖКХ", icon: <Home size={18} />, color: "from-[#0056FF] to-[#2277FF]" },
-    { id: "taxes", label: "Налоги", icon: <Wallet size={18} />, color: "from-[#2277FF] to-[#9BB8FF]" },
-    { id: "family", label: "Семья", icon: <Heart size={18} />, color: "from-[#001A66] to-[#9BB8FF]" },
+  const publicCategories = [
+    { id: "documents", label: "Документы", icon: <Shield size={18} />, to: "/catalog?category=documents&type=all" },
+    { id: "housing", label: "ЖКХ", icon: <Home size={18} />, to: "/catalog?category=housing&type=all" },
+    { id: "taxes", label: "Налоги", icon: <Wallet size={18} />, to: "/catalog?category=taxes&type=all" },
+    { id: "family", label: "Семья", icon: <Heart size={18} />, to: "/catalog?category=family&type=all" },
   ];
 
-  const DEMO_STEPS = [
-    { title: "Выберите сценарий", desc: "Паспорт, ЖКХ, налоги, прописка — уже готовые пошаговые планы.", icon: <Search size={20} /> },
-    { title: "Создайте свою ситуацию", desc: "Один тап — и в «Моих ситуациях» появятся задачи, документы, сроки.", icon: <Plus size={20} /> },
-    { title: "Получайте напоминания", desc: "Белпомощник напомнит о дедлайнах и приближающихся сроках документов.", icon: <Bell size={20} /> },
+  const publicSteps = [
+    { title: "Найдите проблему", desc: "Для быстрых вопросов откройте карточку: что сделать сейчас, какие документы нужны и куда обращаться.", icon: <Search size={20} /> },
+    { title: "Выберите жизненный сценарий", desc: "Если ситуация длительная, создайте личный план с этапами, задачами и сроками.", icon: <FileText size={20} /> },
+    { title: "Ведите прогресс", desc: "Отмечайте выполненное, храните документы и получайте напоминания о сроках.", icon: <Check size={20} /> },
   ];
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-      {/* Декоративные blur-орбы */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0056FF]/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-[#2277FF]/10 blur-3xl" />
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[#F6F7FB] text-black dark:bg-[#07080C] dark:text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(circle_at_18%_12%,rgba(0,86,255,0.18),transparent_34%),radial-gradient(circle_at_78%_24%,rgba(34,119,255,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(246,247,251,0.78)_46%,rgba(246,247,251,1))] dark:bg-[radial-gradient(circle_at_18%_12%,rgba(0,86,255,0.32),transparent_34%),radial-gradient(circle_at_78%_24%,rgba(127,168,255,0.12),transparent_32%),linear-gradient(180deg,rgba(7,8,12,0.96),rgba(7,8,12,0.86)_46%,rgba(7,8,12,1))]" />
+        <div className="absolute left-1/2 top-28 h-px w-[min(980px,90vw)] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#0056FF]/20 to-transparent" />
+      </div>
 
-      <div className="relative mx-auto max-w-[1100px] px-5 pb-32 pt-6 sm:px-8 sm:pt-10">
-        {/* v1.0: brand-bar */}
+      <div className="relative mx-auto max-w-[1240px] px-5 pb-24 pt-6 sm:px-8 lg:pt-8">
         <div className="flex items-center justify-between">
           <button onClick={() => navigate("/welcome")} className="flex items-center gap-2">
             <Logo size={30} />
           </button>
-          <button
-            onClick={() => navigate("/login")}
-            className="text-[13px] tracking-tight text-black/65 hover:text-black dark:text-white/65 dark:hover:text-white"
-          >
-            Войти
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate("/catalog")} className="hidden rounded-2xl px-4 py-2 text-[13px] tracking-tight text-black/60 transition-colors hover:bg-black/[0.04] dark:text-white/60 dark:hover:bg-white/[0.06] sm:block">
+              Каталог
+            </button>
+            <button onClick={() => navigate("/login")} className="rounded-2xl border border-black/[0.08] bg-white px-4 py-2 text-[13px] tracking-tight text-black/70 shadow-sm transition-colors hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/[0.08]">
+              Войти
+            </button>
+          </div>
         </div>
 
-        {/* Hero */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-            <Sparkles size={12} /> mobile-first · Беларусь
-          </span>
-          <h1 className="mt-5 max-w-[18ch] text-[36px] font-medium leading-[1.05] tracking-tight text-black dark:text-white sm:text-[56px]">
-            Помощник, который <span className="bg-gradient-to-r from-[#0056FF] to-[#2277FF] bg-clip-text text-transparent">превращает проблему</span> в понятный план
-          </h1>
-          <p className="mt-5 max-w-[58ch] text-[15px] leading-relaxed tracking-tight text-black/65 dark:text-white/65 sm:text-[18px]">
-            Найдите жизненную ситуацию, получите чек-лист, документы, сроки и напоминания. Без канцелярита. Паспорт, ЖКХ, налоги, прописка — по шагам.
-          </p>
+        <section className="grid gap-10 pb-12 pt-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:pb-20 lg:pt-20">
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#0056FF]/15 bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:border-[#7FA8FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+              <Sparkles size={12} /> гражданский помощник · Беларусь
+            </span>
+            <h1 className="mt-6 max-w-[15ch] text-[40px] font-medium leading-[1.02] tracking-tight sm:text-[64px] lg:text-[76px]">
+              Проблема превращается в <span className="bg-gradient-to-r from-[#0056FF] via-[#2277FF] to-[#7FA8FF] bg-clip-text text-transparent">понятный план</span>
+            </h1>
+            <p className="mt-6 max-w-[60ch] text-[16px] leading-relaxed tracking-tight text-black/65 dark:text-white/65 sm:text-[18px]">
+              Белпомощник помогает разобраться с документами, сроками, учреждениями и личными задачами. Быстрая проблема открывается как справочная карточка, а жизненный сценарий превращается в вашу ситуацию с прогрессом.
+            </p>
 
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <PrimaryButton onClick={() => navigate("/register")} className="px-7 sm:w-auto">Зарегистрироваться</PrimaryButton>
-            <GhostButton onClick={() => navigate("/login")} className="px-7">У меня уже есть аккаунт</GhostButton>
-          </div>
-        </motion.div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <PrimaryButton onClick={() => navigate("/register")} className="px-7 sm:w-auto">Создать аккаунт</PrimaryButton>
+              <GhostButton onClick={() => navigate("/catalog")} className="px-7">Посмотреть каталог</GhostButton>
+            </div>
 
-        {/* Категории — интерактивные табы с превью */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="mt-14">
-          <div className="flex items-end justify-between">
+            <div className="mt-8 grid max-w-[680px] grid-cols-3 gap-3">
+              {[
+                ["3", "типа помощи"],
+                ["24/7", "локальный доступ"],
+                ["0.1", "beta-версия"],
+              ].map(([value, label]) => (
+                <div key={label} className="rounded-3xl border border-black/[0.06] bg-white/70 p-4 shadow-[0_16px_44px_-34px_rgba(15,23,42,0.5)] backdrop-blur dark:border-white/[0.08] dark:bg-white/[0.05]">
+                  <div className="text-[24px] font-medium tracking-tight text-[#0056FF] dark:text-[#7FA8FF]">{value}</div>
+                  <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">{label}</div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.08 }} className="relative">
+            <div className="absolute -inset-4 rounded-[36px] bg-[#0056FF]/8 blur-2xl dark:bg-[#0056FF]/18" />
+            <Card className="relative overflow-hidden p-5 sm:p-6">
+              <div className="absolute right-0 top-0 h-40 w-40 rounded-bl-[72px] bg-[#E3E7FC] dark:bg-[#0E1A3A]" />
+              <div className="relative">
+                <div className="flex items-center justify-between">
+                  <Pill tone="lavender">Пример личного плана</Pill>
+                  <span className="text-[12px] tracking-tight text-black/40 dark:text-white/40">68%</span>
+                </div>
+                <h2 className="mt-5 max-w-[14ch] tracking-tight" style={{ fontSize: 30, lineHeight: 1.08 }}>Рождение ребёнка</h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-black/55 dark:text-white/55">
+                  Этапы, задачи, документы, учреждения и напоминания собраны в один личный маршрут.
+                </p>
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.08]">
+                  <motion.div initial={{ width: 0 }} animate={{ width: "68%" }} transition={{ duration: 0.9, delay: 0.2 }} className="h-full rounded-full bg-[#0056FF]" />
+                </div>
+                <div className="mt-5 space-y-2.5">
+                  {[
+                    ["Получить медицинскую справку", "Выполнено", true],
+                    ["Обратиться в ЗАГС", "Следующий шаг", false],
+                    ["Подать заявление на пособие", "После свидетельства", false],
+                  ].map(([title, status, done]) => (
+                    <div key={title} className="flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-white/80 p-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${done ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"}`}>
+                        {done ? <Check size={16} /> : <Clock size={16} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{title}</span>
+                        <span className="block text-[11px] tracking-tight text-black/45 dark:text-white/45">{status}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          {[
+            { title: "Проблема", body: "Короткий справочный ответ: что сделать сейчас, какие документы нужны и куда обратиться.", icon: <AlertCircle size={18} /> },
+            { title: "Жизненный сценарий", body: "Готовый пошаговый маршрут для длительной ситуации: этапы, задачи, сроки и источники.", icon: <FileText size={18} /> },
+            { title: "Моя ситуация", body: "Личный экземпляр сценария, где можно отмечать задачи и видеть прогресс.", icon: <Check size={18} /> },
+          ].map((item) => (
+            <Card key={item.title} className="p-5">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{item.icon}</span>
+              <div className="mt-5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{item.title}</div>
+              <p className="mt-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">{item.body}</p>
+            </Card>
+          ))}
+        </section>
+
+        <section className="mt-16">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Попробуйте</div>
-              <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>Жизненные ситуации</h2>
+              <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Популярные направления</h2>
+              <p className="mt-2 max-w-[560px] text-[14px] leading-relaxed text-black/55 dark:text-white/55">
+                Начните без регистрации: посмотрите, какие карточки и сценарии уже доступны в каталоге.
+              </p>
             </div>
+            <button onClick={() => navigate("/catalog")} className="inline-flex items-center gap-2 rounded-2xl bg-[#0056FF] px-4 py-3 text-[13px] font-medium text-white shadow-[0_18px_42px_-22px_rgba(0,86,255,0.85)]">
+              Открыть каталог <ArrowRight size={15} />
+            </button>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {DEMO_CATEGORIES.map((c) => (
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {publicCategories.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setActiveCategory(c.id)}
-                className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-left transition-all ${activeCategory === c.id ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.06] bg-white text-black/70 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-white/70"}`}
+                onClick={() => navigate(c.to)}
+                className="flex items-center gap-3 rounded-3xl border border-black/[0.06] bg-white p-4 text-left shadow-[0_18px_50px_-38px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#0056FF]/30 dark:border-white/[0.06] dark:bg-white/[0.04]"
               >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br text-white" style={{ backgroundImage: `linear-gradient(135deg, var(--tw-gradient-stops))` }}>
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
                   {c.icon}
                 </span>
-                <span className="text-[14px] font-medium tracking-tight">{c.label}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium tracking-tight text-black dark:text-white">{c.label}</span>
+                  <span className="block text-[12px] tracking-tight text-black/45 dark:text-white/45">Проблемы и сценарии</span>
+                </span>
               </button>
             ))}
           </div>
-        </motion.div>
+        </section>
 
-        {/* Шаги работы */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="mt-14">
+        <section className="mt-16 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
           <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Как это работает</div>
-          <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>Три шага до результата</h2>
-          <div className="mt-5 space-y-3">
-            {DEMO_STEPS.map((step, i) => (
+            <h2 className="mt-1 max-w-[12ch] tracking-tight text-black dark:text-white" style={{ fontSize: 34, lineHeight: 1.08 }}>Три шага до результата</h2>
+            <p className="mt-3 max-w-[42ch] text-[14px] leading-relaxed text-black/55 dark:text-white/55">
+              Пользовательский путь построен вокруг практического действия, а не вокруг длинного текста.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {publicSteps.map((step, i) => (
               <button
                 key={i}
                 onClick={() => setActiveStep(i)}
@@ -587,39 +771,39 @@ export function WelcomePage() {
               </button>
             ))}
           </div>
-        </motion.div>
+        </section>
 
-        {/* CTA блок */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-14 overflow-hidden rounded-3xl p-1">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="mt-16 overflow-hidden rounded-[32px] border border-[#0056FF]/15 bg-white p-1 shadow-[0_32px_90px_-58px_rgba(0,86,255,0.7)] dark:border-[#7FA8FF]/15 dark:bg-white/[0.04]">
           <div
-            className="rounded-[22px] p-8 text-white sm:p-10"
+            className="grid gap-7 rounded-[26px] p-7 text-white sm:p-10 lg:grid-cols-[1fr_360px] lg:items-center"
             style={{ background: "radial-gradient(120% 100% at 0% 0%, #2277FF 0%, #0056FF 45%, #001A66 100%)" }}
           >
-            <div className="text-[12px] uppercase tracking-[0.14em] text-white/70">Готовы попробовать?</div>
-            <h3 className="mt-2 max-w-[20ch] tracking-tight" style={{ fontSize: 28, lineHeight: 1.1 }}>
-              Зарегистрируйтесь — это бесплатно и занимает минуту.
-            </h3>
-            <p className="mt-3 max-w-[48ch] text-[14px] leading-relaxed text-white/80">
-              После регистрации вы получите доступ к каталогу ситуаций, документам, уведомлениям и админ-панели (если у вас есть роль редактора или администратора).
-            </p>
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => navigate("/register")}
-                className="rounded-2xl bg-white px-6 py-3 text-[14px] font-semibold tracking-tight text-[#0056FF] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.25)]"
-              >
-                Создать аккаунт
-              </button>
-              <button
-                onClick={() => navigate("/login")}
-                className="rounded-2xl border border-white/30 bg-white/10 px-6 py-3 text-[14px] font-semibold tracking-tight text-white backdrop-blur"
-              >
-                У меня уже есть аккаунт
-              </button>
+            <div>
+              <div className="text-[12px] uppercase tracking-[0.14em] text-white/70">Готовы начать?</div>
+              <h3 className="mt-2 max-w-[18ch] tracking-tight" style={{ fontSize: 34, lineHeight: 1.08 }}>
+                Создайте личную ситуацию и ведите её по шагам.
+              </h3>
+              <p className="mt-3 max-w-[58ch] text-[14px] leading-relaxed text-white/80">
+                Регистрация открывает сохранение прогресса, личные документы, уведомления и быстрый доступ к своим ситуациям.
+              </p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <button onClick={() => navigate("/register")} className="rounded-2xl bg-white px-6 py-3 text-[14px] font-semibold tracking-tight text-[#0056FF] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.25)]">
+                  Создать аккаунт
+                </button>
+                <button onClick={() => navigate("/login")} className="rounded-2xl border border-white/30 bg-white/10 px-6 py-3 text-[14px] font-semibold tracking-tight text-white backdrop-blur">
+                  У меня уже есть аккаунт
+                </button>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <div className="text-[13px] font-medium tracking-tight text-white">Справочный характер</div>
+              <p className="mt-2 text-[12px] leading-relaxed text-white/75">
+                Информация помогает ориентироваться, но перед подачей документов требования нужно уточнять на официальных ресурсах.
+              </p>
             </div>
           </div>
         </motion.div>
 
-        {/* Footer */}
         <div className="mt-12 flex flex-col items-center gap-2 text-[12px] text-black/40 dark:text-white/40 sm:flex-row sm:justify-between">
           <div>© 2026 Белпомощник · Беларусь</div>
           <div className="flex gap-4">
@@ -684,41 +868,90 @@ export function NewsPage() {
   const { isMobile } = useContext(ShellContext);
   const navigate = useNavigate();
   const { articles, legal } = useStore();
+  const [preferredSourceIds, setPreferredSourceIds] = usePreferredSourceIds();
 
   // v0.7: объединяем «Новости» (статьи с kind='news') и «Закон-апдейты»
   // (массив legal) в одну ленту с фильтр-чипами. Подписка на закон-апдейты
   // уже есть в settings.notifications.legal.
   type FilterKey = "all" | "news" | "law";
   const [filter, setFilter] = useState<FilterKey>("all");
+  // P6: фильтр по sourceId (id из OFFICIAL_SOURCES).
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+
+  // Helper: sourceId для конкретной записи (news|article или law).
+  // Для law: приоритет sourceIds[0], иначе матч OFFICIAL_SOURCES по домену url.
+  // Для article: sourceIds[0] или sourceUrl-матч по домену.
+  const resolveSourceId = (record: { sourceIds?: string[]; sourceUrl?: string; sourceUrlDomain?: string }): string | null => {
+    if (record.sourceIds && record.sourceIds.length > 0) return record.sourceIds[0];
+    const target = (record.sourceUrlDomain ?? record.sourceUrl ?? "").toLowerCase();
+    if (!target) return null;
+    const hit = OFFICIAL_SOURCES.find(s => s.url.toLowerCase().includes(target));
+    return hit?.id ?? null;
+  };
 
   const newsList = articles
     .filter((a) => a.status === "published" && a.kind === "news")
     .map((a) => ({
       kind: "news" as const,
+      id: a.id,
       title: a.title,
       summary: a.summary ?? "",
       date: a.publishedAt ?? a.updatedAt ?? "",
-      // никаких дополнительных полей
+      sourceIds: a.sourceIds,
+      sourceUrl: a.sourceUrl,
     }));
 
-  const lawList = legal.map((l) => ({
-    kind: "law" as const,
-    title: l.title,
-    summary: l.summary ?? "",
-    date: l.effectiveDate ?? "",
-    sourceUrl: l.sourceUrl,
-    priority: l.priority,
-  }));
+  const lawList = legal.map((l) => {
+    const domain = (() => {
+      try { return new URL(l.source.url).hostname.replace(/^www\./, ""); } catch { return l.source.url; }
+    })();
+    return {
+      kind: "law" as const,
+      id: l.id,
+      title: l.title,
+      summary: l.summary ?? "",
+      date: l.effectiveDate ?? "",
+      sourceUrl: l.source.url,
+      sourceTitle: l.source.title,
+      sourceUrlDomain: domain,
+      sourceIds: l.sourceIds,
+      priority: l.priority,
+    };
+  });
 
-  const combined =
-    filter === "news" ? newsList
-    : filter === "law" ? lawList
-    : [...newsList, ...lawList].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  // Привязка sourceId после построения, чтобы NewsCard показывал плашку источника.
+  const enrichSource = <T extends { sourceIds?: string[]; sourceUrlDomain?: string; sourceUrl?: string }>(it: T): T & { sourceId: string | null } => {
+    const sourceId = resolveSourceId(it);
+    return { ...it, sourceId };
+  };
+  const newsWithSource = newsList.map(enrichSource);
+  const lawWithSource = lawList.map(enrichSource);
+
+  const baseCombined =
+    filter === "news" ? newsWithSource
+    : filter === "law" ? lawWithSource
+    : [...newsWithSource, ...lawWithSource].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+
+  // Применяем фильтр по источнику.
+  const combined = sourceFilter
+    ? baseCombined.filter(it => it.sourceId === sourceFilter)
+    : baseCombined;
+
+  // Приоритетная сортировка: preferred sources → выше.
+  const preferredSet = new Set(preferredSourceIds);
+  const sorted = preferredSourceIds.length === 0
+    ? combined
+    : [...combined].sort((a, b) => {
+        const ap = a.sourceId && preferredSet.has(a.sourceId) ? 1 : 0;
+        const bp = b.sourceId && preferredSet.has(b.sourceId) ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        return (b.date ?? "").localeCompare(a.date ?? "");
+      });
 
   const filterCounts = {
-    all: newsList.length + lawList.length,
-    news: newsList.length,
-    law: lawList.length,
+    all: newsWithSource.length + lawWithSource.length,
+    news: newsWithSource.length,
+    law: lawWithSource.length,
   };
 
   const filterChips = ([
@@ -735,6 +968,62 @@ export function NewsPage() {
     </button>
   ));
 
+  // P6: топ-3 источника, у которых есть хотя бы один материал.
+  const sourceCount = new Map<string, number>();
+  [...newsWithSource, ...lawWithSource].forEach(it => {
+    if (!it.sourceId) return;
+    sourceCount.set(it.sourceId, (sourceCount.get(it.sourceId) ?? 0) + 1);
+  });
+  const featuredSources = [...sourceCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => OFFICIAL_SOURCES.find(s => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+
+  const sourcePills = (
+    <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [&::-webkit-scrollbar]:hidden">
+      <button
+        onClick={() => setSourceFilter(null)}
+        className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${sourceFilter === null ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white text-black/65 hover:bg-black/[0.04] dark:bg-white/[0.06] dark:text-white/65 dark:hover:bg-white/[0.08]"}`}
+      >
+        Все источники
+      </button>
+      {featuredSources.map(s => (
+        <button
+          key={s.id}
+          onClick={() => setSourceFilter(prev => prev === s.id ? null : s.id)}
+          className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${sourceFilter === s.id ? "bg-[#0056FF] text-white" : "bg-white text-black/70 hover:bg-black/[0.04] dark:bg-white/[0.06] dark:text-white/70 dark:hover:bg-white/[0.08]"}`}
+          title={s.description}
+        >
+          <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full ${sourceFilter === s.id ? "bg-white/20" : "bg-[#E3E7FC] dark:bg-[#0E1A3A]"}`}>
+            <Shield size={9} className={sourceFilter === s.id ? "text-white" : "text-[#0056FF] dark:text-[#7FA8FF]"} />
+          </span>
+          <span className="max-w-[180px] truncate">{s.title}</span>
+          {preferredSourceIds.includes(s.id) && <Star size={11} className={sourceFilter === s.id ? "text-white" : "text-amber-500"} fill="currentColor" />}
+        </button>
+      ))}
+    </div>
+  );
+
+  const sourcesSection = (
+    <div>
+      <div className="mb-2 flex items-center justify-between pl-1">
+        <div className="inline-flex items-center gap-1.5 text-[12px] tracking-tight text-black/45 dark:text-white/45">
+          <Shield size={12} className="text-[#0056FF]" /> Официальные источники
+        </div>
+        {sourceFilter && (
+          <button
+            onClick={() => setSourceFilter(null)}
+            className="text-[11px] tracking-tight text-black/45 underline-offset-2 hover:underline dark:text-white/45"
+          >
+            Сбросить
+          </button>
+        )}
+      </div>
+      {sourcePills}
+    </div>
+  );
+
   const empty = combined.length === 0 && (
     <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
       <div>
@@ -749,12 +1038,20 @@ export function NewsPage() {
     return (
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
         <MobileTopBar title="Новости" onBack={() => navigate(-1)} />
-        <div className="px-5 space-y-4">
+        <div className="space-y-4 px-5">
           <ProposeButton kind="news" className="w-full justify-center" />
+          {sourcesSection}
           <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">{filterChips}</div>
           <div className="space-y-3">
-            {combined.map((item, i) => (
-              <NewsCard key={`${item.kind}-${i}-${item.title}`} item={item} navigate={navigate} />
+            {sorted.map((item, i) => (
+              <NewsCard
+                key={`${item.kind}-${i}-${item.title}`}
+                item={item}
+                navigate={navigate}
+                source={item.sourceId ? OFFICIAL_SOURCES.find(s => s.id === item.sourceId) : undefined}
+                onTogglePreferred={item.sourceId ? () => setPreferredSourceIds(item.sourceId!) : undefined}
+                isPreferred={item.sourceId ? preferredSourceIds.includes(item.sourceId) : false}
+              />
             ))}
           </div>
           {empty}
@@ -772,9 +1069,17 @@ export function NewsPage() {
         <ProposeButton kind="news" />
         <div className="flex flex-wrap gap-2">{filterChips}</div>
       </div>
+      <div className="mt-6 max-w-[920px]">{sourcesSection}</div>
       <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {combined.map((item, i) => (
-          <NewsCard key={`${item.kind}-${i}-${item.title}`} item={item} navigate={navigate} />
+        {sorted.map((item, i) => (
+          <NewsCard
+            key={`${item.kind}-${i}-${item.title}`}
+            item={item}
+            navigate={navigate}
+            source={item.sourceId ? OFFICIAL_SOURCES.find(s => s.id === item.sourceId) : undefined}
+            onTogglePreferred={item.sourceId ? () => setPreferredSourceIds(item.sourceId!) : undefined}
+            isPreferred={item.sourceId ? preferredSourceIds.includes(item.sourceId) : false}
+          />
         ))}
       </div>
       {empty}
@@ -783,17 +1088,20 @@ export function NewsPage() {
 }
 
 function NewsCard({
-  item, navigate,
+  item, navigate, source, onTogglePreferred, isPreferred,
 }: {
   item:
-    | { kind: "news"; title: string; summary: string; date: string }
-    | { kind: "law"; title: string; summary: string; date: string; sourceUrl?: string; priority?: "low" | "medium" | "high" };
+    | { kind: "news"; id: string; title: string; summary: string; date: string; sourceId: string | null }
+    | { kind: "law"; id: string; title: string; summary: string; date: string; sourceUrl?: string; priority?: boolean; sourceId: string | null; sourceTitle?: string };
   navigate: (path: string) => void;
+  source?: { id: string; title: string; url: string; type: string };
+  onTogglePreferred?: () => void;
+  isPreferred?: boolean;
 }) {
   const isLaw = item.kind === "law";
   return (
     <button
-      onClick={() => isLaw ? navigate("/legal") : navigate("/news")}
+      onClick={() => isLaw ? navigate(`/law-detail/${item.id}`) : navigate("/news")}
       className="block text-left"
     >
       <Card className="flex h-full flex-col p-5">
@@ -801,14 +1109,66 @@ function NewsCard({
           <Pill tone={isLaw ? "warn" : "lavender"}>
             {isLaw ? "Закон-апдейт" : "Новость"}
           </Pill>
-          {isLaw && item.priority === "high" && <Pill tone="warn"><AlertCircle size={11} /> Важное</Pill>}
+          {isLaw && item.priority && <Pill tone="warn"><AlertCircle size={11} /> Важное</Pill>}
         </div>
         <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 16, lineHeight: 1.25 }}>{item.title}</div>
         {item.summary && <div className="mt-1 line-clamp-3 text-[13px] tracking-tight text-black/55 dark:text-white/55">{item.summary}</div>}
-        {item.date && <div className="mt-auto pt-3 text-[11px] tracking-tight text-black/40 dark:text-white/40">{item.date}</div>}
+        {/* P6: плашка источника */}
+        {source && (
+          <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-[#F6F7FB] px-2.5 py-1.5 text-[11px] tracking-tight text-black/60 dark:bg-white/[0.04] dark:text-white/60">
+            <Shield size={11} className="shrink-0 text-[#0056FF] dark:text-[#7FA8FF]" />
+            <span className="min-w-0 flex-1 truncate">{source.title}</span>
+            {onTogglePreferred && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onTogglePreferred(); }}
+                className={`shrink-0 grid h-5 w-5 place-items-center rounded-full transition-colors ${isPreferred ? "text-amber-500" : "text-black/25 hover:text-amber-500 dark:text-white/25"}`}
+                title={isPreferred ? "Убрать из предпочтений" : "В предпочтения"}
+                aria-label="Предпочтение источника"
+              >
+                <Star size={12} fill={isPreferred ? "currentColor" : "none"} />
+              </button>
+            )}
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 inline-flex items-center text-[#0056FF] hover:underline dark:text-[#7FA8FF]"
+              title="Открыть источник"
+            >
+              <ArrowUpRight size={11} />
+            </a>
+          </div>
+        )}
+        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
+          {item.date && <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">{item.date}</div>}
+          <span className="inline-flex items-center gap-1 text-[11px] tracking-tight text-[#0056FF]">
+            Подробнее <ExternalLink size={11} />
+          </span>
+        </div>
       </Card>
     </button>
   );
+}
+
+/** P6: localStorage-хук для предпочтительных источников (без бэка). */
+const PREFERRED_SOURCES_KEY = "belp.preferredSourceIds";
+function usePreferredSourceIds(): [string[], (id: string) => void] {
+  const [ids, setIds] = useState<string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(PREFERRED_SOURCES_KEY);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+    } catch { return []; }
+  });
+  const toggle = useCallback((id: string) => {
+    setIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      try { window.localStorage.setItem(PREFERRED_SOURCES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+  return [ids, toggle];
 }
 
 const SOURCE_TYPE_LABEL: Record<string, string> = { law: "Закон", government_portal: "Госпортал", ministry: "Министерство", tax: "Налоги", registry: "Реестр" };
@@ -1220,10 +1580,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-5 relative overflow-hidden bg-[#F6F7FB] dark:bg-[#0B0D13]">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#0056FF]/10 blur-3xl" />
-      <Card className="w-full max-w-[400px] p-6 sm:p-8 z-10 shadow-xl border-0">
-        <div className="flex justify-center mb-6">
+    <div className="relative mx-auto grid min-h-[calc(100dvh-150px)] w-full max-w-[1120px] items-center overflow-hidden rounded-[34px] bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6 lg:p-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,86,255,0.14),transparent_30%),radial-gradient(circle_at_88%_80%,rgba(34,119,255,0.10),transparent_32%)]" />
+      <AuthAside mode="login" />
+      <div className="relative z-10 flex justify-center">
+      <Card className="w-full max-w-[420px] border-0 p-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-8">
+        <div className="mb-6 flex justify-center">
           <div className="flex items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-[#0056FF] to-[#2277FF] text-white shadow-sm">
               <Shield size={16} />
@@ -1231,7 +1593,10 @@ export function LoginPage() {
             <span className="text-xl font-medium tracking-tight text-black dark:text-white">Белпомощник</span>
           </div>
         </div>
-        <h1 className="text-2xl font-medium text-center text-black dark:text-white mb-6 tracking-tight">Вход</h1>
+        <h1 className="mb-2 text-center text-2xl font-medium tracking-tight text-black dark:text-white">Вход в аккаунт</h1>
+        <p className="mb-6 text-center text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+          Откройте свои ситуации, документы и уведомления.
+        </p>
         
         <div className="space-y-4">
           <div>
@@ -1263,6 +1628,7 @@ export function LoginPage() {
           <button onClick={handleGuest} className="text-[14px] text-black/50 dark:text-white/50 hover:underline">Продолжить как гость</button>
         </div>
       </Card>
+      </div>
     </div>
   );
 }
@@ -1292,11 +1658,12 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-5 relative overflow-hidden bg-[#F6F7FB] dark:bg-[#0B0D13]">
-      <div className="pointer-events-none absolute -bottom-24 right-1/4 h-80 w-80 rounded-full bg-[#0056FF]/10 blur-3xl" />
-      <div className="h-full w-full overflow-y-auto pt-10 pb-20 flex justify-center [&::-webkit-scrollbar]:hidden">
-        <Card className="w-full max-w-[400px] p-6 sm:p-8 z-10 shadow-xl border-0 h-fit">
-          <div className="flex justify-center mb-6">
+    <div className="relative mx-auto grid min-h-[calc(100dvh-150px)] w-full max-w-[1120px] items-center overflow-hidden rounded-[34px] bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:p-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(0,86,255,0.14),transparent_32%),radial-gradient(circle_at_86%_76%,rgba(34,119,255,0.10),transparent_34%)]" />
+      <AuthAside mode="register" />
+      <div className="relative z-10 flex max-h-[calc(100dvh-190px)] justify-center overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden">
+        <Card className="h-fit w-full max-w-[440px] border-0 p-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-8">
+          <div className="mb-6 flex justify-center">
             <div className="flex items-center gap-2">
               <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-[#0056FF] to-[#2277FF] text-white shadow-sm">
                 <Shield size={16} />
@@ -1304,7 +1671,10 @@ export function RegisterPage() {
               <span className="text-xl font-medium tracking-tight text-black dark:text-white">Белпомощник</span>
             </div>
           </div>
-          <h1 className="text-2xl font-medium text-center text-black dark:text-white mb-6 tracking-tight">Создание аккаунта</h1>
+          <h1 className="mb-2 text-center text-2xl font-medium tracking-tight text-black dark:text-white">Создание аккаунта</h1>
+          <p className="mb-6 text-center text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+            Заполните базовые данные, чтобы сохранить личные планы и подсказки по региону.
+          </p>
           
           <div className="space-y-4">
             <input type="text" placeholder="Имя и фамилия" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
@@ -1487,6 +1857,49 @@ export function ProblemsPage() {
               <div className="mt-3 text-[13px] tracking-tight text-black/60 dark:text-white/60 line-clamp-3">{s.shortDescription}</div>
             </Card>
           </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AuthAside({ mode }: { mode: "login" | "register" }) {
+  const title = mode === "login" ? "Вернитесь к своим ситуациям" : "Начните с личного профиля";
+  const text = mode === "login"
+    ? "После входа откроются ваши задачи, документы, уведомления и быстрые роли для показа разных сценариев работы."
+    : "Профиль нужен, чтобы подбирать учреждения по городу, сохранять документы и строить персональные планы.";
+  const points = mode === "login"
+    ? [
+        { icon: <Check size={16} />, title: "Прогресс сохраняется", text: "Отмеченные задачи и ситуации остаются в аккаунте." },
+        { icon: <Bell size={16} />, title: "Сроки под контролем", text: "Напоминания показывают ближайшие действия." },
+        { icon: <Shield size={16} />, title: "Личные данные отдельно", text: "Гость видит интерфейс, но не меняет личные записи." },
+      ]
+    : [
+        { icon: <MapPin size={16} />, title: "Адрес и регион", text: "Система сможет подсказывать подходящие учреждения." },
+        { icon: <FileText size={16} />, title: "Документы", text: "Добавляйте паспорт, медкнижку и другие важные документы." },
+        { icon: <Search size={16} />, title: "Каталог помощи", text: "Выбирайте проблемы или жизненные сценарии." },
+      ];
+
+  return (
+    <div className="hidden min-h-[640px] overflow-hidden rounded-[34px] border border-[#0056FF]/15 bg-[#071022] p-8 text-white shadow-[0_36px_110px_-70px_rgba(0,86,255,0.9)] lg:flex lg:flex-col lg:justify-between">
+      <div>
+        <Logo size={34} />
+        <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[12px] tracking-tight text-white/75">
+          <Sparkles size={12} /> гражданский помощник
+        </div>
+        <h1 className="mt-5 max-w-[12ch] tracking-tight" style={{ fontSize: 46, lineHeight: 1.02 }}>{title}</h1>
+        <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-white/68">{text}</p>
+      </div>
+
+      <div className="mt-10 space-y-3">
+        {points.map(point => (
+          <div key={point.title} className="flex gap-3 rounded-3xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-[#0056FF]">{point.icon}</span>
+            <span>
+              <span className="block text-[14px] font-medium tracking-tight text-white">{point.title}</span>
+              <span className="mt-0.5 block text-[12px] leading-relaxed tracking-tight text-white/60">{point.text}</span>
+            </span>
+          </div>
         ))}
       </div>
     </div>

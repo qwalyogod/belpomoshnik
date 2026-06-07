@@ -1,26 +1,8 @@
-"""Белпомощник — нативное мобильное приложение на Flet.
+"""Белпомощник — нативная мобильная оболочка.
 
-Показывает интерфейс программы (React-приложение из reactvitemaket) на телефоне
-через нативный WebView. WebView работает на Android/iOS/desktop (но НЕ в web —
-Flutter Web не умеет встраивать WebView).
-
-ВАЖНО про сеть: при `flet run --android/--ios` Python-код выполняется на КОМПЬЮТЕРЕ,
-а сам WebView рендерится на ТЕЛЕФОНЕ и грузит URL уже из сети телефона. Значит
-телефон должен достучаться до dev-сервера React на компьютере по Wi-Fi.
-
-ВРЕМЕННЫЙ dev-режим: перед загрузкой вручную вводим URL, который печатает терминал
-vite в строке `Network: http://192.168.x.x:8560`. После заливки на сервер заменить
-на постоянный URL (env REACT_APP_URL или захардкодить).
-
-Как запустить НА ТЕЛЕФОНЕ (dev, по Wi-Fi):
-    1. Поднять React в сети:   cd reactvitemaket && pnpm dev:lan
-    2. На телефоне установить приложение «Flet» (Google Play / App Store),
-       телефон и компьютер — в одной Wi-Fi сети.
-    3. Запустить из КОРНЯ проекта:
-           .venv/bin/flet run --android src/mobile_webview.py   (iPhone: --ios)
-
-Локальная проверка на компьютере (окно с WebView):
-    .venv/bin/flet run src/mobile_webview.py
+Файл оставляет Flet только как тонкую оболочку вокруг основного web-интерфейса.
+На текущем dev-этапе первым экраном остается ввод адреса приложения. После
+переезда на постоянный сервер этот экран можно заменить статичным URL из env.
 """
 
 from __future__ import annotations
@@ -28,14 +10,16 @@ from __future__ import annotations
 import asyncio
 import os
 import socket
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 import flet as ft
 from flet_webview import WebView
 
 
 def _lan_ip() -> str:
-    """LAN-адрес компьютера, чтобы телефон достучался до dev-сервера React."""
+    """LAN-адрес компьютера для локальной разработки по Wi-Fi."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         sock.connect(("8.8.8.8", 80))
@@ -46,150 +30,401 @@ def _lan_ip() -> str:
         sock.close()
 
 
-REACT_URL = os.getenv("REACT_APP_URL", f"http://{_lan_ip()}:8560")
+APP_URL = os.getenv("BELPOMOSHNIK_APP_URL") or os.getenv("REACT_APP_URL") or f"http://{_lan_ip()}:8560"
+DEBUG_WEBVIEW = os.getenv("BELPOMOSHNIK_WEBVIEW_DEBUG", "0") == "1"
 
-# Тёмный фон самого Flet — чтобы на телефоне отличить «пустой Flet» (тёмный) от
-# реально загруженного React (светлый #F6F7FB). Диагностика «серого экрана».
-_FLET_BG = "#15171C"
-
-_CHECKLIST = (
-    "Проверь:\n"
-    "• запущен ли  cd reactvitemaket && pnpm dev:lan  (именно dev:lan, не dev)\n"
-    "• телефон и компьютер в ОДНОЙ сети Wi-Fi\n"
-    "• firewall macOS не блокирует порт 8560\n"
-    "• URL открывается в браузере телефона"
-)
+PHONE_MAX_SHORTEST_SIDE = 600
+PHONE_MAX_LONGEST_SIDE = 1100
 
 
-def _vite_reachable(url: str) -> tuple[bool, str]:
-    """Со стороны компьютера: поднят ли dev-сервер React (ловит 'vite не запущен')."""
+def _normalize_url(raw: str) -> str:
+    value = raw.strip()
+    if value and "://" not in value:
+        value = f"http://{value}"
+    return value.rstrip("/")
+
+
+def _app_host_label(url: str) -> str:
     parsed = urlparse(url)
-    host = parsed.hostname or "127.0.0.1"
-    port = parsed.port or 80
-    last_error = "unknown"
-    for candidate in ("127.0.0.1", host):
+    return parsed.netloc or url
+
+
+def _internet_reachable() -> bool:
+    for host in ("1.1.1.1", "8.8.8.8"):
         try:
-            with socket.create_connection((candidate, port), timeout=1.5):
-                return True, candidate
-        except OSError as exc:
-            last_error = str(exc)
-    return False, last_error
+            with socket.create_connection((host, 53), timeout=1.5):
+                return True
+        except OSError:
+            continue
+    return False
 
 
-# iOS WKWebView в flet НЕ возвращает значение из run_javascript и не пробрасывает
-# console.* — поэтому зонд рисует диагноз ПРЯМО на странице (div поверх всего).
-_PROBE_JS = """
-(function(){
-  function panel(bg,txt){
-    var d=document.createElement('div');
-    d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483647;'
-      +'background:'+bg+';color:#000;font:12px/1.4 monospace;padding:10px;'
-      +'white-space:pre-wrap;border-bottom:3px solid red';
-    d.textContent=txt; document.body.appendChild(d);
-  }
-  try{
-    var r=document.getElementById('root');
-    var fc=r&&r.firstElementChild;
-    var p=document.createElement('div');p.style.height='100dvh';
-    document.body.appendChild(p);var dvh=p.offsetHeight;p.remove();
-    panel('#fff',
-      'PROBE ok\\n'
-      +'ready='+document.readyState+'\\n'
-      +'path='+location.pathname+'\\n'
-      +'inner='+window.innerWidth+'x'+window.innerHeight+'\\n'
-      +'dvh100='+dvh+'\\n'
-      +'rootKids='+(r?r.childElementCount:-1)+'\\n'
-      +'first='+(fc?fc.offsetWidth+'x'+fc.offsetHeight:'-')+'\\n'
-      +'body='+(document.body.innerText||'').replace(/\\s+/g,' ').slice(0,60));
-  }catch(err){ panel('#f88','PROBE_FAIL '+err); }
-})();
-"""
+def _server_reachable(url: str) -> tuple[bool, str]:
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if not host:
+        return False, "Некорректный адрес"
+
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            pass
+    except OSError as exc:
+        return False, str(exc)
+
+    try:
+        request = Request(url, headers={"User-Agent": "BelpomoshnikShell/1.0"})
+        with urlopen(request, timeout=3) as response:  # noqa: S310 - dev/local health check.
+            if 200 <= response.status < 500:
+                return True, f"HTTP {response.status}"
+            return False, f"HTTP {response.status}"
+    except HTTPError as exc:
+        if exc.code < 500:
+            return True, f"HTTP {exc.code}"
+        return False, f"HTTP {exc.code}"
+    except (OSError, URLError) as exc:
+        return False, str(exc)
+
+
+def _looks_like_offline_error(data: object) -> bool:
+    text = str(data).lower()
+    offline_markers = (
+        "internet",
+        "notconnectedtointernet",
+        "network is unreachable",
+        "err_internet_disconnected",
+        "err_network_changed",
+        "the internet connection appears to be offline",
+    )
+    return any(marker in text for marker in offline_markers)
+
+
+def _is_phone(page: ft.Page) -> bool:
+    platform = getattr(page, "platform", None)
+    if platform not in (ft.PagePlatform.IOS, ft.PagePlatform.ANDROID):
+        return False
+
+    width = float(page.width or 0)
+    height = float(page.height or 0)
+    if not width or not height:
+        return False
+
+    shortest = min(width, height)
+    longest = max(width, height)
+    return shortest <= PHONE_MAX_SHORTEST_SIDE and longest <= PHONE_MAX_LONGEST_SIDE
+
+
+def _palette(page: ft.Page) -> dict[str, str]:
+    is_dark = page.platform_brightness == ft.Brightness.DARK
+    if is_dark:
+        return {
+            "bg": "#070A12",
+            "surface": "#111827",
+            "surface_2": "#172033",
+            "text": "#F8FAFC",
+            "muted": "#AAB4C5",
+            "border": "#263247",
+            "primary": "#3B82F6",
+            "primary_text": "#FFFFFF",
+            "danger": "#F87171",
+            "warning": "#FBBF24",
+        }
+    return {
+        "bg": "#F5F7FB",
+        "surface": "#FFFFFF",
+        "surface_2": "#EEF4FF",
+        "text": "#111827",
+        "muted": "#64748B",
+        "border": "#DCE5F5",
+        "primary": "#2563EB",
+        "primary_text": "#FFFFFF",
+        "danger": "#EF4444",
+        "warning": "#F59E0B",
+    }
 
 
 def main(page: ft.Page) -> None:
     page.title = "Белпомощник"
     page.padding = 0
     page.spacing = 0
-    page.bgcolor = _FLET_BG
+    page.theme_mode = ft.ThemeMode.SYSTEM
 
-    title = ft.Text("Введите адрес React", size=18, weight=ft.FontWeight.W_600, color="#FFFFFF")
-    hint = ft.Text(
-        "Скопируй из терминала строку  Network: http://…:8560",
-        size=13,
-        color="#9AA4B2",
-    )
+    last_url = {"value": APP_URL}
+    orientation_applied = {"done": False}
+
+    def apply_shell_theme() -> None:
+        colors = _palette(page)
+        page.bgcolor = colors["bg"]
+
+    def lock_phone_orientation_if_needed() -> None:
+        if orientation_applied["done"] or not _is_phone(page):
+            return
+        try:
+            page.set_allowed_device_orientations([ft.DeviceOrientation.PORTRAIT_UP])
+            orientation_applied["done"] = True
+            print("[shell] portrait orientation locked for phone viewport")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[shell] orientation lock unavailable: {exc}")
+
+    def root(control: ft.Control) -> ft.SafeArea:
+        return ft.SafeArea(
+            expand=True,
+            minimum_padding=ft.padding.only(left=16, top=12, right=16, bottom=16),
+            content=control,
+        )
+
+    def brand_mark(size: int = 48) -> ft.Container:
+        colors = _palette(page)
+        return ft.Container(
+            width=size,
+            height=size,
+            border_radius=16,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#1D4ED8", colors["primary"]],
+            ),
+            alignment=ft.alignment.center,
+            content=ft.Text("Б", size=size * 0.46, weight=ft.FontWeight.W_700, color="#FFFFFF"),
+        )
+
+    def primary_button(label: str, icon: str, on_click) -> ft.FilledButton:
+        colors = _palette(page)
+        return ft.FilledButton(
+            label,
+            icon=icon,
+            on_click=on_click,
+            height=48,
+            style=ft.ButtonStyle(
+                bgcolor=colors["primary"],
+                color=colors["primary_text"],
+                shape=ft.RoundedRectangleBorder(radius=14),
+            ),
+        )
+
+    def secondary_button(label: str, icon: str, on_click) -> ft.OutlinedButton:
+        colors = _palette(page)
+        return ft.OutlinedButton(
+            label,
+            icon=icon,
+            on_click=on_click,
+            height=48,
+            style=ft.ButtonStyle(
+                color=colors["text"],
+                side=ft.BorderSide(1, colors["border"]),
+                shape=ft.RoundedRectangleBorder(radius=14),
+            ),
+        )
+
+    def shell_card(
+        icon: str,
+        title: str,
+        text: str,
+        controls: list[ft.Control],
+        accent: str | None = None,
+    ) -> ft.Container:
+        colors = _palette(page)
+        accent_color = accent or colors["primary"]
+        return ft.Container(
+            width=440,
+            padding=24,
+            border_radius=28,
+            bgcolor=colors["surface"],
+            border=ft.border.all(1, colors["border"]),
+            shadow=ft.BoxShadow(
+                blur_radius=24,
+                spread_radius=0,
+                color="#1E293B1A",
+                offset=ft.Offset(0, 12),
+            ),
+            content=ft.Column(
+                [
+                    brand_mark(52),
+                    ft.Container(
+                        width=52,
+                        height=52,
+                        border_radius=18,
+                        bgcolor=colors["surface_2"],
+                        alignment=ft.alignment.center,
+                        content=ft.Icon(icon, color=accent_color, size=28),
+                    ),
+                    ft.Text(title, size=24, weight=ft.FontWeight.W_700, color=colors["text"]),
+                    ft.Text(text, size=15, color=colors["muted"], text_align=ft.TextAlign.CENTER),
+                    *controls,
+                ],
+                spacing=16,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                tight=True,
+            ),
+        )
+
     url_field = ft.TextField(
-        value=REACT_URL,
-        label="URL React-сервера",
+        value=APP_URL,
+        label="Адрес приложения",
         hint_text="http://192.168.0.10:8560",
-        text_size=14,
+        text_size=15,
         autofocus=True,
         keyboard_type=ft.KeyboardType.URL,
-        # open_url объявлен ниже — lambda откладывает обращение и планирует корутину.
         on_submit=lambda e: page.run_task(open_url),
+        border_radius=14,
     )
 
-    input_view = ft.Container(
-        expand=True,
-        bgcolor=_FLET_BG,
-        padding=24,
-        alignment=ft.Alignment.CENTER,
-        content=ft.Column(
-            [
-                title,
-                hint,
-                url_field,
-                ft.FilledButton("Открыть", icon=ft.Icons.PLAY_ARROW, on_click=lambda e: page.run_task(open_url)),
-                ft.OutlinedButton("🔴 Тест WebView (без React)", on_click=lambda e: page.run_task(test_webview)),
-            ],
-            spacing=14,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            tight=True,
-            width=360,
-        ),
-    )
-
-    probed = {"done": False}
-
-    def show_input(text: str | None = None, detail: str | None = None, color: str = "#FFFFFF") -> None:
-        if text is not None:
-            title.value = text
-            title.color = color
-        if detail is not None:
-            hint.value = detail
+    def replace(control: ft.Control) -> None:
+        apply_shell_theme()
+        lock_phone_orientation_if_needed()
         page.clean()
-        page.add(input_view)
+        page.add(root(control))
         page.update()
 
-    # --- WebView (создаётся один раз, монтируется как ЕДИНСТВЕННЫЙ контрол страницы) ---
+    def show_connection_form(message: str | None = None, error: bool = False) -> None:
+        colors = _palette(page)
+        helper: ft.Control
+        if message:
+            helper = ft.Container(
+                padding=ft.padding.symmetric(horizontal=14, vertical=10),
+                border_radius=14,
+                bgcolor="#FEF2F2" if error else colors["surface_2"],
+                content=ft.Text(
+                    message,
+                    size=13,
+                    color=colors["danger"] if error else colors["muted"],
+                    text_align=ft.TextAlign.CENTER,
+                ),
+            )
+        else:
+            helper = ft.Text(
+                "Для разработки укажите адрес, который доступен с этого устройства.",
+                size=13,
+                color=colors["muted"],
+                text_align=ft.TextAlign.CENTER,
+            )
+
+        controls: list[ft.Control] = [
+            helper,
+            url_field,
+            ft.Row(
+                [primary_button("Подключиться", ft.Icons.ARROW_FORWARD, lambda e: page.run_task(open_url))],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ]
+        if DEBUG_WEBVIEW:
+            controls.append(secondary_button("Проверить оболочку", ft.Icons.BUG_REPORT, lambda e: page.run_task(test_shell)))
+
+        replace(
+            ft.Container(
+                expand=True,
+                alignment=ft.alignment.center,
+                content=shell_card(
+                    ft.Icons.LINK,
+                    "Подключение к Белпомощнику",
+                    "Введите адрес приложения и нажмите «Подключиться».",
+                    controls,
+                ),
+            )
+        )
+
+    def show_loading(url: str) -> None:
+        colors = _palette(page)
+        replace(
+            ft.Container(
+                expand=True,
+                alignment=ft.alignment.center,
+                content=ft.Container(
+                    width=420,
+                    padding=28,
+                    border_radius=28,
+                    bgcolor=colors["surface"],
+                    border=ft.border.all(1, colors["border"]),
+                    content=ft.Column(
+                        [
+                            brand_mark(56),
+                            ft.ProgressRing(width=42, height=42, stroke_width=4, color=colors["primary"]),
+                            ft.Text("Загрузка приложения", size=24, weight=ft.FontWeight.W_700, color=colors["text"]),
+                            ft.Text(
+                                f"Открываем Белпомощник: {_app_host_label(url)}",
+                                size=14,
+                                color=colors["muted"],
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                        ],
+                        spacing=16,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        tight=True,
+                    ),
+                ),
+            )
+        )
+
+    def show_offline() -> None:
+        replace(
+            ft.Container(
+                expand=True,
+                alignment=ft.alignment.center,
+                content=shell_card(
+                    ft.Icons.WIFI_OFF,
+                    "Нет подключения к интернету",
+                    "Проверьте сеть на устройстве и попробуйте снова.",
+                    [
+                        ft.Row(
+                            [
+                                primary_button("Попробовать снова", ft.Icons.REFRESH, lambda e: page.run_task(retry)),
+                                secondary_button("Изменить адрес", ft.Icons.EDIT, lambda e: show_connection_form()),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            wrap=True,
+                            spacing=10,
+                        )
+                    ],
+                    accent=_palette(page)["danger"],
+                ),
+            )
+        )
+
+    def show_server_error(detail: str | None = None) -> None:
+        console_detail = f" ({detail})" if detail else ""
+        print(f"[shell] server/site error{console_detail}")
+        replace(
+            ft.Container(
+                expand=True,
+                alignment=ft.alignment.center,
+                content=shell_card(
+                    ft.Icons.CLOUD_OFF,
+                    "Сервис временно недоступен",
+                    "Сервер не ответил или страница не загрузилась. Попробуйте обновить подключение.",
+                    [
+                        ft.Row(
+                            [
+                                primary_button("Попробовать снова", ft.Icons.REFRESH, lambda e: page.run_task(retry)),
+                                secondary_button("Изменить адрес", ft.Icons.EDIT, lambda e: show_connection_form()),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            wrap=True,
+                            spacing=10,
+                        )
+                    ],
+                    accent=_palette(page)["warning"],
+                ),
+            )
+        )
+
     def on_started(e: ft.ControlEvent) -> None:
-        print(f"[webview] start  -> {e.data}")
+        print(f"[webview] start -> {e.data}")
 
     def on_progress(e: ft.ControlEvent) -> None:
-        print(f"[webview] {e.data}%")
-
-    async def _probe() -> None:
-        if probed["done"]:
-            return
-        probed["done"] = True
-        # Ждём выхода из диспатча событий flet (иначе "Concurrent modification").
-        await asyncio.sleep(0.8)
-        try:
-            await webview.run_javascript(_PROBE_JS)
-            print("[probe] инъекция отправлена (смотри панель на телефоне)")
-        except Exception as ex:  # noqa: BLE001
-            print(f"[probe] run_javascript failed: {ex}")
+        print(f"[webview] progress -> {e.data}%")
 
     def on_ended(e: ft.ControlEvent) -> None:
         print(f"[webview] loaded -> {e.data}")
-        page.run_task(_probe)
 
     def on_error(e: ft.ControlEvent) -> None:
-        print(f"[webview] ERROR  -> {e.data}")
-        show_input("Не удалось загрузить", f"Ошибка: {e.data}\n\n{_CHECKLIST}", "#F87171")
+        print(f"[webview] resource error -> {e.data}")
+        if _looks_like_offline_error(e.data):
+            show_offline()
+            return
+        show_server_error(str(e.data))
 
     def on_console(e) -> None:
-        print(f"[react:{getattr(e, 'severity_level', '?')}] {getattr(e, 'message', e)}")
+        print(f"[web:{getattr(e, 'severity_level', '?')}] {getattr(e, 'message', e)}")
 
     webview = WebView(
         url="about:blank",
@@ -202,44 +437,65 @@ def main(page: ft.Page) -> None:
     )
 
     async def open_url(_=None) -> None:
-        url = (url_field.value or "").strip()
+        url = _normalize_url(url_field.value or "")
         if not url:
-            show_input("Введите адрес React", "Поле пустое — вставь URL из терминала.", "#F87171")
+            show_connection_form("Введите адрес приложения.", error=True)
             return
-        print(f"[webview] открываю -> {url}")
-        probed["done"] = False
-        # WebView становится единственным контролом страницы → full-size, без Stack.
+
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            show_connection_form("Адрес должен начинаться с http:// или https://.", error=True)
+            return
+
+        last_url["value"] = url
+        url_field.value = url
+        print(f"[shell] open -> {url}")
+        show_loading(url)
+
+        server_ok, server_info = await asyncio.to_thread(_server_reachable, url)
+        if not server_ok:
+            internet_ok = await asyncio.to_thread(_internet_reachable)
+            if not internet_ok:
+                print(f"[shell] offline detected while opening {url}: {server_info}")
+                show_offline()
+                return
+            show_server_error(server_info)
+            return
+
+        print(f"[shell] server reachable: {server_info}")
         page.clean()
         page.add(webview)
         page.update()
-        await asyncio.sleep(0.3)  # дать контролу смонтироваться
+        await asyncio.sleep(0.25)
         await webview.load_request(url)
 
-    async def test_webview(_=None) -> None:
-        # Решающий тест: красим WebView напрямую, минуя React и сеть.
-        # Красный экран "WEBVIEW OK" => контрол рендерит, виноват React/сеть.
-        # Остался тёмный/серый => сам WebView не красит на этом устройстве.
-        print("[webview] ТЕСТ load_html")
+    async def retry(_=None) -> None:
+        url_field.value = last_url["value"]
+        await open_url()
+
+    async def test_shell(_=None) -> None:
         page.clean()
         page.add(webview)
         page.update()
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.25)
         await webview.load_html(
-            "<!doctype html><html><body style='margin:0;background:#e11d48;"
-            "color:#fff;font:bold 40px sans-serif;display:flex;align-items:center;"
-            "justify-content:center;height:100vh'>WEBVIEW OK</body></html>"
+            "<!doctype html><html><body style='margin:0;background:#0f172a;color:#fff;"
+            "font:700 36px system-ui;display:flex;align-items:center;justify-content:center;"
+            "height:100vh'>Белпомощник</body></html>"
         )
 
-    page.add(input_view)
+    def on_resize(_=None) -> None:
+        lock_phone_orientation_if_needed()
 
-    ok, info = _vite_reachable(REACT_URL)
-    port = urlparse(REACT_URL).port
-    if ok:
-        print(f"[preflight] vite доступен локально на {info}:{port}")
-    else:
-        print(f"[preflight] vite НЕ отвечает локально: {info}")
-        hint.value = "vite не отвечает на этой машине — запусти  pnpm dev:lan"
-        page.update()
+    def on_brightness_change(_=None) -> None:
+        # Нативные shell-экраны должны следовать системной теме.
+        show_connection_form() if not page.controls else page.update()
+
+    page.on_resize = on_resize
+    page.on_platform_brightness_change = on_brightness_change
+
+    apply_shell_theme()
+    show_connection_form()
 
 
 if __name__ == "__main__":

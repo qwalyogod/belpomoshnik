@@ -32,6 +32,18 @@ export interface OfficialSource {
   checkedAt?: string;       // ISO date, or undefined → "требует проверки"
 }
 
+/** P6: расширенный источник для интеграции с NewsPage.
+ *  Отдельный от OfficialSource (вложен в сценарии) — здесь с type/lastChecked
+ *  для UI-чипов и фильтрации. */
+export interface Source {
+  id: string;
+  title: string;
+  type: string;             // law | ministry | government_portal | tax | registry
+  url: string;
+  description: string;
+  lastChecked: string;      // yyyy-mm-dd
+}
+
 export interface Institution {
   id: string;
   name: string;
@@ -183,6 +195,9 @@ export interface LegalUpdate {
   whatToDo: string;
   effectiveDate: string;       // ISO
   source: OfficialSource;
+  /** P6: опциональная привязка к Source.id из OFFICIAL_SOURCES.
+   *  Если пусто — NewsPage ищет источник по `source.id`. */
+  sourceIds?: string[];
   priority: boolean;
   matchesProfile: boolean;
 }
@@ -266,6 +281,8 @@ export interface Article {
   audience?: string;
   source?: string;
   sourceUrl?: string;
+  /** P6: опциональная привязка к Source.id из OFFICIAL_SOURCES. */
+  sourceIds?: string[];
   status: ArticleStatus;
   author: AuthorMeta;
   date: string;                              // yyyy-mm-dd publication date
@@ -273,3 +290,52 @@ export interface Article {
   updatedAt: string;                         // ISO timestamp
   reported?: boolean;                        // editor flagged it for admin review
 }
+
+// P7: каркас «Экстремистский контент». Контент НЕ заполняется — только типы
+// и константы. Любая запись ОБЯЗАНА иметь source_url (валидируется).
+export type ExtremistCategory = "registry" | "news" | "explanation";
+export type ExtremistStatus = "draft" | "published";
+export type ExtremistContentType =
+  | "social"
+  | "channels"
+  | "media"
+  | "persons"
+  | "organizations"
+  | "music"
+  | "other";
+
+export interface ExtremistEntry {
+  id: string;
+  title: string;
+  category: ExtremistCategory;
+  sourceUrl: string;                         // обязателен, валидируется на сервере
+  sourceName: string;
+  includedAt?: string;                       // ISO date
+  lastCheckedAt?: string;                    // ISO date
+  shortDescription: string;
+  contentTypes: ExtremistContentType[];      // мульти-выбор (filters_json)
+  status: ExtremistStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const EXTREMIST_CATEGORY_LABEL: Record<ExtremistCategory, string> = {
+  registry: "Реестр",
+  news: "Новость",
+  explanation: "Разъяснение",
+};
+
+export const EXTREMIST_STATUS_LABEL: Record<ExtremistStatus, string> = {
+  draft: "Черновик",
+  published: "Опубликовано",
+};
+
+export const EXTREMIST_CONTENT_TYPE_LABEL: Record<ExtremistContentType, string> = {
+  social: "Соцсети",
+  channels: "Каналы",
+  media: "Медиа",
+  persons: "Лица",
+  organizations: "Организации",
+  music: "Музыка",
+  other: "Другое",
+};

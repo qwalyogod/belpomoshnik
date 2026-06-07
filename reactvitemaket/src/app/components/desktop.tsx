@@ -94,7 +94,7 @@ export function DesktopDashboard() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <GhostButton className="h-10 px-4">Каталог ситуаций</GhostButton>
+                <GhostButton className="h-10 px-4">Каталог</GhostButton>
                 <PrimaryButton className="h-10 px-4">Создать план</PrimaryButton>
               </div>
             </div>
@@ -150,7 +150,7 @@ export function DesktopDashboard() {
             {/* Categories */}
             <div className="mt-7">
               <div className="flex items-center justify-between">
-                <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>Каталог ситуаций</div>
+                <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>Каталог помощи</div>
                 <span className="text-[12px] tracking-tight text-[#0056FF]">Открыть все</span>
               </div>
               <div className="mt-3 grid grid-cols-6 gap-3">
@@ -165,7 +165,7 @@ export function DesktopDashboard() {
                   <Card key={c.n} interactive className="p-4">
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{c.i}</span>
                     <div className="mt-7 tracking-tight text-black dark:text-white">{c.n}</div>
-                    <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{c.c} ситуаций</div>
+                    <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{c.c} материалов</div>
                   </Card>
                 ))}
               </div>
@@ -242,7 +242,7 @@ const SAMPLE_ADMIN_ROWS = [
   { c: "Работа", t: "Увольнение по соглашению сторон", st: "На проверке", a: "Е. Соколова", u: "5 дней" },
 ];
 const SAMPLE_ADMIN_STATS = [
-  { l: "Всего ситуаций", v: "142", d: "+6 за неделю" },
+  { l: "Всего сценариев", v: "142", d: "+6 за неделю" },
   { l: "Опубликовано", v: "118", d: "83%" },
   { l: "На проверке", v: "17", d: "ждут редактора" },
   { l: "Просмотры за 7 дней", v: "48 217", d: "+12%" },
@@ -321,7 +321,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   const review = admin.scenarios.filter((s) => s.status === "review").length;
   const stats = total
     ? [
-        { l: "Всего ситуаций", v: String(total), d: admin.status === "api" ? "из API" : "локально" },
+        { l: "Всего сценариев", v: String(total), d: admin.status === "api" ? "из API" : "локально" },
         { l: "Опубликовано", v: String(published), d: total ? `${Math.round((published / total) * 100)}%` : "0%" },
         { l: "На проверке", v: String(review), d: "ждут редактора" },
         { l: "Черновики", v: String(total - published - review), d: "в работе" },
@@ -336,7 +336,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     { id: "publications", icon: <Newspaper size={15} />, label: "Публикации", short: "Публик.", badge: articles.length ? String(articles.length) : undefined },
     { id: "moderation", icon: <ShieldAlert size={15} />, label: "Модерация", short: "Модер.", badge: moderationCount ? String(moderationCount) : undefined },
     { id: "categories", icon: <LayoutGrid size={15} />, label: "Категории", short: "Категории" },
-    { id: "scenarios", icon: <FileText size={15} />, label: "Ситуации", short: "Ситуации", badge: total ? String(total) : undefined },
+    { id: "scenarios", icon: <FileText size={15} />, label: "Сценарии", short: "Сценарии", badge: total ? String(total) : undefined },
     { id: "law", icon: <BookOpen size={15} />, label: "Правовые обновления", short: "Право" },
     { id: "authorities", icon: <Building2 size={15} />, label: "Учреждения", short: "Учрежд." },
     { id: "users", icon: <Users size={15} />, label: "Пользователи и роли", short: "Люди", sys: true },
@@ -544,7 +544,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   );
 
   // ---- Publications (editor / UGC output) ----
-  const kindLabel = (k: ContentKind) => (k === "news" ? "Новости" : k === "scenario" ? "Ситуация" : "Проблема");
+  const kindLabel = (k: ContentKind) => (k === "news" ? "Новости" : k === "scenario" ? "Жизненный сценарий" : "Проблема");
   const authorLabel = (a: Article) => {
     const m = a.author;
     if (m.proposedBy) {
@@ -558,7 +558,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   const publicationsBody = (
     <>
       <div className="mb-4 flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        {([["all", "Все"], ["news", "Новости"], ["scenario", "Ситуации"], ["problem", "Проблемы"]] as const).map(([id, label]) => {
+        {([["all", "Все"], ["news", "Новости"], ["scenario", "Жизненные сценарии"], ["problem", "Проблемы"]] as const).map(([id, label]) => {
           const cnt = id === "all" ? articles.length : articles.filter((a) => a.kind === id).length;
           return (
             <button key={id} onClick={() => setPubFilter(id)} className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] tracking-tight transition-colors ${pubFilter === id ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/55 hover:bg-black/[0.04] dark:text-white/55 dark:hover:bg-white/[0.05]"}`}>{label}{cnt ? ` · ${cnt}` : ""}</button>
@@ -876,7 +876,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-white/70 px-5 py-3.5 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/70 sm:px-7">
         <div>
           <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">{editor ? "Редактор" : "Контент"} / {current.label}</div>
-          <div className="mt-0.5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{section === "scenarios" ? "Каталог ситуаций" : section === "dashboard" ? (editor ? "Обзор редакции" : "Обзор") : current.label}</div>
+          <div className="mt-0.5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{section === "scenarios" ? "Жизненные сценарии" : section === "dashboard" ? (editor ? "Обзор редакции" : "Обзор") : current.label}</div>
         </div>
         {section === "dashboard" && (
           <div className="flex items-center gap-2">

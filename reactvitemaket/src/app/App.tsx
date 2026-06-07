@@ -102,13 +102,12 @@ const MOBILE_TITLES: Record<string, string> = {
   "/": "Главная",
   "/onboarding": "Добро пожаловать",
   "/welcome": "Добро пожаловать",
-  "/catalog": "Каталог ситуаций",
-  "/scenarios": "Каталог",
+  "/catalog": "Каталог помощи",
+  "/scenarios": "Жизненные сценарии",
   "/situations": "Мои ситуации",
   "/documents": "Мои документы",
   "/finance": "ЖКХ и налоги",
   "/news": "Новости",
-  "/sources": "Источники",
   "/notifications": "Уведомления",
   "/profile": "Профиль",
   "/settings": "Настройки",
@@ -293,12 +292,12 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
 }
 
 function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => void; dark: boolean; setDark: (d: boolean) => void }) {
-  const cats: { i: React.ReactNode; n: string; r: Page }[] = [
+  const cats: { i: React.ReactNode; n: string; r?: Page; to?: string }[] = [
     { i: <FileText size={20} />, n: "Документы", r: "documents" },
     { i: <Home size={20} />, n: "ЖКХ", r: "finance" },
     { i: <Wallet size={20} />, n: "Налоги", r: "finance" },
-    { i: <Heart size={20} />, n: "Семья", r: "catalog" },
-    { i: <Briefcase size={20} />, n: "Работа", r: "catalog" },
+    { i: <Heart size={20} />, n: "Семья", to: "/catalog?category=family&type=all" },
+    { i: <Briefcase size={20} />, n: "Работа", to: "/catalog?category=work&type=all" },
     { i: <Newspaper size={20} />, n: "Новости", r: "news" },
   ];
   const navigate = useNavigate();
@@ -333,7 +332,7 @@ function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => vo
 
       <div className="mt-5 grid grid-cols-3 gap-2.5">
         {cats.map((c) => (
-          <button key={c.n} onClick={() => onNavigate(c.r)} className="flex flex-col items-start gap-2 rounded-2xl border border-black/[0.06] bg-white px-3 py-3 text-left transition-all active:scale-[0.98] dark:border-white/[0.06] dark:bg-[#0F1117]">
+          <button key={c.n} onClick={() => c.to ? navigate(c.to) : c.r && onNavigate(c.r)} className="flex flex-col items-start gap-2 rounded-2xl border border-black/[0.06] bg-white px-3 py-3 text-left transition-all active:scale-[0.98] dark:border-white/[0.06] dark:bg-[#0F1117]">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{c.i}</span>
             <span className="tracking-tight text-black dark:text-white">{c.n}</span>
           </button>
@@ -425,7 +424,7 @@ function MobileCatalog({ onBack, onOpen }: { onBack: () => void; onOpen: () => v
   ];
   return (
     <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
-      <MobileTopBar title="Каталог ситуаций" onBack={onBack} />
+      <MobileTopBar title="Жизненные сценарии" onBack={onBack} />
       <div className="px-5">
         <div className="flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-white px-4 py-3 dark:border-white/[0.06] dark:bg-[#0F1117]">
           <Search size={16} className="text-black/40 dark:text-white/40" />
@@ -815,7 +814,6 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
   { id: "documents", icon: <Shield size={16} />, label: "Документы" },
   { id: "finance", icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
   { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
-  { id: "sources", icon: <Shield size={16} />, label: "Источники" },
 ];
 
 function HeaderUserMenu() {
@@ -996,12 +994,11 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </div>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Личный кабинет</div>
-        {item("catalog", <LayoutGrid size={16} />, "Каталог ситуаций")}
+        {item("catalog", <LayoutGrid size={16} />, "Каталог")}
         {item("home", <Home size={16} />, "Главная")}
         {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
         {item("documents", <Shield size={16} />, "Документы")}
         {item("news", <Newspaper size={16} />, "Новости")}
-        {item("sources", <Shield size={16} />, "Источники")}
       </nav>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>
@@ -1282,7 +1279,7 @@ function DesktopHome({ onOpen }: { onOpen: (p: Page) => void }) {
           <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30, lineHeight: 1.1 }}>Добрый день{firstName ? `, ${firstName}` : ""}</div>
         </div>
         <div className="flex gap-2">
-          <GhostButton className="h-10 px-4" onClick={() => onOpen("catalog")}>Каталог ситуаций</GhostButton>
+          <GhostButton className="h-10 px-4" onClick={() => onOpen("catalog")}>Каталог</GhostButton>
           <PrimaryButton className="h-10 px-4" onClick={() => onOpen("situations")}>Мои ситуации</PrimaryButton>
         </div>
       </div>
@@ -1341,7 +1338,7 @@ function DesktopHome({ onOpen }: { onOpen: (p: Page) => void }) {
 
       <div className="mt-7">
         <div className="flex items-center justify-between">
-          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>Каталог ситуаций</div>
+          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>Каталог помощи</div>
           <button onClick={() => onOpen("catalog")} className="text-[12px] tracking-tight text-[#0056FF]">Открыть все</button>
         </div>
         <div className="mt-3 grid grid-cols-6 gap-3">
@@ -1349,15 +1346,15 @@ function DesktopHome({ onOpen }: { onOpen: (p: Page) => void }) {
             { i: <FileText size={18} />, n: "Документы", c: 28, r: "documents" as Page },
             { i: <Home size={18} />, n: "ЖКХ", c: 14, r: "finance" as Page },
             { i: <Wallet size={18} />, n: "Налоги", c: 19, r: "finance" as Page },
-            { i: <Heart size={18} />, n: "Семья", c: 22, r: "catalog" as Page },
-            { i: <Briefcase size={18} />, n: "Работа", c: 17, r: "catalog" as Page },
-            { i: <Hammer size={18} />, n: "Здоровье", c: 12, r: "catalog" as Page },
+            { i: <Heart size={18} />, n: "Семья", c: 22, to: "/catalog?category=family&type=all" },
+            { i: <Briefcase size={18} />, n: "Работа", c: 17, to: "/catalog?category=work&type=all" },
+            { i: <Hammer size={18} />, n: "Здоровье", c: 12, to: "/catalog?category=health&type=all" },
           ].map((c) => (
-            <button key={c.n} onClick={() => onOpen(c.r)}>
+            <button key={c.n} onClick={() => c.to ? navigate(c.to) : onOpen(c.r)}>
               <Card interactive className="p-4 text-left">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{c.i}</span>
                 <div className="mt-7 tracking-tight text-black dark:text-white">{c.n}</div>
-                <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{c.c} ситуаций</div>
+                <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{c.c} материалов</div>
               </Card>
             </button>
           ))}
