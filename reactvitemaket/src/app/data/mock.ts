@@ -1,6 +1,6 @@
 import {
   Category, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate, UserProfile, Settings, Problem,
-  UtilityAccount, TaxObligation
+  UtilityAccount, TaxObligation, Source
 } from "./types";
 
 export const CATEGORIES: Category[] = [
@@ -246,6 +246,7 @@ export const LEGAL_UPDATES: LegalUpdate[] = [
     whatToDo: "Подать заявление в ИМНС с подтверждающими документами в течение года с момента покупки.",
     effectiveDate: "2026-07-01",
     source: { id: "src-nalog", title: "Министерство по налогам и сборам", url: "nalog.gov.by", description: "Официальное разъяснение.", checkedAt: "2026-06-01" },
+    sourceIds: ["source-nalog"],
     priority: true, matchesProfile: true,
   },
   {
@@ -256,6 +257,7 @@ export const LEGAL_UPDATES: LegalUpdate[] = [
     whatToDo: "Проверить начисления в первой квитанции после вступления в силу.",
     effectiveDate: "2026-10-01",
     source: { id: "src-minsk", title: "Минский горисполком", url: "minsk.gov.by", description: "Решение горисполкома.", checkedAt: "2026-05-21" },
+    sourceIds: ["source-portal-gov"],
     priority: false, matchesProfile: true,
   },
   {
@@ -266,6 +268,7 @@ export const LEGAL_UPDATES: LegalUpdate[] = [
     whatToDo: "Записаться через портал государственных услуг.",
     effectiveDate: "2026-09-15",
     source: { id: "src-mvd", title: "Министерство внутренних дел", url: "mvd.gov.by", description: "Пресс-релиз.", checkedAt: "2026-05-30" },
+    sourceIds: ["source-mvd"],
     priority: true, matchesProfile: false,
   },
   {
@@ -276,6 +279,7 @@ export const LEGAL_UPDATES: LegalUpdate[] = [
     whatToDo: "Подать заявление в управление социальной защиты.",
     effectiveDate: "2027-01-01",
     source: { id: "src-mintrud", title: "Министерство труда и социальной защиты", url: "mintrud.gov.by", description: "Постановление №211.", checkedAt: "2026-05-25" },
+    sourceIds: ["source-mintrud"],
     priority: false, matchesProfile: false,
   },
 ];
@@ -295,6 +299,11 @@ export const INITIAL_PROFILE: UserProfile = {
     { id: "a1", title: "Первая ситуация создана" },
     { id: "a2", title: "Все документы добавлены" },
   ],
+  // v1.1 (P4): дефолтные значения для новых полей профиля. addresses и
+  // preferredSourceIds пустые, чтобы не подменять пользовательские данные.
+  avatarDataUrl: undefined,
+  addresses: [],
+  preferredSourceIds: [],
 };
 
 export const INITIAL_SETTINGS: Settings = {
@@ -462,7 +471,7 @@ export const PROBLEMS: Problem[] = [
 ];
 
 // Официальные источники (перенесено из Flet OFFICIAL_SOURCES).
-export const OFFICIAL_SOURCES: { id: string; title: string; url: string; type: string; description: string; lastChecked: string }[] = [
+export const OFFICIAL_SOURCES: Source[] = [
   { id: "source-pravo", title: "Национальный правовой Интернет-портал Республики Беларусь", url: "https://pravo.by/", type: "law", description: "Официальный источник нормативных правовых актов Республики Беларусь.", lastChecked: "2026-05-24" },
   { id: "source-portal-gov", title: "Единый портал электронных услуг", url: "https://portal.gov.by/", type: "government_portal", description: "Государственный портал административных процедур и электронных услуг.", lastChecked: "2026-05-24" },
   { id: "source-mintrud", title: "Министерство труда и социальной защиты", url: "https://mintrud.gov.by/", type: "ministry", description: "Официальная информация по пособиям, социальной поддержке и трудовым вопросам.", lastChecked: "2026-05-24" },

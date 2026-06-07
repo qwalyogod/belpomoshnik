@@ -108,7 +108,6 @@ const MOBILE_TITLES: Record<string, string> = {
   "/documents": "Мои документы",
   "/finance": "ЖКХ и налоги",
   "/news": "Новости",
-  "/sources": "Источники",
   "/notifications": "Уведомления",
   "/profile": "Профиль",
   "/settings": "Настройки",
@@ -121,6 +120,7 @@ const MOBILE_TITLES: Record<string, string> = {
   "/problems": "Проблемы",
   "/law-detail": "Закон-апдейт",
   "/problem-detail": "Проблема",
+  "/extremist": "Экстремистский контент",
 };
 
 function mobileTitleFromPath(pathname: string): string {
