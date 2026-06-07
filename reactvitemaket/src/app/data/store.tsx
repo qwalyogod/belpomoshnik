@@ -153,6 +153,14 @@ type Store = {
   situationByScenario: (scenarioId: string) => UserSituation | undefined;
   taskIsBlocked: (situation: UserSituation, taskId: string) => boolean;
   situationProgress: (situation: UserSituation) => number; // 0..100
+
+  // Guest-guard: действия, требующие аккаунт, вызывают requireAccount().
+  // Если пользователь — гость, инкрементится guestGuardSignal, и
+  // GuestGuardBridge показывает модал «Войдите или зарегистрируйтесь».
+  // Возвращает true, если действие разрешено; false — если заблокировано.
+  requireAccount: () => boolean;
+  guestGuardSignal: number;
+  dismissGuestGuard: () => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -476,6 +484,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [adminStatus, setAdminStatus] = useState<"loading" | "api" | "fallback">("fallback");
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
+  const [guestGuardSignal, setGuestGuardSignal] = useState(0);
 
   useEffect(() => {
     safeWrite(CURRENT_USER_KEY, currentUser.id);
@@ -1007,6 +1016,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const problemById = useCallback((id: string) => problems.find(p => p.id === id), [problems]);
   const situationByScenario = useCallback((scenarioId: string) => situations.find(s => s.scenarioId === scenarioId), [situations]);
 
+  // Guest-guard: единая точка входа для действий, требующих аккаунт.
+  // Если role === "guest" — инкрементим сигнал (GuestGuardBridge покажет
+  // модал) и блокируем действие. Если залогинен — пропускаем.
+  const requireAccount = useCallback(() => {
+    if (role !== "guest") return true;
+    setGuestGuardSignal(s => s + 1);
+    return false;
+  }, [role]);
+  const dismissGuestGuard = useCallback(() => {
+    setGuestGuardSignal(0);
+  }, []);
+
   const loadScenarioDetail = useCallback(async (id: string) => {
     const data = await apiClient.getScenario<Record<string, unknown>>(id);
     const fullScenario = adaptScenario(data);
@@ -1016,7 +1037,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const createSituation = useCallback((scenarioId: string) => {
-    if (role === "guest") return "";
+    if (!requireAccount()) return "";
     const existing = situations.find(s => s.scenarioId === scenarioId);
     if (existing) return existing.id;
     const scenario = scenarioById(scenarioId);
@@ -1086,9 +1107,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role, scenarioById, situations, taskIsBlocked]);
 
   const setNote = useCallback((situationId: string, taskId: string, note: string) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setSituations(prev => prev.map(s => s.id === situationId ? { ...s, notes: { ...s.notes, [taskId]: note } } : s));
-  }, [role]);
+  }, [requireAccount]);
 
   const deleteSituation = useCallback((situationId: string) => {
     if (role === "guest") return;
@@ -1103,7 +1124,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const addDocument: Store["addDocument"] = useCallback((doc) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const tempDocument: UserDocument = { id: uid("doc"), status: doc.status ?? "active", ...doc };
     setDocuments(prev => [tempDocument, ...prev]);
 
@@ -1151,7 +1172,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   // --- Taxes (ТЗ §18) ---
   const addTax: Store["addTax"] = useCallback((tax) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const temp: TaxObligation = { id: uid("tax"), ...tax };
     setTaxes(prev => [temp, ...prev]);
     if (authSession?.access_token) {
@@ -1331,7 +1352,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   // --- Utility / ЖКХ (ТЗ §18) ---
   const addUtilityAccount: Store["addUtilityAccount"] = useCallback((account) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const temp: UtilityAccount = { id: uid("util"), payments: [], ...account };
     setUtilityAccounts(prev => [temp, ...prev]);
     if (authSession?.access_token) {
@@ -1454,7 +1475,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   // v1.1 (P4): пользовательские заметки. Локально + бэк sync.
   const addNote: Store["addNote"] = useCallback((input) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const text = input.text.trim();
     if (!text) return;
     const note: UserNote = {
@@ -1506,7 +1527,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // v1.1 (P4): адреса пользователя (до 5 шт.). Дубликат id, пустые записи
   // отбрасываем. Один помечается isPrimary — остальные снимаются.
   const addAddress: Store["addAddress"] = useCallback((input) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setProfile(prev => {
       const current = prev.addresses ?? [];
       if (current.length >= 5) return prev;
@@ -1616,6 +1637,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addAuthority, updateAuthority, deleteAuthority,
     setAdminUserRole, setAdminUserActive,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
+    requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus, adminUsers, auditLogs,
@@ -1638,6 +1660,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setAdminUserRole, setAdminUserActive,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
+    requireAccount, guestGuardSignal, dismissGuestGuard,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

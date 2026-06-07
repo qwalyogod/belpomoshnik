@@ -13,6 +13,7 @@ import { AppStoreProvider, useStore } from "./data/store";
 import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
 import { AdminWindowMount } from "./components/admin-window";
+import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { CATEGORIES } from "./data/mock";
 
 const catLabelApp = (id: string) => CATEGORIES.find(c => c.id === id)?.name ?? id;
@@ -1966,6 +1967,7 @@ export function RootLayout() {
             <AppStoreProvider>, поэтому живёт в return-дереве RootLayout, а не
             в его теле. */}
         <AccessibilityBridge />
+        <GuestGuardBridge />
         <OnboardingGate />
         <div className={dark ? "dark" : ""}>
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
