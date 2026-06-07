@@ -20,7 +20,13 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth import get_current_user_email
 from backend.database import get_db
-from backend.models import User, UserDocument
+from backend.models import User, UserDocument, UserNote
+from backend.schemas import (
+    USER_NOTE_CATEGORIES,
+    UserNoteCreate,
+    UserNoteOut,
+    UserNoteUpdate,
+)
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
@@ -492,4 +498,108 @@ def delete_document_scan(
         except OSError:
             pass
     doc.scan_path = ""
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# v1.1 (P4) — Пользовательские заметки (CRUD, владелец-only)
+# ---------------------------------------------------------------------------
+
+def _owned_note(db: Session, user: User, note_id: int) -> UserNote:
+    note = db.scalars(
+        select(UserNote).where(UserNote.id == note_id, UserNote.user_id == user.id)
+    ).first()
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Заметка не найдена.")
+    return note
+
+
+def _validate_note_payload(payload: dict) -> dict:
+    """Нормализовать входные поля заметки.
+
+    - text: обрезаем до 1000 символов, не пустой.
+    - category: если передана — должна быть в USER_NOTE_CATEGORIES;
+      иначе тихо подменяется на «Общее».
+    - reminder_at: либо пустая строка, либо валидный ISO yyyy-mm-dd.
+    """
+    text = str(payload.get("text", "")).strip()
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Текст заметки не может быть пустым.",
+        )
+    payload["text"] = text[:1000]
+
+    category = str(payload.get("category", "")).strip()
+    if not category or category not in USER_NOTE_CATEGORIES:
+        category = "Общее"
+    payload["category"] = category
+
+    reminder = str(payload.get("reminder_at", "")).strip()
+    if reminder:
+        try:
+            # Принимаем yyyy-mm-dd и полный ISO.
+            datetime.fromisoformat(reminder.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="reminder_at должен быть ISO датой (yyyy-mm-dd).",
+            )
+    payload["reminder_at"] = reminder[:40]
+
+    return payload
+
+
+@router.get("/notes", response_model=list[UserNoteOut])
+def list_notes(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Список заметок пользователя (новые сверху)."""
+    notes = db.scalars(
+        select(UserNote)
+        .where(UserNote.user_id == user.id)
+        .order_by(UserNote.created_at.desc())
+    ).all()
+    return [UserNoteOut.model_validate(n) for n in notes]
+
+
+@router.post("/notes", response_model=UserNoteOut, status_code=status.HTTP_201_CREATED)
+def create_note(
+    payload: UserNoteCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Создать заметку. Валидация категории и reminder_at."""
+    validated = _validate_note_payload(payload.model_dump())
+    note = UserNote(user_id=user.id, **validated)
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return UserNoteOut.model_validate(note)
+
+
+@router.put("/notes/{note_id}", response_model=UserNoteOut)
+def update_note(
+    note_id: int,
+    payload: UserNoteUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Обновить заметку (текст / категория / срок / флаг done)."""
+    note = _owned_note(db, user, note_id)
+    data = _validate_note_payload(payload.model_dump(exclude_none=True))
+    for field, value in data.items():
+        setattr(note, field, value)
+    db.commit()
+    db.refresh(note)
+    return UserNoteOut.model_validate(note)
+
+
+@router.delete("/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_note(
+    note_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Удалить заметку."""
+    note = _owned_note(db, user, note_id)
+    db.delete(note)
     db.commit()

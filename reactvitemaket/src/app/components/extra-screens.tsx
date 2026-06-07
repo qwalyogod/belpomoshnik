@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
+import { isBiometricAvailable, requestPushPermission, sendTestNotification, getPushStatus } from "../services/a11y";
 import { useNavigate } from "react-router";
 import { useStore, maskDocumentNumber, DOC_TYPE_LABEL } from "../data/store";
 import { apiClient, API_BASE_URL } from "../services/api";
@@ -426,7 +427,41 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
           <Row label="Сроки задач" right={<Toggle on={settings.notifications.deadlines} onChange={() => updateSettings({ notifications: { ...settings.notifications, deadlines: !settings.notifications.deadlines } })} />} />
           <Row label="Срок действия документов" right={<Toggle on={settings.notifications.documents} onChange={() => updateSettings({ notifications: { ...settings.notifications, documents: !settings.notifications.documents } })} />} />
           <Row label="Правовые обновления" right={<Toggle on={settings.notifications.legal} onChange={() => updateSettings({ notifications: { ...settings.notifications, legal: !settings.notifications.legal } })} />} />
-          <Row label="Push-уведомления" right={<Toggle on={settings.notifications.push} onChange={() => updateSettings({ notifications: { ...settings.notifications, push: !settings.notifications.push } })} />} />
+          {/* v1.1 (P8): push-уведомления через Notification API (web).
+              Если браузер не поддерживает — показываем статус «не поддерживается». */}
+          {getPushStatus() === "unsupported" ? (
+            <Row label="Push-уведомления" sub="Браузер не поддерживает push" right={<Pill tone="ghost">Недоступно</Pill>} />
+          ) : (
+            <Row
+              label="Push-уведомления"
+              sub={getPushStatus() === "granted" ? "Разрешение выдано — тестовое сообщение можно отправить" : "Запросим разрешение у браузера"}
+              right={
+                <div className="flex items-center gap-2">
+                  {getPushStatus() === "granted" && (
+                    <button
+                      onClick={() => sendTestNotification("Белпомощник", "Тестовое уведомление")}
+                      className="rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] tracking-tight text-black hover:bg-black/[0.08] dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.12]"
+                    >
+                      Тест
+                    </button>
+                  )}
+                  <Toggle on={settings.notifications.push} onChange={async () => {
+                    const next = !settings.notifications.push;
+                    if (next && getPushStatus() !== "granted") {
+                      const result = await requestPushPermission();
+                      if (result === "denied") {
+                        // Не дадим обмануть UI: если браузер запретил — выключаем
+                        // локальный флаг, чтобы он не расходился с реальностью.
+                        updateSettings({ notifications: { ...settings.notifications, push: false } });
+                        return;
+                      }
+                    }
+                    updateSettings({ notifications: { ...settings.notifications, push: next } });
+                  }} />
+                </div>
+              }
+            />
+          )}
         </div>
       </Card>
 
@@ -435,7 +470,13 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
         <div className="mt-2 divide-y divide-black/[0.05] dark:divide-white/[0.05]">
           <Row label="Скрывать данные документов" sub="Номера маскируются по умолчанию"
             right={<Toggle on={settings.privacy.maskDocuments} onChange={() => updateSettings({ privacy: { ...settings.privacy, maskDocuments: !settings.privacy.maskDocuments } })} />} />
-          <Row label="Быстрый вход (Face/Touch ID)" right={<Toggle on={settings.privacy.quickLogin} onChange={() => updateSettings({ privacy: { ...settings.privacy, quickLogin: !settings.privacy.quickLogin } })} />} />
+          {/* v1.1 (P8): Face/Touch ID — только в native-оболочке. В web показываем
+              честный текст, что функция доступна в приложении на телефоне. */}
+          {isBiometricAvailable() ? (
+            <Row label="Быстрый вход (Face/Touch ID)" right={<Toggle on={settings.privacy.quickLogin} onChange={() => updateSettings({ privacy: { ...settings.privacy, quickLogin: !settings.privacy.quickLogin } })} />} />
+          ) : (
+            <Row label="Быстрый вход" sub="Face/Touch ID доступны в мобильном приложении" right={<Pill tone="ghost">В приложении</Pill>} />
+          )}
         </div>
       </Card>
 

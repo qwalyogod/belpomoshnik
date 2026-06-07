@@ -234,30 +234,19 @@ export function DesktopDashboard() {
 }
 
 /* ---------------- ADMIN PANEL ---------------- */
-const SAMPLE_ADMIN_ROWS = [
-  { c: "Документы", t: "Восстановление паспорта", st: "Опубликовано", a: "Е. Соколова", u: "2 ч назад" },
-  { c: "Семья", t: "Рождение ребёнка — единое пособие", st: "На проверке", a: "А. Мельник", u: "сегодня" },
-  { c: "Налоги", t: "Имущественный вычет для семей", st: "Черновик", a: "И. Кравцов", u: "вчера" },
-  { c: "ЖКХ", t: "Передача показаний счётчиков", st: "Опубликовано", a: "О. Лещенко", u: "3 дня" },
-  { c: "Работа", t: "Увольнение по соглашению сторон", st: "На проверке", a: "Е. Соколова", u: "5 дней" },
+// v1.1 (P10): admin analytics — реальные счётчики считаются из стора
+// (admin.scenarios, articles, views). Если данных нет — пустые
+// карточки с честной плашкой «нет данных», а не синтетические числа.
+const EMPTY_ADMIN_ROWS: { c: string; t: string; st: string; a: string; u: string }[] = [];
+const EMPTY_ADMIN_STATS = [
+  { l: "Всего сценариев", v: "0", d: "из API" },
+  { l: "Опубликовано", v: "0", d: "0%" },
+  { l: "На проверке", v: "0", d: "ждут редактора" },
+  { l: "Просмотры за 7 дней", v: "—", d: "пока нет данных" },
 ];
-const SAMPLE_ADMIN_STATS = [
-  { l: "Всего сценариев", v: "142", d: "+6 за неделю" },
-  { l: "Опубликовано", v: "118", d: "83%" },
-  { l: "На проверке", v: "17", d: "ждут редактора" },
-  { l: "Просмотры за 7 дней", v: "48 217", d: "+12%" },
-];
-// Editorial dashboard: representative analytics until view-tracking lands.
 const WEEK_BASE = [
-  { d: "Пн", v: 5200 }, { d: "Вт", v: 6100 }, { d: "Ср", v: 5800 },
-  { d: "Чт", v: 7400 }, { d: "Пт", v: 8100 }, { d: "Сб", v: 6900 }, { d: "Вс", v: 7300 },
-];
-const SAMPLE_TOP_MATERIALS = [
-  { title: "Рождение ребёнка: пошагово", status: "Опубликовано", views: 4120 },
-  { title: "Развод и раздел имущества", status: "Опубликовано", views: 3380 },
-  { title: "Оформление наследства", status: "Опубликовано", views: 2910 },
-  { title: "Потеря работы: что делать", status: "На проверке", views: 2150 },
-  { title: "Льготы многодетным семьям", status: "Опубликовано", views: 1870 },
+  { d: "Пн", v: 0 }, { d: "Вт", v: 0 }, { d: "Ср", v: 0 },
+  { d: "Чт", v: 0 }, { d: "Пт", v: 0 }, { d: "Сб", v: 0 }, { d: "Вс", v: 0 },
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
@@ -314,19 +303,21 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     a: editor ? "Редактор" : "—",
     u: `${s.taskCount} задач`,
   }));
-  const rows = apiRows.length ? apiRows : SAMPLE_ADMIN_ROWS;
+  const rows = apiRows;
 
   const total = admin.scenarios.length;
   const published = admin.scenarios.filter((s) => s.status === "published").length;
   const review = admin.scenarios.filter((s) => s.status === "review").length;
-  const stats = total
+  // v1.1 (P10): реальные счётчики. Плашка «нет данных», если backend пустой.
+  const hasRealData = admin.status === "api" && total > 0;
+  const stats = hasRealData
     ? [
-        { l: "Всего сценариев", v: String(total), d: admin.status === "api" ? "из API" : "локально" },
-        { l: "Опубликовано", v: String(published), d: total ? `${Math.round((published / total) * 100)}%` : "0%" },
+        { l: "Всего сценариев", v: String(total), d: "из API" },
+        { l: "Опубликовано", v: String(published), d: `${Math.round((published / total) * 100)}%` },
         { l: "На проверке", v: String(review), d: "ждут редактора" },
         { l: "Черновики", v: String(total - published - review), d: "в работе" },
       ]
-    : SAMPLE_ADMIN_STATS;
+    : EMPTY_ADMIN_STATS;
 
   const tone = (s: string) => s === "Опубликовано" ? "ok" : s === "На проверке" ? "lavender" : s === "Отклонено" ? "warn" : "ghost";
   const moderationCount = articles.filter((a) => a.status === "review").length;
@@ -368,15 +359,11 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   const realPublished = articles.filter((a) => a.status === "published");
   const realReview = articles.filter((a) => a.status === "review").length;
   const hasReal = realPublished.length > 0;
+  // v1.1 (P10): реальные просмотры из `a.views` если они есть. Никаких
+  // синтетических псевдослучайных чисел на пустых данных.
   const baseMaterials = hasReal
     ? realPublished.map((a) => ({ title: a.title, status: "Опубликовано", views: a.views }))
-    : admin.scenarios.length
-      ? admin.scenarios.map((s, i) => ({
-          title: s.title,
-          status: statusLabel(s.status),
-          views: 280 + ((s.title.length * 137 + i * 911) % 3600),
-        }))
-      : SAMPLE_TOP_MATERIALS;
+    : [];
   const viewMul = hasReal ? 1 : periodMul; // real views are cumulative, not per-period
   const topMaterials = [...baseMaterials]
     .sort((a, b) => b.views - a.views)
@@ -390,9 +377,11 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     return wd.charAt(0).toUpperCase() + wd.slice(1);
   };
   const hasWeekReal = viewsDaily.some((d) => d.count > 0);
+  // v1.1 (P10): если реальных просмотров нет — week остаётся пустым,
+  // а не заполняется синтетикой.
   const week = hasWeekReal
     ? viewsDaily.map((d) => ({ d: shortWeekday(d.date), v: d.count }))
-    : WEEK_BASE.map((d) => ({ ...d, v: Math.round(d.v * periodMul) }));
+    : WEEK_BASE;
   const maxWeek = Math.max(1, ...week.map((d) => d.v));
   const pubCount = hasReal ? realPublished.length : total ? published : 118;
   const revCount = hasReal ? realReview : total ? review : 17;

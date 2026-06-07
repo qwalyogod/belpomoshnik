@@ -3,13 +3,14 @@ import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
   AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
+  UserAddress, UserNote, NoteCategory,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
+import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
@@ -98,6 +99,22 @@ type Store = {
   profile: UserProfile;
   updateProfile: (patch: Partial<UserProfile>) => void;
   applyQuizResult: (correct: number, total: number) => void;
+
+  // v1.1 (P4): пользовательские заметки (локальные).
+  notes: UserNote[];
+  addNote: (input: { text: string; category: NoteCategory; reminderAt?: string }) => void;
+  updateNote: (id: string, patch: Partial<Pick<UserNote, "text" | "category" | "reminderAt" | "done">>) => void;
+  toggleNote: (id: string) => void;
+  removeNote: (id: string) => void;
+
+  // v1.1 (P4): адреса пользователя (до 5 шт.). Внутри профиля, но
+  // вынесенные методы для удобства UI.
+  addAddress: (input: Omit<UserAddress, "id" | "isPrimary"> & { isPrimary?: boolean }) => void;
+  updateAddress: (id: string, patch: Partial<UserAddress>) => void;
+  removeAddress: (id: string) => void;
+
+  // v1.1 (P4): предпочтения источников новостей (id из OFFICIAL_SOURCES).
+  togglePreferredSource: (sourceId: string) => void;
 
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
@@ -201,6 +218,9 @@ type PersistedUserData = {
   settings: Settings;
   utilityAccounts: UtilityAccount[];
   taxes: TaxObligation[];
+  // v1.1 (P4): пользовательские заметки — локальный массив, привязан
+  // к пользователю через USER_DATA_PREFIX.
+  notes: UserNote[];
 };
 
 function safeRead<T>(key: string, fallback: T): T {
@@ -308,6 +328,8 @@ function profileForUser(user: AppUser): UserProfile {
       region: "",
       city: "",
       district: "",
+      addresses: [],
+      preferredSourceIds: [],
     };
   }
 
@@ -318,6 +340,8 @@ function profileForUser(user: AppUser): UserProfile {
     region: user.region || INITIAL_PROFILE.region,
     city: user.city || INITIAL_PROFILE.city,
     district: user.district || INITIAL_PROFILE.district,
+    addresses: INITIAL_PROFILE.addresses ?? [],
+    preferredSourceIds: INITIAL_PROFILE.preferredSourceIds ?? [],
   };
 }
 
@@ -332,6 +356,7 @@ function defaultUserData(user: AppUser): PersistedUserData {
     settings: INITIAL_SETTINGS,
     utilityAccounts: hasPersonalArea ? INITIAL_UTILITY_ACCOUNTS : [],
     taxes: hasPersonalArea ? INITIAL_TAXES : [],
+    notes: [],
   };
 }
 
@@ -342,10 +367,18 @@ function normalizeUserData(user: AppUser, saved: Partial<PersistedUserData> | nu
     documents: Array.isArray(saved?.documents) ? saved.documents : fallback.documents,
     favorites: Array.isArray(saved?.favorites) ? saved.favorites : fallback.favorites,
     notifications: Array.isArray(saved?.notifications) ? saved.notifications : fallback.notifications,
-    profile: saved?.profile ? { ...fallback.profile, ...saved.profile } : fallback.profile,
+    profile: saved?.profile
+      ? {
+          ...fallback.profile,
+          ...saved.profile,
+          addresses: Array.isArray(saved.profile.addresses) ? saved.profile.addresses : fallback.profile.addresses,
+          preferredSourceIds: Array.isArray(saved.profile.preferredSourceIds) ? saved.profile.preferredSourceIds : fallback.profile.preferredSourceIds,
+        }
+      : fallback.profile,
     settings: saved?.settings ? { ...fallback.settings, ...saved.settings } : fallback.settings,
     utilityAccounts: Array.isArray(saved?.utilityAccounts) ? saved.utilityAccounts : fallback.utilityAccounts,
     taxes: Array.isArray(saved?.taxes) ? saved.taxes : fallback.taxes,
+    notes: Array.isArray(saved?.notes) ? saved.notes : fallback.notes,
   };
 }
 
@@ -433,6 +466,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
   const [settings, setSettings] = useState<Settings>(INITIAL_SETTINGS);
+  // v1.1 (P4): пользовательские заметки. Локально, в userData.
+  const [notes, setNotes] = useState<UserNote[]>([]);
+  const notesRef = useRef<UserNote[]>([]);
+  notesRef.current = notes;
   const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
   const [authSession, setAuthSession] = useState<AuthTokens | null>(null);
   const [adminScenarios, setAdminScenarios] = useState<AdminScenarioRow[]>([]);
@@ -457,6 +494,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setSettings(next.settings);
     setUtilityAccounts(next.utilityAccounts);
     setTaxes(next.taxes);
+    setNotes(next.notes);
     setHydratedUserId(currentUser.id);
   }, [currentUser]);
 
@@ -500,8 +538,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       settings,
       utilityAccounts,
       taxes,
+      notes,
     });
-  }, [currentUser.id, documents, favorites, hydratedUserId, notifications, profile, settings, situations, utilityAccounts, taxes]);
+  }, [currentUser.id, documents, favorites, hydratedUserId, notifications, profile, settings, situations, utilityAccounts, taxes, notes]);
 
   // Platform-wide content + moderation block-list (cached locally for offline).
   useEffect(() => { safeWrite(ARTICLES_KEY, articles); }, [articles]);
@@ -660,6 +699,27 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
     return () => controller.abort();
   }, [authSession?.access_token, currentUser.role, scenarios]);
+
+  // v1.1 (P4): подтягиваем заметки пользователя из backend. Локальные
+  // uid-ы остаются, адаптированные бэковые записи мерджатся.
+  useEffect(() => {
+    if (currentUser.role === "guest" || !authSession?.access_token) return;
+    const controller = new AbortController();
+
+    apiClient.getUserNotes<LooseRecord[]>(authSession.access_token, { signal: controller.signal })
+      .then(items => {
+        if (controller.signal.aborted || !Array.isArray(items)) return;
+        const apiNotes = items.map(adaptUserNote);
+        setNotes(prev => mergeById(prev, apiNotes));
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) {
+          console.warn("User notes API is unavailable; React keeps local notes.", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [authSession?.access_token, currentUser.role]);
 
   // Pull the personal layer (profile, settings, notifications) from backend
   // after a JWT login; local state stays as fallback if the API is down.
@@ -1392,6 +1452,144 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, [role]);
 
+  // v1.1 (P4): пользовательские заметки. Локально + бэк sync.
+  const addNote: Store["addNote"] = useCallback((input) => {
+    if (role === "guest") return;
+    const text = input.text.trim();
+    if (!text) return;
+    const note: UserNote = {
+      id: uid("note"),
+      text,
+      category: input.category,
+      reminderAt: input.reminderAt || undefined,
+      done: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotes(prev => [note, ...prev]);
+    if (authSession?.access_token) {
+      apiClient.createUserNote<LooseRecord>(authSession.access_token, userNotePayload(note))
+        .then(created => {
+          const adapted = adaptUserNote(created);
+          setNotes(prev => prev.map(n => n.id === note.id ? { ...n, ...adapted, id: adapted.id || n.id } : n));
+        })
+        .catch(err => console.warn("createUserNote API failed; local only.", err));
+    }
+  }, [role, authSession?.access_token]);
+
+  const updateNote: Store["updateNote"] = useCallback((id, patch) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch } : n));
+    if (authSession?.access_token && /^\d+$/.test(String(id))) {
+      apiClient.updateUserNote<LooseRecord>(authSession.access_token, String(id), userNotePayload(patch))
+        .catch(err => console.warn("updateUserNote API failed; local only.", err));
+    }
+  }, [authSession?.access_token]);
+
+  const toggleNote: Store["toggleNote"] = useCallback((id) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, done: !n.done } : n));
+    if (authSession?.access_token && /^\d+$/.test(String(id))) {
+      const current = notesRef.current.find(n => n.id === id);
+      if (current) {
+        apiClient.updateUserNote<LooseRecord>(authSession.access_token, String(id), { done: !current.done })
+          .catch(err => console.warn("toggleNote API failed; local only.", err));
+      }
+    }
+  }, [authSession?.access_token]);
+
+  const removeNote: Store["removeNote"] = useCallback((id) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+    if (authSession?.access_token && /^\d+$/.test(String(id))) {
+      apiClient.deleteUserNote(authSession.access_token, String(id))
+        .catch(err => console.warn("deleteUserNote API failed; local only.", err));
+    }
+  }, [authSession?.access_token]);
+
+  // v1.1 (P4): адреса пользователя (до 5 шт.). Дубликат id, пустые записи
+  // отбрасываем. Один помечается isPrimary — остальные снимаются.
+  const addAddress: Store["addAddress"] = useCallback((input) => {
+    if (role === "guest") return;
+    setProfile(prev => {
+      const current = prev.addresses ?? [];
+      if (current.length >= 5) return prev;
+      const next: UserAddress = {
+        id: uid("addr"),
+        label: input.label.trim().slice(0, 80),
+        region: input.region.trim().slice(0, 120),
+        district: input.district.trim().slice(0, 120),
+        city: input.city.trim().slice(0, 120),
+        street: input.street.trim().slice(0, 255),
+        isPrimary: input.isPrimary ?? current.length === 0,
+      };
+      if (!next.label && !next.street && !next.city) return prev;
+      const wantsPrimary = next.isPrimary;
+      const addresses = [
+        ...current.map(item => wantsPrimary ? { ...item, isPrimary: false } : item),
+        next,
+      ];
+      const nextProfile = { ...prev, addresses };
+      if (authSession?.access_token) {
+        apiClient.updateUserProfile(authSession.access_token, userProfilePayload(nextProfile))
+          .catch(error => console.warn("Address saved locally; backend update failed.", error));
+      }
+      return nextProfile;
+    });
+  }, [authSession?.access_token, role]);
+
+  const updateAddress: Store["updateAddress"] = useCallback((id, patch) => {
+    setProfile(prev => {
+      const current = prev.addresses ?? [];
+      const wantsPrimary = patch.isPrimary === true;
+      const addresses = current.map(item => {
+        if (item.id === id) {
+          return {
+            ...item,
+            ...patch,
+            label: (patch.label ?? item.label).trim().slice(0, 80),
+            region: (patch.region ?? item.region).trim().slice(0, 120),
+            district: (patch.district ?? item.district).trim().slice(0, 120),
+            city: (patch.city ?? item.city).trim().slice(0, 120),
+            street: (patch.street ?? item.street).trim().slice(0, 255),
+          };
+        }
+        return wantsPrimary ? { ...item, isPrimary: false } : item;
+      });
+      const nextProfile = { ...prev, addresses };
+      if (authSession?.access_token) {
+        apiClient.updateUserProfile(authSession.access_token, userProfilePayload(nextProfile))
+          .catch(error => console.warn("Address updated locally; backend update failed.", error));
+      }
+      return nextProfile;
+    });
+  }, [authSession?.access_token]);
+
+  const removeAddress: Store["removeAddress"] = useCallback((id) => {
+    setProfile(prev => {
+      const current = prev.addresses ?? [];
+      const filtered = current.filter(item => item.id !== id);
+      // Если удалили primary — назначаем первому оставшемуся.
+      const hadPrimary = current.some(item => item.id === id && item.isPrimary);
+      const addresses = hadPrimary && filtered.length > 0
+        ? filtered.map((item, i) => ({ ...item, isPrimary: i === 0 }))
+        : filtered;
+      const nextProfile = { ...prev, addresses };
+      if (authSession?.access_token) {
+        apiClient.updateUserProfile(authSession.access_token, userProfilePayload(nextProfile))
+          .catch(error => console.warn("Address removed locally; backend update failed.", error));
+      }
+      return nextProfile;
+    });
+  }, [authSession?.access_token]);
+
+  // v1.1 (P4): предпочтения источников новостей. Локально, без бэка.
+  const togglePreferredSource: Store["togglePreferredSource"] = useCallback((sourceId) => {
+    setProfile(prev => {
+      const current = prev.preferredSourceIds ?? [];
+      const next = current.includes(sourceId)
+        ? current.filter(id => id !== sourceId)
+        : [...current, sourceId];
+      return { ...prev, preferredSourceIds: next };
+    });
+  }, []);
+
   const value: Store = useMemo(() => ({
     role, setRole,
     currentUser, quickAccounts, isAuthenticated: role !== "guest",
@@ -1408,6 +1606,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
     profile, updateProfile, applyQuizResult,
+    notes, addNote, updateNote, toggleNote, removeNote,
+    addAddress, updateAddress, removeAddress,
+    togglePreferredSource,
     settings, updateSettings, setLang,
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
@@ -1419,6 +1620,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
+    notes, addNote, updateNote, toggleNote, removeNote,
+    addAddress, updateAddress, removeAddress, togglePreferredSource,
     addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,

@@ -12,10 +12,12 @@ import type {
   Stage,
   Task,
   TaskKind,
+  UserAddress,
   UserDocument,
   UserDocumentStatus,
   UserDocumentType,
   UserProfile,
+  UserNote,
   UserSituation,
   SituationStatus,
   TaxObligation,
@@ -289,6 +291,30 @@ export function adaptUserDocument(input: LooseRecord): UserDocument {
   };
 }
 
+/** v1.1 (P4): адаптер пользовательской заметки. */
+export function adaptUserNote(input: LooseRecord): UserNote {
+  return {
+    id: identifier(input.id, "note"),
+    text: text(input.text, ""),
+    category: text(input.category, "Общее") as UserNote["category"],
+    reminderAt: text(input.reminderAt || input.reminder_at, "") || undefined,
+    done: Boolean(input.done),
+    createdAt: text(input.createdAt || input.created_at, "") || new Date().toISOString(),
+  };
+}
+
+/** v1.1 (P4): payload заметки для PUT/POST. reminder_at приводим к yyyy-mm-dd. */
+export function userNotePayload(note: Partial<UserNote>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (note.text !== undefined) out.text = note.text;
+  if (note.category !== undefined) out.category = note.category;
+  if (note.done !== undefined) out.done = note.done;
+  if (note.reminderAt !== undefined) {
+    out.reminder_at = note.reminderAt ? note.reminderAt.slice(0, 10) : "";
+  }
+  return out;
+}
+
 function findScenarioTask(scenario: Scenario | undefined, backendTask: LooseRecord) {
   if (!scenario) return undefined;
   const taskTitle = comparable(backendTask.title);
@@ -426,6 +452,31 @@ export function adaptAdminScenarioRow(input: LooseRecord): AdminScenarioRow {
 }
 
 export function adaptUserProfile(input: LooseRecord, fallback: UserProfile): UserProfile {
+  // v1.1 (P4): бэк возвращает addresses как JSON-строку или массив.
+  // Парсим в обоих случаях и валидируем по схеме UserAddress.
+  const rawAddresses = input.addresses ?? input.addresses_json;
+  let parsedAddresses: unknown = rawAddresses;
+  if (typeof parsedAddresses === "string" && parsedAddresses.trim()) {
+    try {
+      parsedAddresses = JSON.parse(parsedAddresses);
+    } catch {
+      parsedAddresses = [];
+    }
+  }
+  const addresses: UserAddress[] = Array.isArray(parsedAddresses)
+    ? (parsedAddresses as LooseRecord[])
+        .filter((item): item is LooseRecord => !!item && typeof item === "object")
+        .map((item) => ({
+          id: text(item.id, ""),
+          label: text(item.label, ""),
+          region: text(item.region, ""),
+          district: text(item.district, ""),
+          city: text(item.city, ""),
+          street: text(item.street, ""),
+          isPrimary: bool(item.isPrimary, false),
+        }))
+        .filter((item) => item.id)
+    : fallback.addresses ?? [];
   return {
     ...fallback,
     name: text(input.name, fallback.name),
@@ -444,6 +495,11 @@ export function adaptUserProfile(input: LooseRecord, fallback: UserProfile): Use
     interests: Array.isArray(input.interest_tags)
       ? (input.interest_tags as unknown[]).map(item => String(item)).filter(Boolean)
       : fallback.interests,
+    // v1.1 (P4): аватарка и предпочтения источников — локальные, бэк их
+    // не хранит. Оставляем значения из fallback.
+    avatarDataUrl: fallback.avatarDataUrl,
+    addresses,
+    preferredSourceIds: Array.isArray(fallback.preferredSourceIds) ? fallback.preferredSourceIds : [],
   };
 }
 
@@ -460,6 +516,9 @@ export function userProfilePayload(profile: UserProfile): Record<string, unknown
     has_car: profile.flags.hasCar,
     is_renter: profile.flags.tenant,
     interest_tags: profile.interests,
+    // v1.1 (P4): адреса отправляем как массив — бэк нормализует и
+    // сериализует в addresses_json.
+    addresses: profile.addresses ?? [],
   };
 }
 

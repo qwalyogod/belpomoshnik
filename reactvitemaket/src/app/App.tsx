@@ -11,6 +11,7 @@ import {
 import { Logo, Pill, Card, PrimaryButton, GhostButton } from "./components/belp-ui";
 import { AppStoreProvider, useStore } from "./data/store";
 import { buildReminders } from "./services/reminders";
+import { applyAccessibilitySettings } from "./services/a11y";
 import { AdminWindowMount } from "./components/admin-window";
 import { CATEGORIES } from "./data/mock";
 
@@ -302,7 +303,7 @@ function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => vo
     { i: <Newspaper size={20} />, n: "Новости", r: "news" },
   ];
   const navigate = useNavigate();
-  const { situations, scenarioById, situationProgress, documents, utilityAccounts, taxes, settings, legal, currentUser } = useStore();
+  const { situations, scenarioById, situationProgress, documents, utilityAccounts, taxes, settings, legal, currentUser, notes, profile, toggleNote } = useStore();
   const active = situations
     .map(s => { const sc = scenarioById(s.scenarioId); return sc ? { id: s.id, title: sc.title, progress: situationProgress(s), status: s.status } : null; })
     .filter(Boolean) as { id: string; title: string; progress: number; status: string }[];
@@ -386,6 +387,49 @@ function MobileHome({ onNavigate, dark, setDark }: { onNavigate: (p: Page) => vo
           <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">{firstDoc ? (firstDoc.expiresAt ? `Действует до ${firstDoc.expiresAt}` : "Без срока") : "Добавьте документ"}</div>
         </Card>
       </div>
+
+      {/* v1.1 (P4): ближайшие заметки пользователя. Видны только гражданину,
+          не гостю. Если заметок нет — карточка не показывается. */}
+      {currentUser.role !== "guest" && (() => {
+        const activeNotes = notes
+          .filter(n => !n.done)
+          .sort((a, b) => (a.reminderAt || "9999").localeCompare(b.reminderAt || "9999"))
+          .slice(0, 3);
+        if (activeNotes.length === 0) return null;
+        const primaryAddress = profile?.addresses?.find(a => a.isPrimary)?.label || profile?.city || "";
+        return (
+          <div className="mt-6">
+            <div className="flex items-center justify-between">
+              <div className="tracking-tight text-black dark:text-white">Мои заметки</div>
+              <button onClick={() => navigate("/profile")} className="text-[13px] tracking-tight text-[#0056FF]">Все</button>
+            </div>
+            <Card className="mt-3 p-4 space-y-2.5">
+              {primaryAddress && (
+                <div className="flex items-center gap-1.5 text-[11px] tracking-tight text-black/50 dark:text-white/50">
+                  <MapPin size={11} /> {primaryAddress}
+                </div>
+              )}
+              {activeNotes.map(n => (
+                <div key={n.id} className="flex items-start gap-2.5">
+                  <button
+                    onClick={() => toggleNote(n.id)}
+                    className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border border-black/15 dark:border-white/15"
+                    title="Отметить выполненной"
+                  >
+                    {n.done && <Check size={12} className="text-[#0056FF]" />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] tracking-tight text-black dark:text-white">{n.text}</div>
+                    <div className="mt-0.5 text-[11px] tracking-tight text-black/50 dark:text-white/50">
+                      {n.category}{n.reminderAt ? ` · до ${n.reminderAt}` : ""}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          </div>
+        );
+      })()}
 
       <div className="mt-6 flex items-center justify-between">
         <div className="tracking-tight text-black dark:text-white">Важное для вас</div>
@@ -1892,6 +1936,13 @@ export function RootLayout() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
+
+  // v1.1 (P8): real accessibility — применяем font-scale / high-contrast
+  // к DOM, когда меняются настройки пользователя.
+  const { settings } = useStore();
+  useEffect(() => {
+    applyAccessibilitySettings(settings);
+  }, [settings]);
 
   useEffect(() => {
     const check = () => {

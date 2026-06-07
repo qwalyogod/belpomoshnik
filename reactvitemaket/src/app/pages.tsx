@@ -2281,8 +2281,73 @@ function FinanceBody() {
   } = useStore();
   const canEdit = role !== "guest";
 
+  // v1.1 (P9): summary-карточки — ближайший платёж, просрочки, сумма месяца.
+  const today = todayISO();
+  const allUpcoming: { title: string; date: string; amount?: number; overdue: boolean }[] = [];
+  for (const acc of utilityAccounts) {
+    for (const p of acc.payments) {
+      if (p.status === "Оплачено") continue;
+      const overdue = !!p.paymentDeadline && p.paymentDeadline < today;
+      allUpcoming.push({
+        title: `${acc.provider || "ЖКХ"} · ${acc.address || "без адреса"}`,
+        date: p.paymentDeadline || "",
+        amount: typeof p.amount === "number" ? p.amount : undefined,
+        overdue,
+      });
+    }
+  }
+  for (const t of taxes) {
+    if (t.status === "Оплачено") continue;
+    const overdue = !!t.dueDate && t.dueDate < today;
+    allUpcoming.push({ title: t.title, date: t.dueDate || "", amount: typeof t.amount === "number" ? t.amount : undefined, overdue });
+  }
+  allUpcoming.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+  const overdueCount = allUpcoming.filter(x => x.overdue).length;
+  const next = allUpcoming.find(x => !x.overdue);
+  const monthSum = allUpcoming
+    .filter(x => x.date && x.date.startsWith(today.slice(0, 7)))
+    .reduce((acc, x) => acc + (x.amount || 0), 0);
+
   return (
     <div className="space-y-8">
+      {/* v1.1 (P9): summary — ближайший / просрочки / сумма месяца. */}
+      <section>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+              <CalendarClock size={13} /> Ближайший платёж
+            </div>
+            <div className="mt-1.5 truncate text-[15px] tracking-tight text-black dark:text-white">
+              {next ? next.title : "Нет сроков"}
+            </div>
+            <div className="mt-0.5 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+              {next ? (next.date ? (next.overdue ? "просрочен" : `до ${next.date}`) : "без срока") : "Всё оплачено или нет счетов"}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-[12px] tracking-tight text-red-600 dark:text-red-400">
+              <AlertCircle size={13} /> Просрочки
+            </div>
+            <div className="mt-1.5 tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>
+              {overdueCount}
+            </div>
+            <div className="mt-0.5 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+              {overdueCount > 0 ? "нужно закрыть как можно скорее" : "просрочек нет"}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 text-[12px] tracking-tight text-emerald-600 dark:text-emerald-400">
+              <Wallet size={13} /> Сумма в этом месяце
+            </div>
+            <div className="mt-1.5 tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>
+              {monthSum > 0 ? `${monthSum.toLocaleString("ru-RU")} BYN` : "—"}
+            </div>
+            <div className="mt-0.5 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+              {monthSum > 0 ? "по срокам этого месяца" : "нет счетов в этом месяце"}
+            </div>
+          </Card>
+        </div>
+      </section>
       {/* ЖКХ */}
       <section>
         <div className="flex items-center justify-between">

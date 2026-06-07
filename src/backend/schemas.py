@@ -16,6 +16,10 @@ from backend.enums import (
     SourceType,
 )
 
+# v1.1 (P4): пользовательские заметки. Категории — фиксированный набор,
+# синхронизирован с NOTE_CATEGORIES на фронте (types.ts).
+USER_NOTE_CATEGORIES: tuple[str, ...] = ("Общее", "Документы", "Семья", "Здоровье")
+
 
 class ProblemBase(BaseModel):
     title: str = Field(min_length=2, max_length=255)
@@ -614,5 +618,38 @@ class ExtremistEntryOut(ORMModel):
     short_description: str
     filters_json: str
     status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# v1.1 (P4) — Пользовательские заметки
+# ---------------------------------------------------------------------------
+
+class UserNoteBase(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    category: str = Field(default="Общее", max_length=80)
+    # ISO дата напоминания (yyyy-mm-dd). Пустая строка = без срока.
+    reminder_at: str = Field(default="", max_length=40)
+    done: bool = False
+
+
+class UserNoteCreate(UserNoteBase):
+    pass
+
+
+class UserNoteUpdate(BaseModel):
+    text: str | None = Field(default=None, min_length=1, max_length=1000)
+    category: str | None = Field(default=None, max_length=80)
+    reminder_at: str | None = Field(default=None, max_length=40)
+    done: bool | None = None
+
+
+class UserNoteOut(ORMModel):
+    id: int
+    text: str
+    category: str
+    reminder_at: str
+    done: bool
     created_at: datetime
     updated_at: datetime

@@ -461,6 +461,12 @@ class User(Base, TimestampMixin):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    # v1.1 (P4): пользовательские заметки (текст, категория, срок).
+    notes: Mapped[list[UserNote]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by=lambda: UserNote.created_at.desc(),
+    )
 
 
 class RefreshToken(Base):
@@ -475,6 +481,30 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class UserNote(Base, TimestampMixin):
+    """v1.1 (P4) — пользовательская заметка с категорией и сроком напоминания.
+
+    Заметки отделены от задач ситуаций: это свободные текстовые напоминания
+    пользователя, которые показываются на главной рядом с активными ситуациями
+    и могут быть помечены как выполненные.
+    """
+    __tablename__ = "user_notes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    text: Mapped[str] = mapped_column(String(1000), nullable=False)
+    category: Mapped[str] = mapped_column(String(80), default="Общее", nullable=False)
+    # ISO дата напоминания (yyyy-mm-dd). Может быть пустой строкой.
+    reminder_at: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    done: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+
+    user: Mapped[User] = relationship(back_populates="notes")
 
 
 class UserDocument(Base, TimestampMixin):

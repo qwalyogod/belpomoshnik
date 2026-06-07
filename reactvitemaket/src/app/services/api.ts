@@ -253,6 +253,39 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+
+  // v1.1 (P4): пользовательские заметки
+  getUserNotes: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/notes", { headers: authHeaders(accessToken), ...options }),
+  createUserNote: <T>(
+    accessToken: string,
+    payload: { text: string; category?: string; reminder_at?: string; done?: boolean },
+    options?: ApiRequestOptions,
+  ) =>
+    requestJson<T>("/api/user/notes", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateUserNote: <T>(
+    accessToken: string,
+    id: string,
+    payload: { text?: string; category?: string; reminder_at?: string; done?: boolean },
+    options?: ApiRequestOptions,
+  ) =>
+    requestJson<T>(`/api/user/notes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteUserNote: (accessToken: string, id: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/user/notes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
   uploadDocumentScan: async (
     accessToken: string,
     docId: string,
