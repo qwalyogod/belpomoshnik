@@ -13,6 +13,7 @@ import {
 import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
+import { clearPublicContentCache } from "../services/storage";
 import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
@@ -1064,12 +1065,22 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
       setPublicContentStatus(loadedSomething ? "api" : "fallback");
       setPublicContentError(errors.length ? errors.join("; ") : undefined);
+
+      // Если ВСЕ 5 источников public-контента упали (errors.length === 5) — это
+      // значит, что backend недоступен. Чистим кэш public-контента, чтобы при
+      // следующем mount-е (или при ручном retry) подтянулись mock-данные или
+      // свежий API-ответ. Auth-токены НЕ трогаем.
+      if (errors.length === 5) {
+        clearPublicContentCache();
+      }
     }
 
     loadPublicContent().catch(error => {
       if (controller.signal.aborted) return;
       setPublicContentStatus("fallback");
       setPublicContentError(error instanceof Error ? error.message : "Публичный API недоступен");
+      // Полный отказ — тоже чистим public-кэш.
+      clearPublicContentCache();
     });
 
     return () => controller.abort();

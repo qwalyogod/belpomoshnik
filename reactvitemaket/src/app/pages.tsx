@@ -6,7 +6,7 @@ import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks, RefreshCw
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
 import { motion } from "motion/react";
@@ -1224,10 +1224,75 @@ export function LawDetailPage() {
   const { isMobile } = useContext(ShellContext);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { legal } = useStore();
+  const { legal, publicContentStatus, publicContentError } = useStore();
   const item = legal.find(l => l.id === params?.id);
-  
-  if (!item) return <div className="p-10">Новость не найдена</div>;
+  const [retryNonce, setRetryNonce] = React.useState(0);
+  // Если элемента нет в сторе, но мы ещё грузим — показываем скелетон.
+  const isLoading = !item && publicContentStatus === "loading" && retryNonce === 0;
+  // Если элемента нет и загрузка упала — показываем сообщение с кнопкой.
+  const isMissing = !item && !isLoading;
+
+  if (isLoading) {
+    return (
+      <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"}`}>
+        {isMobile ? (
+          <MobileTopBar title="Детали" onBack={() => navigate(-1)} />
+        ) : (
+          <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-[13px] tracking-tight text-black/55 dark:text-white/55">
+            <ChevronLeft size={14} /> Назад
+          </button>
+        )}
+        <div className={isMobile ? "px-5" : ""}>
+          <div className="mt-2 h-6 w-32 animate-pulse rounded-full bg-black/[0.06] dark:bg-white/[0.08]" />
+          <div className="mt-4 h-8 w-3/4 animate-pulse rounded-lg bg-black/[0.06] dark:bg-white/[0.08]" />
+          <div className="mt-3 h-4 w-1/3 animate-pulse rounded-md bg-black/[0.05] dark:bg-white/[0.06]" />
+          <div className="mt-6 space-y-3">
+            <div className="h-4 w-full animate-pulse rounded bg-black/[0.05] dark:bg-white/[0.06]" />
+            <div className="h-4 w-5/6 animate-pulse rounded bg-black/[0.05] dark:bg-white/[0.06]" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-black/[0.05] dark:bg-white/[0.06]" />
+          </div>
+          <div className="mt-4 text-[13px] tracking-tight text-black/45 dark:text-white/45">Загружаем материал…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isMissing) {
+    return (
+      <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"}`}>
+        {isMobile ? (
+          <MobileTopBar title="Детали" onBack={() => navigate(-1)} />
+        ) : (
+          <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-[13px] tracking-tight text-black/55 dark:text-white/55">
+            <ChevronLeft size={14} /> Назад
+          </button>
+        )}
+        <div className={isMobile ? "px-5" : ""}>
+          <div className="mt-6 grid place-items-center rounded-3xl border border-dashed border-black/10 p-10 text-center dark:border-white/12">
+            <div>
+              <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                <Newspaper size={20} />
+              </div>
+              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+                Новость не найдена
+              </div>
+              <div className="mt-2 max-w-[420px] text-[13px] tracking-tight text-black/55 dark:text-white/55">
+                {publicContentError
+                  ? "Не удалось загрузить материалы с сервера. Проверьте подключение и попробуйте снова."
+                  : "Этот материал пока недоступен. Возможно, он ещё не опубликован."}
+              </div>
+              <button
+                onClick={() => setRetryNonce(n => n + 1)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-4 py-2 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"
+              >
+                <RefreshCw size={13} /> Попробовать снова
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"} space-y-6`}>
@@ -1238,27 +1303,27 @@ export function LawDetailPage() {
           <ChevronLeft size={14} /> Назад
         </button>
       )}
-      
+
       <div className={isMobile ? "px-5" : ""}>
         <div>
-          <Pill tone="lavender">{catLabel(item.category)}</Pill>
-          <h1 className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: isMobile ? 26 : 32, lineHeight: 1.1 }}>{item.title}</h1>
+          <Pill tone="lavender">{catLabel(item!.category)}</Pill>
+          <h1 className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: isMobile ? 26 : 32, lineHeight: 1.1 }}>{item!.title}</h1>
           <div className="mt-3 flex gap-4 text-[13px] text-black/55 dark:text-white/55">
-            <span className="flex items-center gap-1.5"><Clock size={14} /> с {item.effectiveDate}</span>
+            <span className="flex items-center gap-1.5"><Clock size={14} /> с {item!.effectiveDate}</span>
           </div>
         </div>
 
         <Card className="mt-6 p-5">
           <div className="font-medium text-[15px] mb-1">Что изменилось?</div>
-          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item.whatChanged || item.summary}</p>
-          
+          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item!.whatChanged || item!.summary}</p>
+
           <div className="mt-6 font-medium text-[15px] mb-1">Кого это касается?</div>
-          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item.whoAffected || "Всех граждан РБ"}</p>
+          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item!.whoAffected || "Всех граждан РБ"}</p>
 
           <div className="mt-6 font-medium text-[15px] mb-1">Что сделать?</div>
-          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item.whatToDo}</p>
+          <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item!.whatToDo}</p>
         </Card>
-        
+
         <div className="mt-6 rounded-2xl border border-amber-200/60 bg-amber-50 p-4 text-[13px] tracking-tight text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
           Информация носит справочный характер. Перед действиями рекомендуется сверить требования на официальном ресурсе.
         </div>

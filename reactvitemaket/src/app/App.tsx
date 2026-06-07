@@ -106,13 +106,16 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           больше не нужен. */}
       <MobileBrandBar />
       <div>
-        <AnimatePresence mode="wait">
+        {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
+            на mobile это давало визуальный «флэш пустоты» при переходе на
+            /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.25, ease: [0.16,1,0.3,1] }}
+            initial={{ y: 6 }}
+            animate={{ y: 0 }}
+            exit={{ y: -4, opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
             <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
           </motion.div>
