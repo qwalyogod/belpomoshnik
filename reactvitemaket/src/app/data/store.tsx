@@ -1143,7 +1143,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [scenarioById]);
 
   const toggleTask = useCallback((situationId: string, taskId: string) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const current = situations.find(s => s.id === situationId);
     if (!current) return;
     const wasDone = current.completedTaskIds.includes(taskId);
@@ -1175,7 +1175,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [requireAccount]);
 
   const deleteSituation = useCallback((situationId: string) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setSituations(prev => prev.filter(s => s.id !== situationId));
 
     if (authSession?.access_token && isBackendSituationId(situationId)) {
@@ -1204,7 +1204,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const updateDocument: Store["updateDocument"] = useCallback((id, patch) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
 
     if (authSession?.access_token && isBackendNumericId(id)) {
@@ -1222,7 +1222,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, documents, role]);
 
   const deleteDocument = useCallback((id: string) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setDocuments(prev => prev.filter(d => d.id !== id));
 
     if (authSession?.access_token && isBackendNumericId(id)) {
@@ -1246,7 +1246,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const updateTax: Store["updateTax"] = useCallback((id, patch) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const existing = taxes.find(t => t.id === id);
     setTaxes(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
     if (authSession?.access_token && isBackendSituationId(id)) {
@@ -1257,7 +1257,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role, taxes]);
 
   const deleteTax: Store["deleteTax"] = useCallback((id) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setTaxes(prev => prev.filter(t => t.id !== id));
     if (authSession?.access_token && isBackendSituationId(id)) {
       apiClient.deleteTax(authSession.access_token, id)
@@ -1426,7 +1426,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const updateUtilityAccount: Store["updateUtilityAccount"] = useCallback((id, patch) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const existing = utilityAccounts.find(a => a.id === id);
     setUtilityAccounts(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
     if (authSession?.access_token && isBackendSituationId(id)) {
@@ -1436,7 +1436,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role, utilityAccounts]);
 
   const deleteUtilityAccount: Store["deleteUtilityAccount"] = useCallback((id) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setUtilityAccounts(prev => prev.filter(a => a.id !== id));
     if (authSession?.access_token && isBackendSituationId(id)) {
       apiClient.deleteUtilityAccount(authSession.access_token, id)
@@ -1445,7 +1445,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const addUtilityPayment: Store["addUtilityPayment"] = useCallback((accountId, payment) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const temp: UtilityPayment = { id: uid("upay"), accountId, ...payment };
     setUtilityAccounts(prev => prev.map(a => a.id === accountId ? { ...a, payments: [temp, ...a.payments] } : a));
     if (authSession?.access_token && isBackendSituationId(accountId)) {
@@ -1456,7 +1456,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role]);
 
   const updateUtilityPayment: Store["updateUtilityPayment"] = useCallback((accountId, paymentId, patch) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     const existingAccount = utilityAccounts.find(a => a.id === accountId);
     const existingPayment = existingAccount?.payments.find(p => p.id === paymentId);
     setUtilityAccounts(prev => prev.map(a => a.id === accountId ? { ...a, payments: a.payments.map(p => p.id === paymentId ? { ...p, ...patch } : p) } : a));
@@ -1468,7 +1468,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, [authSession?.access_token, role, utilityAccounts]);
 
   const deleteUtilityPayment: Store["deleteUtilityPayment"] = useCallback((accountId, paymentId) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setUtilityAccounts(prev => prev.map(a => a.id === accountId ? { ...a, payments: a.payments.filter(p => p.id !== paymentId) } : a));
     if (authSession?.access_token && isBackendSituationId(paymentId)) {
       apiClient.deleteUtilityPayment(authSession.access_token, paymentId)
@@ -1502,7 +1502,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const unreadCount = useMemo(() => allNotifications.filter(n => !n.read).length, [allNotifications]);
 
   const updateProfile: Store["updateProfile"] = useCallback((patch) => {
-    if (role === "guest") return;
+    if (!requireAccount()) return;
     setProfile(p => ({ ...p, ...patch }));
     if (authSession?.access_token) {
       apiClient.updateUserProfile(authSession.access_token, userProfilePayload({ ...profile, ...patch }))
