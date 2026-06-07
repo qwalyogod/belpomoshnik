@@ -14,7 +14,7 @@ import { Server, ExternalLink, AlertTriangle, CheckCircle2, Loader2 } from "luci
 
 const STORAGE_KEY = "belpomoshnik.serverUrl";
 
-type Candidate = { url: string; status: "checking" | "ok" | "fail"; detail?: string };
+type Candidate = { url: string; status: "checking" | "ok" | "fail" };
 
 function normalizeUrl(raw: string): string | null {
   const s = raw.trim();
@@ -35,12 +35,11 @@ function isCapacitorShell(): boolean {
   return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
 }
 
-// Резолвим все IPv4 у текущего устройства. На iPhone Capacitor WKWebView
-// видит все Wi-Fi/VPN интерфейсы; пробуем их как кандидаты.
-async function discoverLocalCandidates(): Promise<string[]> {
+// WebRTC SDP — best-effort, не всегда даёт IPv4 (iOS фильтрует).
+// Возвращаем уникальные IPv4-кандидаты.
+async function discoverLocalIps(): Promise<string[]> {
   if (typeof window === "undefined") return [];
-  const cands: string[] = [];
-  // Попытка через WebRTC — даёт все локальные IPv4 (best-effort, не всегда работает).
+  const out = new Set<string>();
   try {
     const RTCPeer = (window as unknown as { RTCPeerConnection?: typeof RTCPeerConnection }).RTCPeerConnection;
     if (RTCPeer) {
@@ -48,28 +47,34 @@ async function discoverLocalCandidates(): Promise<string[]> {
       pc.createDataChannel("");
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      await new Promise<void>(r => setTimeout(r, 200));
+      await new Promise<void>(r => setTimeout(r, 250));
       const lines = (pc.localDescription?.sdp ?? "").split("\n");
       for (const line of lines) {
         const m = line.match(/a=candidate:.*? (\d+\.\d+\.\d+\.\d+) \d+ typ/);
-        if (m && m[1]) cands.push(m[1]);
+        if (m && m[1]) {
+          const ip = m[1];
+          // Отсеиваем явно бесполезные: 0.0.0.0, 169.254.* (link-local),
+          // 127.* (loopback) — для кандидатов на сервер они не подходят.
+          if (ip !== "0.0.0.0" && !ip.startsWith("127.") && !ip.startsWith("169.254.")) {
+            out.add(ip);
+          }
+        }
       }
       pc.close();
     }
   } catch { /* ignore */ }
-  return Array.from(new Set(cands));
+  return Array.from(out);
 }
 
-async function probeBase(url: string, timeoutMs = 2500): Promise<"ok" | "fail"> {
-  // Пробуем /api/health (тот же endpoint, что ConnectionBanner). На 2xx — OK.
+async function probeBase(url: string, timeoutMs = 2500): Promise<boolean> {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);
     const r = await fetch(`${url}/api/health`, { signal: ctrl.signal, cache: "no-store" });
     clearTimeout(t);
-    return r.ok ? "ok" : "fail";
+    return r.ok;
   } catch {
-    return "fail";
+    return false;
   }
 }
 
@@ -85,6 +90,8 @@ export function ServerPicker() {
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [busy, setBusy] = useState(false);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
@@ -93,62 +100,65 @@ export function ServerPicker() {
       return;
     }
 
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setValue(saved);
     } catch { /* ignore */ }
 
-    // Автопоиск кандидатов: пробуем сохранённый URL + найденные локальные IP.
+    // Формируем стартовый список кандидатов. Первым — сохранённый,
+    // затем — найденные WebRTC-кандидаты. Плюс в конец — localhost
+    // как запасной (на некоторых эмуляторах WebRTC даёт пусто).
     (async () => {
-      const localIps = await discoverLocalCandidates();
+      const localIps = await discoverLocalIps();
+      console.info("[ServerPicker] local IPs from WebRTC:", localIps);
+
       const initial: Candidate[] = [];
-      // Сохранённый — первый.
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) initial.push({ url: saved, status: "checking" });
-      } catch { /* ignore */ }
-      // Локальные IPv4 — http://<ip>:8060 (бэк) и сразу с портом 8560 не проверяем,
-      // потому что dev бэк идёт на 8060. Но пикер ожидает Vite-адрес (8560),
-      // а бэк уже подтверждён через /api/health, так что покажем "http://<ip>:8560".
+      if (saved) initial.push({ url: saved, status: "checking" });
       for (const ip of localIps) {
         if (initial.some(c => c.url.startsWith(`http://${ip}:`))) continue;
         initial.push({ url: `http://${ip}:8560`, status: "checking" });
       }
       setCandidates(initial);
 
-      // Параллельно проверяем каждый.
+      // Параллельная проверка. Vite-url (порт 8560) → backend-url (порт 8060).
       await Promise.all(initial.map(async (c, idx) => {
-        // Преобразуем Vite-url (8560) → backend-url (8060) для health-проверки.
         let probeUrl = c.url;
         try {
           const u = new URL(c.url);
           if (u.port === "8560" || u.port === "8550") u.port = "8060";
           probeUrl = u.toString().replace(/\/$/, "");
         } catch { /* keep as-is */ }
-        const status = await probeBase(probeUrl);
-        setCandidates(prev => prev.map((p, i) => i === idx ? { ...p, status } : p));
+        const ok = await probeBase(probeUrl);
+        console.info(`[ServerPicker] probe ${probeUrl} -> ${ok ? "OK" : "fail"}`);
+        setCandidates(prev => prev.map((p, i) => i === idx ? { ...p, status: ok ? "ok" : "fail" } : p));
       }));
     })();
 
     setOpen(true);
   }, []);
 
-  if (!open) return null;
-
   const submit = (override?: string) => {
+    if (busy) return;
     const url = normalizeUrl(override ?? value);
     if (!url) {
       setError("Введите корректный URL, например http://192.168.1.10:8560");
       return;
     }
+    console.info(`[ServerPicker] submit -> ${url}`);
+    setBusy(true);
     try { localStorage.setItem(STORAGE_KEY, url); } catch { /* ignore */ }
-    window.location.replace(url);
+    // Небольшая задержка, чтобы state ушёл, потом replace.
+    setTimeout(() => {
+      window.location.replace(url);
+    }, 50);
   };
 
-  // Кандидаты, до которых бэк ответил OK — кликабельные.
+  if (!open) return null;
+
   const okCandidates = candidates.filter(c => c.status === "ok");
-  const pendingCandidates = candidates.filter(c => c.status === "checking");
-  const failedCandidates = candidates.filter(c => c.status === "fail");
+  const pendingCount = candidates.filter(c => c.status === "checking").length;
+  const failedCount = candidates.filter(c => c.status === "fail").length;
 
   return (
     <div
@@ -162,6 +172,7 @@ export function ServerPicker() {
         flexDirection: "column",
         padding: "calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 32px)",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
+        overflowY: "auto",
       }}
     >
       <div style={{ margin: "auto", width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -184,55 +195,57 @@ export function ServerPicker() {
 
         {/* Инструкция */}
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "rgba(255,255,255,0.55)" }}>
-          Запустите{" "}
-          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#7FA8FF", background: "rgba(127,168,255,0.1)", padding: "1px 5px", borderRadius: 5 }}>pnpm dev</code>
-          {" "}на ПК. В строке{" "}
-          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#7FA8FF", background: "rgba(127,168,255,0.1)", padding: "1px 5px", borderRadius: 5 }}>Network:</code>
-          {" "}будет адрес — вставьте его сюда.
-          ПК и телефон должны быть в одной Wi-Fi.
+          На ПК запустите{" "}
+          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#7FA8FF", background: "rgba(127,168,255,0.1)", padding: "1px 5px", borderRadius: 5 }}>pnpm dev:all</code>.
+          Ниже появятся серверы, до которых бэкенд ответил — тапните на рабочий.
+          ПК и телефон — в одной Wi-Fi.
         </p>
 
-        {/* Авто-найденные кандидаты (если есть рабочие — кликабельные) */}
+        {/* Найденные кандидаты */}
         {candidates.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
               Найденные серверы
             </div>
-            {okCandidates.length === 0 && pendingCandidates.length > 0 && (
+
+            {okCandidates.length === 0 && pendingCount > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
-                <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Проверяем доступные серверы…
+                <Loader2 size={14} style={{ animation: "belp-spin 1s linear infinite" }} /> Проверяем доступные серверы…
               </div>
             )}
+
             {okCandidates.map((c) => (
               <button
                 key={c.url}
+                type="button"
                 onClick={() => submit(c.url)}
+                disabled={busy}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  background: "rgba(0,86,255,0.12)",
-                  border: "1px solid rgba(127,168,255,0.4)",
-                  borderRadius: 14, padding: "12px 14px",
+                  background: "rgba(0,86,255,0.18)",
+                  border: "1px solid rgba(127,168,255,0.45)",
+                  borderRadius: 14, padding: "13px 14px",
                   color: "#fff", fontSize: 14, fontFamily: "ui-monospace, monospace",
-                  cursor: "pointer", WebkitTapHighlightColor: "transparent",
-                  transition: "transform 0.1s, background 0.15s",
+                  cursor: busy ? "wait" : "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  opacity: busy ? 0.5 : 1,
                 }}
-                onTouchStart={(e) => (e.currentTarget.style.background = "rgba(0,86,255,0.22)")}
-                onTouchEnd={(e) => (e.currentTarget.style.background = "rgba(0,86,255,0.12)")}
               >
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.url}</span>
                 <CheckCircle2 size={16} color="#7FA8FF" style={{ flexShrink: 0 }} />
               </button>
             ))}
-            {okCandidates.length === 0 && pendingCandidates.length === 0 && failedCandidates.length > 0 && (
+
+            {okCandidates.length === 0 && pendingCount === 0 && failedCount > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#FCA5A5" }}>
                 <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-                Не нашли бэкенд. Проверьте, что pnpm dev:all запущен на ПК.
+                Не нашли бэкенд. Проверьте, что pnpm dev:all запущен на ПК, и введите адрес вручную.
               </div>
             )}
           </div>
         )}
 
-        {/* Поле ввода */}
+        {/* Поле ввода (ручной fallback) */}
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
           background: "rgba(255,255,255,0.065)",
@@ -257,6 +270,7 @@ export function ServerPicker() {
           />
           {value && (
             <button
+              type="button"
               onClick={() => { setValue(""); setError(null); }}
               style={{
                 background: "rgba(255,255,255,0.1)", border: "none",
@@ -279,29 +293,27 @@ export function ServerPicker() {
 
         {/* Кнопка подключения */}
         <button
-          onClick={submit}
+          type="button"
+          onClick={() => submit()}
+          disabled={busy || !value.trim()}
           style={{
             height: 52, borderRadius: 16,
-            background: "linear-gradient(135deg,#0056FF,#2277FF)",
+            background: busy || !value.trim() ? "rgba(0,86,255,0.4)" : "linear-gradient(135deg,#0056FF,#2277FF)",
             color: "#fff", fontSize: 16, fontWeight: 600, letterSpacing: -0.2,
-            border: "none", cursor: "pointer",
+            border: "none", cursor: busy || !value.trim() ? "not-allowed" : "pointer",
             boxShadow: "0 18px 36px -10px rgba(0,86,255,0.55)",
             transition: "opacity 0.15s, transform 0.1s",
             WebkitTapHighlightColor: "transparent",
           }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "")}
-          onTouchStart={(e) => (e.currentTarget.style.opacity = "0.85")}
-          onTouchEnd={(e) => (e.currentTarget.style.opacity = "")}
         >
-          Подключиться
+          {busy ? "Подключаем…" : "Подключиться"}
         </button>
 
         <p style={{ margin: 0, textAlign: "center", fontSize: 11, lineHeight: 1.5, color: "rgba(255,255,255,0.22)" }}>
           Адрес сохраняется — следующий раз заполнится автоматически
         </p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes belp-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
