@@ -339,6 +339,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     { id: "scenarios", icon: <FileText size={15} />, label: "Ситуации", short: "Ситуации", badge: total ? String(total) : undefined },
     { id: "law", icon: <BookOpen size={15} />, label: "Правовые обновления", short: "Право" },
     { id: "authorities", icon: <Building2 size={15} />, label: "Учреждения", short: "Учрежд." },
+    { id: "extremist", icon: <ShieldAlert size={15} />, label: "Экстремистский реестр", short: "Экстр." },
     { id: "users", icon: <Users size={15} />, label: "Пользователи и роли", short: "Люди", sys: true },
     { id: "regions", icon: <MapPin size={15} />, label: "Регионы и города", short: "Регионы", sys: true },
     { id: "rules", icon: <Bell size={15} />, label: "Правила уведомлений", short: "Правила", sys: true },
@@ -539,6 +540,30 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
         <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{current.icon}</div>
         <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{current.label}</div>
         <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">Раздел подключается к backend. CRUD добавляется поэтапно.</div>
+      </div>
+    </div>
+  );
+
+  // P7: каркас раздела «Экстремистский контент» — отдельная страница.
+  // В админ-окне показываем короткое описание + кнопку перехода на /extremist.
+  const extremistLinkBody = (
+    <div className="grid h-full place-items-center p-8 text-center">
+      <div className="max-w-[480px]">
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/15 dark:text-red-300">
+          <ShieldAlert size={20} />
+        </div>
+        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Экстремистский реестр</div>
+        <div className="mt-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+          Юридически чувствительный раздел. Содержит только записи с проверенным
+          официальным источником и датой проверки. Каркас открывается на отдельной странице.
+        </div>
+        <a
+          href="/extremist"
+          onClick={(e) => { e.preventDefault(); window.history.pushState({}, "", "/extremist"); window.dispatchEvent(new PopStateEvent("popstate")); }}
+          className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
+        >
+          Открыть раздел →
+        </a>
       </div>
     </div>
   );
@@ -910,6 +935,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
           : section === "users" ? usersBody
           : section === "audit" ? auditBody
           : section === "rules" ? rulesBody
+          : section === "extremist" ? extremistLinkBody
           : placeholderBody}
       </div>
     </div>

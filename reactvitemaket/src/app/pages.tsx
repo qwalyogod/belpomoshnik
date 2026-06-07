@@ -1144,6 +1144,282 @@ export function NotificationsPage() {
   );
 }
 
+/* ============================================================
+   v1.1 (P4): подкомпоненты ProfilePage (аватар, заметки, адреса,
+   предпочтения источников). Гость видит только базовый блок.
+   ============================================================ */
+
+function ProfileAvatar({ size = "lg" }: { size?: "lg" | "md" }) {
+  const { profile, currentUser, updateProfile } = useStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const dim = size === "lg" ? "h-24 w-24" : "h-14 w-14";
+  const fontSize = size === "lg" ? "text-3xl" : "text-lg";
+  const canEdit = currentUser.role !== "guest";
+  const avatar = profile?.avatarDataUrl;
+  const initial = (profile?.name?.trim?.()?.[0] || "П").toUpperCase();
+
+  const onFile = (file?: File | null) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = typeof reader.result === "string" ? reader.result : undefined;
+      if (data) updateProfile({ avatarDataUrl: data });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className={`relative shrink-0 ${dim} rounded-3xl overflow-hidden bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white ${fontSize} font-medium`}>
+      {avatar
+        ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
+        : <span>{initial}</span>}
+      {canEdit && (
+        <>
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition-opacity hover:opacity-100"
+            title="Загрузить фото"
+          >
+            <Camera size={size === "lg" ? 22 : 16} className="text-white" />
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => onFile(e.target.files?.[0] || null)}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProfileNotes() {
+  const { notes, addNote, toggleNote, removeNote } = useStore();
+  const [showAll, setShowAll] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [draftText, setDraftText] = useState("");
+  const [draftCategory, setDraftCategory] = useState<NoteCategory>("Общее");
+  const [draftDate, setDraftDate] = useState("");
+
+  const active = notes.filter(n => !n.done)
+    .sort((a, b) => (a.reminderAt || "9999").localeCompare(b.reminderAt || "9999"));
+  const visible = showAll ? active : active.slice(0, 3);
+
+  const submit = () => {
+    const text = draftText.trim();
+    if (!text) return;
+    addNote({ text, category: draftCategory, reminderAt: draftDate || undefined });
+    setDraftText("");
+    setDraftDate("");
+    setDraftCategory("Общее");
+    setAdding(false);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <StickyNote size={15} className="text-[#0056FF]" />
+          <div className="font-medium text-[15px] text-black dark:text-white">Заметки</div>
+          {notes.length > 0 && <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{active.length} активных</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          {active.length > 3 && (
+            <button onClick={() => setShowAll(s => !s)} className="text-[12px] tracking-tight text-[#0056FF] hover:underline">
+              {showAll ? "Свернуть" : "Все"}
+            </button>
+          )}
+          <button onClick={() => setAdding(s => !s)} className="inline-flex h-8 items-center gap-1 rounded-full bg-[#0056FF] px-3 text-[12px] text-white">
+            <Plus size={13} /> Заметка
+          </button>
+        </div>
+      </div>
+
+      {adding && (
+        <div className="mb-3 rounded-2xl border border-black/[0.06] bg-black/[0.02] p-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+          <textarea
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            placeholder="Что нужно не забыть?"
+            rows={2}
+            className="w-full resize-none bg-transparent text-[14px] tracking-tight text-black placeholder:text-black/40 outline-none dark:text-white dark:placeholder:text-white/40"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <select
+              value={draftCategory}
+              onChange={(e) => setDraftCategory(e.target.value as NoteCategory)}
+              className="rounded-lg border border-black/10 bg-white px-2 py-1 text-[12px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+            >
+              {NOTE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input
+              type="date"
+              value={draftDate}
+              onChange={(e) => setDraftDate(e.target.value)}
+              className="rounded-lg border border-black/10 bg-white px-2 py-1 text-[12px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+            />
+            <div className="ml-auto flex gap-2">
+              <button onClick={() => setAdding(false)} className="rounded-lg px-2 py-1 text-[12px] text-black/55 dark:text-white/55">Отмена</button>
+              <button onClick={submit} disabled={!draftText.trim()} className="rounded-lg bg-[#0056FF] px-3 py-1 text-[12px] text-white disabled:opacity-50">Сохранить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Пока пусто. Нажмите «Заметка», чтобы добавить напоминание.</div>
+      ) : (
+        <ul className="space-y-2">
+          {visible.map((n) => (
+            <li key={n.id} className="flex items-start gap-2 rounded-2xl border border-black/[0.05] bg-black/[0.015] p-2.5 dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <button
+                onClick={() => toggleNote(n.id)}
+                className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border border-black/15 dark:border-white/15"
+                title="Отметить выполненной"
+              >
+                {n.done && <Check size={12} className="text-[#0056FF]" />}
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className={`text-[13px] tracking-tight ${n.done ? "text-black/40 line-through dark:text-white/40" : "text-black dark:text-white"}`}>{n.text}</div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] tracking-tight text-black/50 dark:text-white/50">
+                  <Pill tone="ghost">{n.category}</Pill>
+                  {n.reminderAt && <span>до {n.reminderAt}</span>}
+                </div>
+              </div>
+              <button onClick={() => removeNote(n.id)} className="shrink-0 text-black/30 hover:text-red-500 dark:text-white/30" title="Удалить">
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function ProfileAddresses() {
+  const { profile, addAddress, updateAddress, removeAddress } = useStore();
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ label: "", region: "", district: "", city: "", street: "" });
+  const list = profile?.addresses ?? [];
+  const canAdd = list.length < 5;
+
+  const reset = () => { setForm({ label: "", region: "", district: "", city: "", street: "" }); };
+
+  const submit = () => {
+    if (!form.label.trim() && !form.street.trim() && !form.city.trim()) return;
+    addAddress({ ...form, isPrimary: list.length === 0 });
+    reset();
+    setAdding(false);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <MapPin size={15} className="text-[#0056FF]" />
+          <div className="font-medium text-[15px] text-black dark:text-white">Адреса</div>
+          <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{list.length}/5</span>
+        </div>
+        {canAdd && (
+          <button onClick={() => { setAdding(s => !s); reset(); }} className="inline-flex h-8 items-center gap-1 rounded-full bg-[#0056FF] px-3 text-[12px] text-white">
+            <Plus size={13} /> Добавить
+          </button>
+        )}
+      </div>
+
+      {adding && (
+        <div className="mb-3 rounded-2xl border border-black/[0.06] bg-black/[0.02] p-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input value={form.label} onChange={(e) => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Метка (Дом, Работа, Дача)" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+            <input value={form.region} onChange={(e) => setForm(f => ({ ...f, region: e.target.value }))} placeholder="Область / регион" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+            <input value={form.district} onChange={(e) => setForm(f => ({ ...f, district: e.target.value }))} placeholder="Район" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+            <input value={form.city} onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Город / населённый пункт" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+            <input value={form.street} onChange={(e) => setForm(f => ({ ...f, street: e.target.value }))} placeholder="Улица, дом, квартира" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight sm:col-span-2 dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button onClick={() => { setAdding(false); reset(); }} className="rounded-lg px-3 py-1 text-[12px] text-black/55 dark:text-white/55">Отмена</button>
+            <button onClick={submit} className="ml-auto rounded-lg bg-[#0056FF] px-3 py-1 text-[12px] text-white">Сохранить</button>
+          </div>
+        </div>
+      )}
+
+      {list.length === 0 ? (
+        <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Адресов пока нет. Добавьте основной, чтобы быстро заполнять документы.</div>
+      ) : (
+        <ul className="space-y-2">
+          {list.map((a) => (
+            <li key={a.id} className="flex items-start gap-2 rounded-2xl border border-black/[0.05] bg-black/[0.015] p-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="text-[14px] tracking-tight text-black dark:text-white">{a.label || "Без метки"}</div>
+                  {a.isPrimary && <Pill tone="ok">Основной</Pill>}
+                </div>
+                <div className="mt-0.5 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                  {[a.region, a.district, a.city, a.street].filter(Boolean).join(" · ") || "—"}
+                </div>
+              </div>
+              {!a.isPrimary && (
+                <button
+                  onClick={() => updateAddress(a.id, { isPrimary: true })}
+                  className="shrink-0 text-[12px] tracking-tight text-[#0056FF] hover:underline"
+                  title="Сделать основным"
+                >
+                  Сделать основным
+                </button>
+              )}
+              <button onClick={() => removeAddress(a.id)} className="shrink-0 text-black/30 hover:text-red-500 dark:text-white/30" title="Удалить">
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function ProfileSourcePreferences() {
+  // Шарим состояние с NewsPage через P6-овский хук usePreferredSourceIds —
+  // так звёздочки в ленте и птички в профиле всегда синхронизированы.
+  const [preferredSourceIds, togglePreferredSource] = usePreferredSourceIds();
+  const selected = new Set(preferredSourceIds);
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <ListChecks size={15} className="text-[#0056FF]" />
+        <div className="font-medium text-[15px] text-black dark:text-white">Источники новостей</div>
+        <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{selected.size} выбрано</span>
+      </div>
+      <p className="text-[12px] tracking-tight text-black/55 dark:text-white/55 mb-3">Выбранные источники будут показываться выше в ленте «Новости».</p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {OFFICIAL_SOURCES.map((s) => {
+          const on = selected.has(s.id);
+          return (
+            <label
+              key={s.id}
+              className={`flex items-start gap-2 rounded-2xl border p-2.5 cursor-pointer transition-colors ${on ? "border-[#0056FF] bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "border-black/[0.05] hover:border-black/15 dark:border-white/[0.06] dark:hover:border-white/15"}`}
+            >
+              <input
+                type="checkbox"
+                checked={on}
+                onChange={() => togglePreferredSource(s.id)}
+                className="mt-1 h-4 w-4 accent-[#0056FF]"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] tracking-tight text-black dark:text-white truncate">{s.title}</div>
+                <div className="text-[11px] tracking-tight text-black/50 dark:text-white/50 truncate">{s.url.replace(/^https?:\/\//, "")}</div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export function ProfilePage() {
   const { isMobile, openAdmin } = useContext(ShellContext);
   const { profile, currentUser } = useStore();
@@ -1161,19 +1437,32 @@ export function ProfilePage() {
         } />
         <div className="px-5 space-y-4">
           <Card className="flex items-center gap-4 p-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white text-lg font-medium">{profile?.name ? profile.name[0] : 'П'}</div>
-            <div className="flex-1">
-              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>{profile?.name}</div>
-              <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{profile?.city} · {profile?.region}</div>
+            <ProfileAvatar size="md" />
+            <div className="flex-1 min-w-0">
+              <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 17 }}>{profile?.name}</div>
+              <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55 truncate">{profile?.city} · {profile?.region}</div>
             </div>
           </Card>
-          
+
           <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Личные данные</div>
           <Card className="p-4 space-y-3 text-[13px]">
-            <div className="flex justify-between"><span className="text-black/55 dark:text-white/55">Email</span><span className="text-black dark:text-white">{profile?.email}</span></div>
+            <div className="flex justify-between"><span className="text-black/55 dark:text-white/55">Email</span><span className="text-black dark:text-white truncate ml-2">{profile?.email}</span></div>
             <div className="flex justify-between"><span className="text-black/55 dark:text-white/55">Роль</span><span className="text-black dark:text-white">{roleLabel(currentUser.role)}</span></div>
           </Card>
-          
+
+          {canEdit && (
+            <>
+              <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Заметки</div>
+              <ProfileNotes />
+
+              <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Адреса</div>
+              <ProfileAddresses />
+
+              <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Источники</div>
+              <ProfileSourcePreferences />
+            </>
+          )}
+
           <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Настройки и прочее</div>
           <Card className="p-2">
             <button onClick={() => navigate('/settings')} className="flex w-full items-center justify-between p-3 text-left">
@@ -1198,7 +1487,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="p-8 max-w-[800px]">
+    <div className="p-8 max-w-[920px]">
       <ProfileEditModal open={editOpen} onClose={() => setEditOpen(false)} />
       <div className="flex items-start justify-between">
         <div>
@@ -1209,7 +1498,7 @@ export function ProfilePage() {
       </div>
 
       <div className="mt-8 flex items-center gap-6">
-        <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white text-3xl font-medium">{profile?.name ? profile.name[0] : 'П'}</div>
+        <ProfileAvatar size="lg" />
         <div>
           <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>{currentUser.role === "guest" ? "Гость" : profile?.name}</div>
           <div className="mt-1 text-[14px] text-black/60 dark:text-white/60">{currentUser.role === "guest" ? "Войдите, чтобы сохранять личные данные" : profile?.email}</div>
@@ -1253,7 +1542,21 @@ export function ProfilePage() {
           </Card>
         </div>
       </div>
-      <MyContributions />
+
+      {canEdit && (
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ProfileNotes />
+          <ProfileAddresses />
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="mt-6">
+          <ProfileSourcePreferences />
+        </div>
+      )}
+
+      <div className="mt-8"><MyContributions /></div>
     </div>
   );
 }

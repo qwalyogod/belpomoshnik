@@ -12,6 +12,7 @@ from backend.models import (
     Authority,
     Deadline,
     Document,
+    ExtremistEntry,
     LawUpdate,
     NotificationRule,
     Problem,
@@ -521,3 +522,101 @@ def admin_users(_: str = Depends(require_role("platform_admin")), db: Session = 
         )
         for u in users
     ]
+
+
+# ---------------------------------------------------------------------------
+# P7 — Каркас раздела «Экстремистский контент» (только структура, без данных)
+# ---------------------------------------------------------------------------
+
+def _validate_extremist_payload(
+    category: str | None = None,
+    status: str | None = None,
+) -> None:
+    if category is not None and category not in schemas.EXTREMIST_CATEGORIES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Недопустимая категория. Ожидается одна из: {', '.join(schemas.EXTREMIST_CATEGORIES)}.",
+        )
+    if status is not None and status not in schemas.EXTREMIST_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Недопустимый статус. Ожидается один из: {', '.join(schemas.EXTREMIST_STATUSES)}.",
+        )
+
+
+@router.get("/extremist-entries", response_model=list[schemas.ExtremistEntryOut])
+def admin_list_extremist_entries(
+    status_filter: str | None = Query(default=None, alias="status"),
+    category_filter: str | None = Query(default=None, alias="category"),
+    db: Session = Depends(get_db),
+):
+    """P7 — Список записей раздела. Доступен content_editor и platform_admin."""
+    _validate_extremist_payload(category=category_filter, status=status_filter)
+    stmt = select(ExtremistEntry).order_by(ExtremistEntry.updated_at.desc())
+    if status_filter:
+        stmt = stmt.where(ExtremistEntry.status == status_filter)
+    if category_filter:
+        stmt = stmt.where(ExtremistEntry.category == category_filter)
+    items = db.scalars(stmt).all()
+    return [schemas.ExtremistEntryOut.model_validate(item) for item in items]
+
+
+@router.post(
+    "/extremist-entries",
+    response_model=schemas.ExtremistEntryOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def admin_create_extremist_entry(
+    payload: schemas.ExtremistEntryCreate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P7 — Создать запись. source_url обязателен (валидируется Pydantic HttpUrl)."""
+    _validate_extremist_payload(category=payload.category, status=payload.status)
+    obj = create_entity(db, ExtremistEntry, payload)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Создана запись экстремистского реестра: «{obj.title}»",
+        event_type="create",
+    )
+    return schemas.ExtremistEntryOut.model_validate(obj)
+
+
+@router.patch("/extremist-entries/{entry_id}", response_model=schemas.ExtremistEntryOut)
+def admin_update_extremist_entry(
+    entry_id: int,
+    payload: schemas.ExtremistEntryUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P7 — Частичное обновление записи (можно править title, source_url, статус)."""
+    entry = _must_get(db, ExtremistEntry, entry_id, "Запись не найдена")
+    _validate_extremist_payload(category=payload.category, status=payload.status)
+    obj = update_entity(db, entry, payload)
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Изменена запись экстремистского реестра: «{obj.title}»",
+        event_type="update",
+    )
+    return schemas.ExtremistEntryOut.model_validate(obj)
+
+
+@router.delete("/extremist-entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_extremist_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P7 — Удалить запись."""
+    entry = _must_get(db, ExtremistEntry, entry_id, "Запись не найдена")
+    title = entry.title
+    db.delete(entry)
+    db.commit()
+    log_audit_event(
+        db,
+        actor=actor,
+        action=f"Удалена запись экстремистского реестра: «{title}»",
+        event_type="delete",
+    )
