@@ -14,7 +14,6 @@ import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
-import { setServerError } from "../services/connection";
 import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
@@ -526,7 +525,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         if (!controller.signal.aborted) {
           setAuthSession(tokens);
           apiClient.saveTokens(tokens);
-          setServerError(false);
         }
       })
       .catch(error => {
@@ -534,9 +532,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           console.warn("Backend auth is unavailable; React keeps local user state.", error);
           setAuthSession(null);
           apiClient.saveTokens(null);
-          // Если ошибка похожа на network (TypeError: Failed to fetch) — это
-          // скорее server-error, а не offline. В обоих случаях показываем баннер.
-          setServerError(true);
         }
       });
 
@@ -1077,9 +1072,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       // свежий API-ответ. Auth-токены НЕ трогаем.
       if (errors.length === 5) {
         clearPublicContentCache();
-        setServerError(true);
-      } else if (loadedSomething) {
-        setServerError(false);
       }
     }
 
@@ -1089,7 +1081,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setPublicContentError(error instanceof Error ? error.message : "Публичный API недоступен");
       // Полный отказ — тоже чистим public-кэш.
       clearPublicContentCache();
-      setServerError(true);
     });
 
     return () => controller.abort();
