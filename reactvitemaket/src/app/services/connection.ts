@@ -95,15 +95,20 @@ export function pingHealth(): Promise<boolean> {
   // loadPublicContent при cold start'е зафиксировал «все 5 упали» и больше
   // не повторяется.
   const url = `${API_BASE_URL}/api/health`;
+  console.info(`[belp:ping] GET ${url}`);
   return fetch(url, { method: "GET", cache: "no-store" })
     .then(r => {
+      console.info(`[belp:ping] ${url} -> ${r.status}`);
       if (r.ok) {
         setServerError(false);
         return true;
       }
       return false;
     })
-    .catch(() => false);
+    .catch((e) => {
+      console.warn(`[belp:ping] ${url} -> error:`, e);
+      return false;
+    });
 }
 
 /**
@@ -123,9 +128,12 @@ export function pingHealth(): Promise<boolean> {
  */
 export function startBackgroundHealthLoop(): () => void {
   if (typeof window === "undefined") return () => {};
+  console.info("[belp:health-loop] start, API_BASE_URL =", API_BASE_URL);
   let consecutiveFails = 0;
   const tick = async () => {
+    console.info("[belp:health-loop] tick");
     const ok = await pingHealth();
+    console.info(`[belp:health-loop] tick result: ${ok ? "OK" : "FAIL"}, serverErrorDetected = ${serverErrorDetected}`);
     if (ok) {
       consecutiveFails = 0;
     } else {
