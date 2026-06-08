@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useSyncExternalStore } from "react";
+import { API_BASE_URL } from "./api";
 
 export type ConnectionStatus = "online" | "offline" | "server-error";
 
@@ -93,11 +94,14 @@ export function pingHealth(): Promise<boolean> {
   // При успехе сбрасываем server-error, чтобы баннер исчез, если до этого
   // loadPublicContent при cold start'е зафиксировал «все 5 упали» и больше
   // не повторяется.
-  return import("./api")
-    .then(({ API_BASE_URL }) => fetch(`${API_BASE_URL}/api/health`, { method: "GET", cache: "no-store" }))
+  const url = `${API_BASE_URL}/api/health`;
+  return fetch(url, { method: "GET", cache: "no-store" })
     .then(r => {
-      if (r.ok) setServerError(false);
-      return r.ok;
+      if (r.ok) {
+        setServerError(false);
+        return true;
+      }
+      return false;
     })
     .catch(() => false);
 }
@@ -110,14 +114,15 @@ export function pingHealth(): Promise<boolean> {
  * serverErrorDetected залипает в true навсегда — даже после того как бэк
  * поднимется и обычные fetch'и начнут возвращать 200.
  *
- * Фоновая проверка раз в 15 сек: на 1 успехе сбрасывает serverErrorDetected,
- * на 3 подряд failures — выставляет обратно. Не запускается в браузере /
- * Vite dev (там баннер и так корректен), только в нативной WebView-обёртке.
+ * Фоновая проверка раз в 15 сек: на 1 успехе сбрасывает serverErrorDetected.
+ *
+ * Запускается ВЕЗДЕ (включая обычный браузер / Vite dev), потому что в WebView
+ * на http://<host>:8560 Capacitor.isNativePlatform() может вернуть false —
+ * иначе фикс не работает в самом важном для нас сценарии. 15-секундный
+ * /api/health — копеечный трафик.
  */
 export function startBackgroundHealthLoop(): () => void {
   if (typeof window === "undefined") return () => {};
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  if (!cap?.isNativePlatform) return () => {};
   let consecutiveFails = 0;
   const tick = async () => {
     const ok = await pingHealth();
