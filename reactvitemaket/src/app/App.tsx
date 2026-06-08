@@ -15,6 +15,7 @@ import { applyAccessibilitySettings } from "./services/a11y";
 import { AdminWindowMount } from "./components/admin-window";
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { ConnectionBanner } from "./components/ConnectionBanner";
+import { startBackgroundHealthLoop } from "./services/connection";
 import { CATEGORIES } from "./data/mock";
 
 const catLabelApp = (id: string) => CATEGORIES.find(c => c.id === id)?.name ?? id;
@@ -2030,6 +2031,12 @@ export function RootLayout() {
   const [systemDark, setSystemDark] = useState(() => {
     try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch { return false; }
   });
+
+  // Фоновый health-ping: в нативной WebView-обёртке раз в 15 сек опрашивает
+  // /api/health и сбрасывает server-error, если бэк ожил. Лечит «залипание»
+  // баннера после cold start'а, когда loadPublicContent зафиксировал «все 5
+  // упали» и больше не повторяется.
+  useEffect(() => startBackgroundHealthLoop(), []);
   const [layout, setLayout] = useState<"mobile" | "tablet" | "desktop">("desktop");
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);

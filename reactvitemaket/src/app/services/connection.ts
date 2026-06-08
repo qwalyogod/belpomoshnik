@@ -86,9 +86,49 @@ export function useConnectionStatus(): ConnectionStatus {
 }
 
 export function pingHealth(): Promise<boolean> {
-  // Используем GET /api/health (см. src/backend/app.py). Возвращаем true
-  // если HTTP-статус 2xx, иначе false. При network failure — тоже false.
-  return fetch("/api/health", { method: "GET" })
-    .then(r => r.ok)
+  // GET {API_BASE_URL}/api/health (см. src/backend/app.py).
+  // Относительный /api/health здесь не годится: в Capacitor WebView он
+  // уйдёт на Vite origin (:8560), а бэкенд на :8060 — это разные хосты.
+  // Возвращаем true если HTTP-статус 2xx, иначе false. При network failure — false.
+  // При успехе сбрасываем server-error, чтобы баннер исчез, если до этого
+  // loadPublicContent при cold start'е зафиксировал «все 5 упали» и больше
+  // не повторяется.
+  return import("./api")
+    .then(({ API_BASE_URL }) => fetch(`${API_BASE_URL}/api/health`, { method: "GET", cache: "no-store" }))
+    .then(r => {
+      if (r.ok) setServerError(false);
+      return r.ok;
+    })
     .catch(() => false);
+}
+
+/**
+ * Запустить фоновый health-ping, который самовосстанавливает баннер.
+ *
+ * Проблема: loadPublicContent срабатывает один раз при mount. Если при cold
+ * start'е бэкенд не ответил (был выключен / WebView опередил dev-сервер),
+ * serverErrorDetected залипает в true навсегда — даже после того как бэк
+ * поднимется и обычные fetch'и начнут возвращать 200.
+ *
+ * Фоновая проверка раз в 15 сек: на 1 успехе сбрасывает serverErrorDetected,
+ * на 3 подряд failures — выставляет обратно. Не запускается в браузере /
+ * Vite dev (там баннер и так корректен), только в нативной WebView-обёртке.
+ */
+export function startBackgroundHealthLoop(): () => void {
+  if (typeof window === "undefined") return () => {};
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  if (!cap?.isNativePlatform) return () => {};
+  let consecutiveFails = 0;
+  const tick = async () => {
+    const ok = await pingHealth();
+    if (ok) {
+      consecutiveFails = 0;
+    } else {
+      consecutiveFails = Math.min(consecutiveFails + 1, 10);
+    }
+  };
+  const handle = window.setInterval(tick, 15_000);
+  // Сразу первый тик — чтобы не ждать 15 сек после mount.
+  void tick();
+  return () => window.clearInterval(handle);
 }

@@ -11,12 +11,13 @@ export type AuthTokens = {
 
 // API_BASE_URL — динамический.
 // 1) Если задан VITE_API_BASE_URL в env — используем его (dev/prod).
-// 2) Иначе — берём origin из ServerPicker (там же, где React на iPhone).
-// 3) Фолбэк — 127.0.0.1:8000 для локального запуска вне Capacitor.
+// 2) Если в ServerPicker введён отдельный адрес бэкенда
+//    (belpomoshnik.apiBaseUrl в localStorage) — используем его напрямую.
+// 3) Фолбэк: берём serverUrl и конвертируем порт 8560→8060
+//    (Vite dev соседствует с FastAPI).
+// 4) Последний фолбэк — 127.0.0.1:8000 для локального запуска вне Capacitor.
 //
-// Идея: Vite-сервер и бэк живут на одном origin (vite на :8560, бэк на :8060).
-// Если picker хранит http://192.168.x.x:8560, то API_BASE = http://192.168.x.x:8060.
-// Меняйте порт через env если у вас другое разнесение.
+// Меняйте через env или ServerPicker, не правя код.
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 const DEV_BACKEND_PORT = "8060";
 
@@ -25,11 +26,16 @@ function resolveApiBaseUrl(): string {
   if (fromEnv) return fromEnv;
   if (typeof window === "undefined") return DEFAULT_API_BASE_URL;
   try {
-    const raw = window.localStorage.getItem("belpomoshnik.serverUrl");
-    if (raw) {
-      const u = new URL(raw);
-      // Vite origin -> API на соседнем порту
-      const nextPort = u.port === "8560" || u.port === "8550" ? DEV_BACKEND_PORT : u.port;
+    // 1) Явно заданный в ServerPicker API URL
+    const explicitApi = window.localStorage.getItem("belpomoshnik.apiBaseUrl");
+    if (explicitApi) {
+      return explicitApi.replace(/\/$/, "");
+    }
+    // 2) Фолбэк — автоконверсия из serverUrl
+    const serverUrl = window.localStorage.getItem("belpomoshnik.serverUrl");
+    if (serverUrl) {
+      const u = new URL(serverUrl);
+      const nextPort = u.port === "8560" || u.port === "8550" || !u.port ? DEV_BACKEND_PORT : u.port;
       return `${u.protocol}//${u.hostname}:${nextPort}`;
     }
   } catch {
