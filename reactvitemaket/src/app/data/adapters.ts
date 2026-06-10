@@ -28,8 +28,18 @@ import type {
   ArticleStatus,
   CustomField,
 } from "./types";
+import { API_BASE_URL } from "../services/api";
 
 type LooseRecord = Record<string, unknown>;
+
+/** v1.2: бэк возвращает относительный путь аватара (/uploads/avatars/...).
+ *  Для <img src> нужен абсолютный URL на бэкенд. data:/http(s) — отдаём как есть. */
+function absoluteAvatarUrl(value: unknown): string | undefined {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return undefined;
+  if (/^(data:|https?:\/\/|blob:)/i.test(raw)) return raw;
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
 
 function text(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value : fallback;
@@ -495,9 +505,11 @@ export function adaptUserProfile(input: LooseRecord, fallback: UserProfile): Use
     interests: Array.isArray(input.interest_tags)
       ? (input.interest_tags as unknown[]).map(item => String(item)).filter(Boolean)
       : fallback.interests,
-    // v1.1 (P4): аватарка и предпочтения источников — локальные, бэк их
-    // не хранит. Оставляем значения из fallback.
-    avatarDataUrl: fallback.avatarDataUrl,
+    // v1.2: аватар теперь хранится на бэке (users.avatar_url) и приходит как
+    // относительный путь — превращаем в абсолютный URL. Если ключ присутствует,
+    // доверяем бэку (пустая строка = аватар удалён → undefined). Если ключа нет
+    // (офлайн/частичный ответ) — оставляем локальное значение.
+    avatarDataUrl: "avatar_url" in input ? absoluteAvatarUrl(input.avatar_url) : fallback.avatarDataUrl,
     addresses,
     preferredSourceIds: Array.isArray(fallback.preferredSourceIds) ? fallback.preferredSourceIds : [],
   };
@@ -547,6 +559,7 @@ export function adaptLegalUpdate(input: LooseRecord): LegalUpdate {
     category: category(input.category || input.title || input.description),
     title: text(input.title, "Изменение законодательства"),
     summary: text(input.summary || input.description),
+    bodyHtml: text(input.bodyHtml || input.body_html),
     whoAffected: text(input.whoAffected || input.who_affected, "Граждане Республики Беларусь."),
     whatChanged: text(input.whatChanged || input.what_changed || input.description),
     whatToDo: text(input.whatToDo || input.what_to_do, "Сверить информацию с официальным источником."),

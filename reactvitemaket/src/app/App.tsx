@@ -60,7 +60,8 @@ function isAuthPage(pathname: string): boolean {
 }
 
 function isNavHidden(pathname: string): boolean {
-  return NAV_HIDDEN_ROUTES.has(pathname);
+  if (NAV_HIDDEN_ROUTES.has(pathname)) return true;
+  return Array.from(NAV_HIDDEN_ROUTES).some((route) => pathname.startsWith(`${route}/`));
 }
 
 /* ============================================================
@@ -144,23 +145,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           </motion.div>
         </AnimatePresence>
       </div>
-      {/* Fade-gradient под таб-баром: контент визуально уходит в дымку.
-          Светлая тема — к #F6F7FB, тёмная — к #07080C. Условный рендер: только
-          когда showBottomNav. Высота 5rem, плотный градиент — элементы
-          контента плавно растворяются в фоне при подходе к таб-бару. */}
-      {showBottomNav && (
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-x-0 z-20"
-          style={{
-            bottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
-            height: "5rem",
-            // Плотный градиент: 100% непрозрачности на старте (у таб-бара),
-            // 0% на 5rem выше. rgba последний аргумент = текущий fadeColor.
-            background: `linear-gradient(to top, ${fadeColor} 0%, ${fadeColor}cc 30%, ${fadeColor}66 70%, ${fadeColor}00 100%)`,
-          }}
-        />
-      )}
+      {showBottomNav && <MobileBottomFade color={fadeColor} />}
       {showBottomNav && <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />
       <GuestGuardModal
@@ -171,6 +156,19 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       />
       <ConnectionBanner />
     </div>
+  );
+}
+
+function MobileBottomFade({ color }: { color: string }) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20"
+      style={{
+        height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 5.5rem)",
+        background: `linear-gradient(to bottom, ${color}00 0%, ${color}26 18%, ${color}a8 48%, ${color}f2 66%, ${color} 100%)`,
+      }}
+    />
   );
 }
 

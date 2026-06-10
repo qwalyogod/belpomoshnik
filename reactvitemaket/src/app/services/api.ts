@@ -10,37 +10,96 @@ export type AuthTokens = {
 };
 
 // API_BASE_URL — динамический.
-// 1) Если задан VITE_API_BASE_URL в env — используем его (dev/prod).
-// 2) Если в ServerPicker введён отдельный адрес бэкенда
-//    (belpomoshnik.apiBaseUrl в localStorage) — используем его напрямую.
-// 3) Фолбэк: берём serverUrl и конвертируем порт 8560→8060
-//    (Vite dev соседствует с FastAPI).
-// 4) Последний фолбэк — 127.0.0.1:8000 для локального запуска вне Capacitor.
+// 1) Если в текущем origin сохранён API URL — используем его.
+// 2) Если сохранён serverUrl — конвертируем порт 8560/8550 → 8060.
+// 3) Если VITE_API_BASE_URL задан реальным внешним URL — используем его.
+// 4) Если VITE_API_BASE_URL указывает на localhost, а frontend открыт по LAN,
+//    заменяем host на текущий host страницы. На iPhone 127.0.0.1 — это сам
+//    телефон, а не компьютер с backend.
+// 5) Фолбэк для dev-LAN — текущий host страницы + порт 8060.
+// 6) Последний фолбэк — 127.0.0.1:8000.
 //
 // Меняйте через env или ServerPicker, не правя код.
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 const DEV_BACKEND_PORT = "8060";
+const DEV_FRONTEND_PORTS = new Set(["8560", "8550"]);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function trimSlash(value: string): string {
+  return value.replace(/\/$/, "");
+}
+
+function isAutoEnv(value: string | undefined): boolean {
+  return !value || value.trim().toLowerCase() === "auto";
+}
+
+function isLocalHost(hostname: string): boolean {
+  return LOCAL_HOSTS.has(hostname.toLowerCase());
+}
+
+function isHttpProtocol(protocol: string): boolean {
+  return protocol === "http:" || protocol === "https:";
+}
+
+function apiFromUrlLike(raw: string): string {
+  const u = new URL(raw);
+  const nextPort = DEV_FRONTEND_PORTS.has(u.port) || !u.port ? DEV_BACKEND_PORT : u.port;
+  return `${u.protocol}//${u.hostname}:${nextPort}`;
+}
+
+function apiFromCurrentLocation(): string | null {
+  if (typeof window === "undefined" || !isHttpProtocol(window.location.protocol)) return null;
+  if (!window.location.hostname) return null;
+  return `${window.location.protocol}//${window.location.hostname}:${DEV_BACKEND_PORT}`;
+}
+
+function apiUrlForCurrentDevice(raw: string): string | null {
+  const value = trimSlash(raw.trim());
+  try {
+    const parsedUrl = new URL(value);
+    const currentApi = apiFromCurrentLocation();
+    if (
+      currentApi &&
+      isLocalHost(parsedUrl.hostname) &&
+      typeof window !== "undefined" &&
+      !isLocalHost(window.location.hostname)
+    ) {
+      return currentApi;
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function envApiForCurrentDevice(fromEnv: string | undefined): string | null {
+  if (isAutoEnv(fromEnv)) return apiFromCurrentLocation();
+  const envValue = fromEnv?.trim() ?? "";
+  return apiUrlForCurrentDevice(envValue);
+}
 
 function resolveApiBaseUrl(): string {
-  const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (typeof window === "undefined") return DEFAULT_API_BASE_URL;
   try {
     // 1) Явно заданный в ServerPicker API URL
     const explicitApi = window.localStorage.getItem("belpomoshnik.apiBaseUrl");
     if (explicitApi) {
-      return explicitApi.replace(/\/$/, "");
+      const api = apiUrlForCurrentDevice(explicitApi);
+      if (api) return api;
     }
     // 2) Фолбэк — автоконверсия из serverUrl
     const serverUrl = window.localStorage.getItem("belpomoshnik.serverUrl");
     if (serverUrl) {
-      const u = new URL(serverUrl);
-      const nextPort = u.port === "8560" || u.port === "8550" || !u.port ? DEV_BACKEND_PORT : u.port;
-      return `${u.protocol}//${u.hostname}:${nextPort}`;
+      return apiFromUrlLike(serverUrl);
     }
   } catch {
     /* ignore */
   }
+  const envApi = envApiForCurrentDevice(fromEnv);
+  if (envApi) return envApi;
+  const currentApi = apiFromCurrentLocation();
+  if (currentApi) return currentApi;
   return DEFAULT_API_BASE_URL;
 }
 
@@ -217,6 +276,33 @@ export const apiClient = {
       method: "PUT",
       headers: authHeaders(accessToken),
       body: JSON.stringify(payload),
+      ...options,
+    }),
+  uploadUserAvatar: async (
+    accessToken: string,
+    blob: Blob,
+    options?: ApiRequestOptions,
+  ): Promise<{ avatar_url: string; size: number }> => {
+    const form = new FormData();
+    // Имя файла с расширением — чтобы бэк/мультипарт корректно определил тип.
+    const ext = blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp";
+    form.append("file", blob, `avatar.${ext}`);
+    const res = await fetch(`${API_BASE_URL}/api/user/avatar`, {
+      method: "POST",
+      headers: authHeaders(accessToken), // browser sets multipart boundary
+      body: form,
+      ...options,
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => "");
+      throw new Error(message || `Upload failed: ${res.status}`);
+    }
+    return res.json();
+  },
+  deleteUserAvatar: (accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<void>("/api/user/avatar", {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
       ...options,
     }),
   getUserSettings: <T>(accessToken: string, options?: ApiRequestOptions) =>
@@ -543,6 +629,22 @@ export const apiClient = {
     requestJson<T>(`/api/articles/blocked/${encodeURIComponent(userId)}`, {
       method: "POST",
       headers: authHeaders(accessToken),
+      ...options,
+    }),
+
+  getExtremistEntries: <T>(options?: ApiRequestOptions) =>
+    requestJson<T>("/api/extremist-entries", options),
+  getExtremistEntry: <T>(id: string | number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/extremist-entries/${encodeURIComponent(String(id))}`, options),
+  getAdminExtremistEntries: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/extremist-entries", { headers: authHeaders(accessToken), ...options }),
+  getAdminExtremistEntry: <T>(accessToken: string, id: string | number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/extremist-entries/${encodeURIComponent(String(id))}`, { headers: authHeaders(accessToken), ...options }),
+  createExtremistEntry: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/extremist-entries", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
       ...options,
     }),
 

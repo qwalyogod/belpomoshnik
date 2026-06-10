@@ -13,12 +13,33 @@ from backend.api.admin import router as admin_router
 from backend.api.articles import router as articles_router
 from backend.api.assistant import router as assistant_router
 from backend.api.auth import router as auth_router
+from backend.api.extremist import router as extremist_router
 from backend.api.public import router as public_router
 from backend.api.situations import router as situations_router
 from backend.api.trackers import router as trackers_router
 from backend.api.user import router as user_router
 from backend.database import engine
 from backend.models import Base
+
+
+DEV_CORS_ORIGINS = [
+    "http://127.0.0.1:8560",
+    "http://localhost:8560",
+    "http://127.0.0.1:8550",
+    "http://localhost:8550",
+]
+
+# Dev/WebView mode: телефон открывает Vite по LAN-адресу компьютера. IP часто
+# меняется между Wi-Fi, hotspot и другой сетью, поэтому фиксированный origin
+# быстро ломает fetch-запросы, хотя прямой /api/health в браузере работает.
+DEV_LAN_ORIGIN_REGEX = (
+    r"^https?://("
+    r"localhost|127\.0\.0\.1|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|"
+    r"192\.168\.\d{1,3}\.\d{1,3}"
+    r")(:\d+)?$"
+)
 
 
 @asynccontextmanager
@@ -38,15 +59,8 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:8560",
-            "http://localhost:8560",
-            "http://127.0.0.1:8550",
-            "http://localhost:8550",
-            # LAN-адрес для live-reload: iPhone-приложение через Capacitor
-            # тянет Vite с ПК. Меняй, если ПК переехал в другую сеть.
-            "http://192.168.100.95:8560",
-        ],
+        allow_origins=DEV_CORS_ORIGINS,
+        allow_origin_regex=DEV_LAN_ORIGIN_REGEX,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -58,6 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(situations_router)
     app.include_router(trackers_router)
     app.include_router(articles_router)
+    app.include_router(extremist_router)
     app.include_router(assistant_router)
 
     from backend.api.articles import UPLOAD_DIR

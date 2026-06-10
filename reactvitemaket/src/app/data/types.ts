@@ -190,6 +190,7 @@ export interface LegalUpdate {
   category: CategoryId;
   title: string;
   summary: string;
+  bodyHtml?: string;
   whoAffected: string;
   whatChanged: string;
   whatToDo: string;
@@ -219,8 +220,10 @@ export interface UserProfile {
   interests: string[];
   learningProgress: number;    // 0..100
   achievements: { id: string; title: string }[];
-  // v1.1 (P4): аватарка в виде base64 data URL. Хранится ТОЛЬКО в
-  // localStorage (на бэк не отправляем — лишняя нагрузка и PII).
+  // v1.2: URL аватара. Обрезанное в редакторе фото грузится на бэк
+  // (POST /api/user/avatar → users.avatar_url) и приходит абсолютным URL на
+  // /uploads/avatars/... Может временно держать data:/blob: при локальном
+  // предпросмотре. Имя историческое (раньше тут был base64 data URL).
   avatarDataUrl?: string;
   // v1.1 (P4): до 5 адресов пользователя (label + регион/район/город/улица).
   // Один помечается isPrimary. На бэк ходит как addresses_json.
@@ -345,6 +348,9 @@ export interface ExtremistEntry {
   includedAt?: string;                       // ISO date
   lastCheckedAt?: string;                    // ISO date
   shortDescription: string;
+  coverUrl?: string;
+  mediaUrls?: string[];
+  attachmentUrls?: string[];
   contentTypes: ExtremistContentType[];      // мульти-выбор (filters_json)
   status: ExtremistStatus;
   createdAt: string;

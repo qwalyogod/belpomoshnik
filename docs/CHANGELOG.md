@@ -1,5 +1,171 @@
 # Журнал изменений
 
+## 2026-06-10 (Аватар профиля — редактор в стиле Telegram)
+
+### Что изменено
+
+- `src/backend/migrations/0017_user_avatar.sql`, `src/backend/models.py` — у пользователя добавлена колонка `avatar_url`.
+- `src/backend/api/user.py` — `POST /api/user/avatar` (multipart) с валидацией формата (magic-bytes JPG/PNG/WEBP → 415) и размера (8 МБ → 413); сохраняет файл в `data/uploads/avatars/<uid>/<token>.<ext>`, затирая прежний; `DELETE /api/user/avatar`; `avatar_url` добавлен в `UserProfileOut`.
+- `reactvitemaket/src/app/components/avatar-cropper.tsx` — **новый** редактор: круглая обрезка, перетаскивание (pointer), зум (слайдер + колесо + pinch), экспорт квадрата 512×512 в WebP/JPEG через `<canvas>`. Адаптив desktop/tablet/mobile через `ResizeObserver`.
+- `reactvitemaket/src/app/pages.tsx` — `ProfileAvatar`: выбор файла → валидация (jpg/jpeg/png/webp, размер) → открытие кропера → загрузка обрезанного фото; аватар теперь круглый (`rounded-full`).
+- `reactvitemaket/src/app/services/api.ts` — методы `uploadUserAvatar` / `deleteUserAvatar`.
+- `reactvitemaket/src/app/data/store.tsx`, `data/adapters.ts`, `data/types.ts` — действия `uploadAvatar` / `removeAvatar`; маппинг `avatar_url` → абсолютный URL; аватар теперь хранится на бэке и синхронизируется между устройствами (раньше был local-only base64).
+
+### Результат проверки
+
+- Backend E2E (curl): валидный PNG → ✅ 200 + отдаётся по `/uploads/...`; текстовый файл → ✅ 415; 9 МБ → ✅ 413; `DELETE` → ✅ 204 (файл и ссылка очищены).
+- Frontend (Vite preview): кропер открывается по выбору файла, зум слайдером меняет масштаб (0 = «вписать»), `Сохранить` грузит WebP-кроп → аватар обновляется и отображается круглым; mobile (375px) и desktop — ✅; консоль без ошибок.
+
+---
+
+## 2026-06-09 (Экстремистские материалы — детальные карточки)
+
+### Что изменено
+
+- `src/backend/api/extremist.py` — добавлен публичный endpoint `/api/extremist-entries/{entry_id}` для детального просмотра только опубликованных записей.
+- `src/backend/api/admin.py` — добавлен admin endpoint `/api/admin/extremist-entries/{entry_id}` для просмотра черновиков редактором/администратором.
+- `reactvitemaket/src/app/services/api.ts` — добавлены методы получения одной публичной и admin-записи.
+- `reactvitemaket/src/app/data/store.tsx` — `authSession` открыт для страниц, чтобы редакторский список и detail обновлялись сразу после появления backend-токена.
+- `reactvitemaket/src/app/routes.tsx`, `reactvitemaket/src/app/App.tsx` — добавлен маршрут `/extremist/:id`; служебный раздел скрывается из нижней навигации и для вложенного маршрута.
+- `reactvitemaket/src/app/pages.tsx` — карточки раздела «Экстремистские материалы» теперь открывают внутреннюю подробную страницу с источником, датами, статусом проверки, типами материалов, медиа и вложениями.
+
+### Результат проверки
+
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок.
+- `.venv/bin/python -m compileall src scripts/import_content_batches.py scripts/normalize_content_batch.py scripts/validate_content_batch.py` — ✅ без ошибок.
+- FastAPI TestClient: публичный список `/api/extremist-entries` — ✅ 200; публичный detail для `draft` — ✅ 404; admin detail с ролью editor — ✅ 200.
+
+---
+
+## 2026-06-09 (Контент — нормализация и импорт JSON-батчей)
+
+### Что изменено
+
+- `scripts/normalize_content_batch.py` — добавлен нормализатор JSON-батчей: исправляет типовые ошибки LLM-вывода, нормализует `official_sources_used`, восстанавливает `sourceIds` по официальным URL, заполняет пустые `media_notes`, переименовывает файл с двойной точкой и переносит новости без официального источника в `rejected_items`.
+- `scripts/validate_content_batch.py` — валидатор теперь принимает новые официальные `source_id`, если они явно описаны в `official_sources_used`.
+- `scripts/import_content_batches.py` — добавлен идемпотентный импортёр `content_*_2022_2026.json` в backend SQLite: проблемы, сценарии, стадии, шаги, зависимости, документы, источники, новости, закон-апдейты и записи чувствительного реестра.
+- `data/import/content_*_2022_2026.json` — все 11 файлов нормализованы и приведены к валидному формату; `content_extremist_materials_2022_2026..json` переименован в `content_extremist_materials_2022_2026.json`.
+- `reactvitemaket/src/app/data/mock.ts` — список официальных источников дополнен Минздравом, ЕРИП, ЕГР, НЦЭС, 115.бел, Белтехосмотром, порталом Президента и Совмином.
+- `reactvitemaket/src/app/pages.tsx` — лента новостей теперь сопоставляет источник по домену `sourceUrl`, чтобы импортированные backend-материалы попадали в фильтры официальных источников.
+
+### Результат импорта
+
+- Импортировано 11 content-батчей.
+- Backend DB после импорта: `problems` — 110, `scenarios` — 47, `articles` — 65, `law_updates` — 61, `extremist_entries` — 60, `documents` — 122.
+- Public API: `/api/problems` — 102, `/api/scenarios` — 46, `/api/articles?kind=news` — 65, `/api/law-updates` — 61.
+- `/api/extremist-entries` отдаёт 0 публичных записей, потому что импортированные записи оставлены в `draft` до ручной проверки.
+
+### Результат проверки
+
+- `.venv/bin/python scripts/validate_content_batch.py data/import/content_*_2022_2026.json` — ✅ все файлы без ошибок; остались только предупреждения по объёму и новым источникам.
+- `.venv/bin/python scripts/import_content_batches.py --dry-run` — ✅ без ошибок.
+- `.venv/bin/python scripts/import_content_batches.py` — ✅ импорт выполнен.
+- `.venv/bin/python -m compileall src scripts/import_content_batches.py scripts/normalize_content_batch.py scripts/validate_content_batch.py` — ✅ без ошибок.
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок.
+
+---
+
+## 2026-06-09 (Контент — рабочие промпты по категориям)
+
+### Что изменено
+
+- `docs/CONTENT_GENERATION_PROMPTS_BY_CATEGORY.md` — добавлен практический пакет промптов для генерации реальных JSON-пачек контента: общая неизменяемая часть и отдельные большие промпты по категориям `documents`, `family`, `work`, `business`, `housing`, `taxes`, `health`, `auto`.
+- `docs/CONTENT_GENERATION_PROMPTS_BY_CATEGORY.md` — добавлены отдельные промпты для общего календаря новостей, общего пакета закон-апдейтов и юридически осторожного реестра «Экстремистские материалы».
+- `docs/CONTENT_GENERATION_PROMPTS_BY_CATEGORY.md` — зафиксирован процесс: включать поиск/Deep Research, брать только официальные источники, сохранять ответы в `data/import/content_*_2022_2026.json`, затем прогонять через `scripts/validate_content_batch.py`.
+
+### Примечание
+
+- Это не импорт данных и не генерация контента внутри проекта. Документ нужен, чтобы пользователь мог отправлять категории в ChatGPT и получать фактические JSON-пачки для последующей проверки.
+
+---
+
+## 2026-06-09 (Контент — валидатор JSON-батчей 2022-2026)
+
+### Что изменено
+
+- `scripts/validate_content_batch.py` — добавлен локальный валидатор будущих файлов `content_*_2022_2026.json` без зависимости от `jsonschema`.
+- `scripts/validate_content_batch.py` — проверяет общий batch-контракт, обязательные массивы, `batch_meta`, даты в периоде `2022-01-01` — `2026-06-08`, официальные `source_id`, категории, HTML-тело новостей/закон-апдейтов, media URL и `filters_json`.
+- `scripts/validate_content_batch.py` — для юридически чувствительного раздела «Экстремистские материалы» требует `status: "draft"`, официальный `https://` источник и не допускает прямые ссылки в кратком описании.
+- `data/import/README.md` — описаны новые content-батчи, команды проверки и отличие структурной валидации от ручной проверки официальных источников.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — обновлён статус P11: валидатор готов, backend-импорт остаётся следующим шагом после проверки источников.
+
+### Результат проверки
+
+- `.venv/bin/python -m py_compile scripts/validate_content_batch.py` — ✅ без ошибок.
+- `.venv/bin/python scripts/validate_content_batch.py --help` — ✅ справка выводится.
+- `.venv/bin/python scripts/validate_content_batch.py /tmp/content_documents_2022_2026.json` — ✅ структура проходит, недобор записей выводится как предупреждение.
+
+---
+
+## 2026-06-08 (Контент — промпты, источники и медиа для чувствительного раздела)
+
+### Что изменено
+
+- `docs/CONTENT_PROMPTS.md` — переписан пакет детальных research-промптов для генерации JSON-контента по всем категориям, проблемам, жизненным сценариям, новостям, закон-апдейтам и экстремистским материалам за период 2022-2026.
+- `reactvitemaket/src/app/pages.tsx` — кнопка «Все источники» в `/news` теперь открывает полный список официальных источников внутри страницы с поиском, фильтрацией и выбором приоритетного источника.
+- `src/backend/api/extremist.py` — добавлен публичный read-only endpoint `/api/extremist-entries` для опубликованных записей.
+- `src/backend/models.py`, `src/backend/schemas.py`, `src/backend/api/admin.py`, `src/backend/migrations/0015_extremist_media.sql` — для записей «Экстремистские материалы» добавлены `cover_url`, `media_urls`, `attachment_urls` и сохранение через admin API.
+- `src/backend/models.py`, `src/backend/schemas.py`, `src/backend/migrations/0016_law_update_body_html.sql`, `reactvitemaket/src/app/components/law-editor.tsx`, `reactvitemaket/src/app/data/adapters.ts`, `reactvitemaket/src/app/data/types.ts`, `reactvitemaket/src/app/pages.tsx` — закон-апдейты получили поле `body_html/bodyHtml`, редакторское поле HTML-статьи и отображение полноценного текста на детальной странице.
+- `reactvitemaket/src/app/services/api.ts`, `reactvitemaket/src/app/data/types.ts`, `reactvitemaket/src/app/pages.tsx` — frontend-форма `/extremist` теперь поддерживает загрузку файлов и вставку URL для обложки, медиа и вложений.
+- `src/backend/api/articles.py` — общий upload редакторских медиа разрешает PDF-вложения.
+
+### Результат проверки
+
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- FastAPI TestClient: `/api/health` и `/api/extremist-entries` — ✅ отвечают 200.
+- FastAPI TestClient: `/api/law-updates` — ✅ отвечает 200 после миграции `0016`.
+
+### Примечание
+
+- Мигратор SQLite сейчас использует `DEFAULT_DB_PATH`, даже если передать временный `BELPOMOSHNIK_DATABASE_URL`; при проверке миграция `0015` была применена к рабочей dev-базе. Данные не удалялись, таблица пересобирается с сохранением старых общих полей.
+
+---
+
+## 2026-06-08 (Новости — добавлена категория «Экстремистский контент»)
+
+### Что изменено
+
+- `reactvitemaket/src/app/pages.tsx` — на странице `/news` в ряд фильтров «Все / Новости / Закон-апдейт» добавлена кнопка «Реестр» с переходом в `/extremist`.
+- `reactvitemaket/src/app/pages.tsx` — `/extremist` теперь доступен для просмотра всем ролям; добавление записей по-прежнему доступно только редактору и администратору.
+- `reactvitemaket/src/app/pages.tsx` — mobile-лента новостей теперь растягивает карточки на всю ширину контейнера, а на широком mobile viewport переходит в аккуратную 2-колоночную сетку.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+
+---
+
+## 2026-06-08 (Mobile — восстановлен fade-gradient у bottom nav)
+
+### Что изменено
+
+- `reactvitemaket/src/app/App.tsx` — старый fade-слой над tab-bar заменён на устойчивый `MobileBottomFade`, который покрывает нижнюю nav-зону целиком и плавно растворяет контент под floating bottom nav.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+
+---
+
+## 2026-06-08 (WebView/LAN — исправлен ложный баннер недоступности API)
+
+### Что изменено
+
+- `reactvitemaket/src/app/services/api.ts` — API URL теперь корректно подстраивается под текущий LAN-host frontend: если `.env` указывает на `127.0.0.1`, а приложение открыто на телефоне через `http://<IP>:8560`, запросы уходят на `http://<IP>:8060`.
+- `src/backend/app.py` — dev-CORS больше не привязан к одному старому LAN-IP и разрешает локальные private-network origins (`10.*`, `172.16-31.*`, `192.168.*`) для WebView/Vite-разработки.
+- `reactvitemaket/.env.example` — пример переведён на `VITE_API_BASE_URL=auto`.
+
+### Результат проверки
+
+- `pnpm build` в `reactvitemaket/` — ✅ без ошибок.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- FastAPI TestClient для `Origin: http://172.20.10.3:8560` — ✅ отдаёт `access-control-allow-origin`.
+
+---
+
 ## 2026-06-07 (React/WebView — P4–P10 закрыты: профиль, адреса, заметки, a11y, push, ЖКХ/налоги summary, честная админка)
 
 ### Что изменено

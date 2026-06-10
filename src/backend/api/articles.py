@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/articles", tags=["articles"])
 
 UPLOAD_DIR = Path(DEFAULT_DB_PATH).parent / "uploads"
 _MAX_UPLOAD = 15 * 1024 * 1024  # 15 MB
-_ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".ogg"}
+_ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".ogg", ".pdf"}
 
 _STAFF_ROLES = {"content_editor", "platform_admin"}
 _VALID_STATUS = {"draft", "review", "published", "rejected"}

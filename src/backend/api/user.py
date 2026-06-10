@@ -36,6 +36,16 @@ DOCUMENT_SCAN_DIR = Path(os.getenv("DOCUMENT_SCAN_DIR", "data/uploads/documents"
 DOCUMENT_SCAN_MAX_BYTES = int(os.getenv("DOCUMENT_SCAN_MAX_BYTES", str(5 * 1024 * 1024)))  # 5MB
 _SAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
+# v1.2: папка для аватаров. Лежит ВНУТРИ data/uploads, поэтому отдаётся тем же
+# StaticFiles-mount `/uploads`, что и остальной контент (отдельный mount не нужен).
+# Структура: data/uploads/avatars/{user_id}/{token}.{ext}. Один аватар на юзера —
+# при загрузке нового папка юзера очищается.
+AVATAR_DIR = Path(os.getenv("AVATAR_DIR", "data/uploads/avatars"))
+AVATAR_MAX_BYTES = int(os.getenv("AVATAR_MAX_BYTES", str(8 * 1024 * 1024)))  # 8MB
+# Разрешённые форматы аватара: jpg/jpeg, png, webp. Ключ — сигнатура (magic bytes),
+# значение — расширение, под которым сохраняем файл.
+_AVATAR_ALLOWED_CTYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -61,6 +71,8 @@ class UserProfileOut(BaseModel):
     # city / street / isPrimary). Хранится как JSON-строка, в адаптере
     # парсится в массив объектов.
     addresses: list[dict] = Field(default_factory=list)
+    # v1.2: публичный путь к аватару (/uploads/avatars/...) или "".
+    avatar_url: str = ""
 
 
 class UserProfileUpdate(BaseModel):
@@ -165,6 +177,7 @@ def _profile_out(user: User) -> UserProfileOut:
         is_renter=user.is_renter,
         interest_tags=tags,
         addresses=addresses,
+        avatar_url=user.avatar_url,
     )
 
 
@@ -207,6 +220,89 @@ def update_profile(
     db.commit()
     db.refresh(user)
     return _profile_out(user)
+
+
+def _detect_avatar_ext(body: bytes) -> str | None:
+    """Определить формат картинки по magic-bytes. Возвращает расширение или None."""
+    if body[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if body[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if body[:4] == b"RIFF" and body[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def _clear_avatar_dir(user_id: int) -> None:
+    """Удалить все файлы аватара пользователя (один аватар на юзера)."""
+    user_dir = AVATAR_DIR / str(user_id)
+    if not user_dir.exists():
+        return
+    for item in user_dir.iterdir():
+        try:
+            item.unlink()
+        except OSError:
+            pass
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Загрузить уже обрезанный аватар (jpg/png/webp).
+
+    Клиент присылает квадратную картинку из редактора-кропера. Сохраняем в
+    `data/uploads/avatars/<user_id>/<token>.<ext>`, пишем публичный путь в
+    `users.avatar_url`. Старый файл затираем. Возвращает `{ "avatar_url": ... }`.
+    """
+    # 1) Размер. Читаем body один раз (multipart уже в памяти).
+    body = await file.read()
+    if not body:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Файл пустой.")
+    if len(body) > AVATAR_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Файл больше {AVATAR_MAX_BYTES // (1024 * 1024)} МБ.",
+        )
+
+    # 2) Формат: сверяем magic-bytes (надёжнее content-type, который iOS WebView
+    # может прислать как application/octet-stream). content-type — мягкая проверка.
+    ext = _detect_avatar_ext(body)
+    ctype = (file.content_type or "").lower()
+    if ext is None or (ctype and ctype not in _AVATAR_ALLOWED_CTYPES and not ctype.startswith("application/octet-stream")):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Поддерживаются только JPG, PNG и WEBP.",
+        )
+
+    # 3) Пишем новый файл, предварительно очистив старый аватар юзера.
+    _clear_avatar_dir(user.id)
+    user_dir = AVATAR_DIR / str(user.id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    token = secrets.token_urlsafe(12)
+    target = user_dir / f"{token}.{ext}"
+    target.write_bytes(body)
+
+    # 4) Публичный путь (токен в имени = кэш-бастинг при смене аватара).
+    rel_url = f"/uploads/avatars/{user.id}/{token}.{ext}"
+    user.avatar_url = rel_url
+    db.commit()
+    db.refresh(user)
+    return {"avatar_url": rel_url, "size": len(body)}
+
+
+@router.delete("/avatar", status_code=status.HTTP_204_NO_CONTENT)
+def delete_avatar(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Удалить аватар пользователя (файл + ссылку в БД)."""
+    _clear_avatar_dir(user.id)
+    user.avatar_url = ""
+    db.commit()
+    return None
 
 
 @router.get("/settings")

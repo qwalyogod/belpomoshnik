@@ -9,6 +9,7 @@ type Draft = {
   category: string;
   title: string;
   summary: string;
+  bodyHtml: string;
   whoAffected: string;
   whatChanged: string;
   whatToDo: string;
@@ -22,6 +23,7 @@ const EMPTY: Draft = {
   category: "documents",
   title: "",
   summary: "",
+  bodyHtml: "",
   whoAffected: "",
   whatChanged: "",
   whatToDo: "",
@@ -40,6 +42,7 @@ function toDraft(item: LegalUpdate): Draft {
     category: item.category,
     title: item.title,
     summary: item.summary,
+    bodyHtml: item.bodyHtml ?? "",
     whoAffected: item.whoAffected,
     whatChanged: item.whatChanged,
     whatToDo: item.whatToDo,
@@ -83,6 +86,7 @@ export function LawEditor({ mobile = false }: { mobile?: boolean }) {
       category: draft.category as LegalUpdate["category"],
       title: draft.title.trim() || "Без названия",
       summary: draft.summary.trim(),
+      bodyHtml: draft.bodyHtml.trim(),
       whoAffected: draft.whoAffected.trim(),
       whatChanged: draft.whatChanged.trim(),
       whatToDo: draft.whatToDo.trim(),
@@ -269,6 +273,17 @@ export function LawEditor({ mobile = false }: { mobile?: boolean }) {
                     placeholder="Суть изменения в 1-2 предложениях"
                     rows={2}
                     className={`${inp} resize-none`}
+                  />
+                </div>
+
+                <div>
+                  <label className={lbl}>Тело статьи (HTML)</label>
+                  <textarea
+                    value={draft.bodyHtml}
+                    onChange={(e) => p("bodyHtml", e.target.value)}
+                    placeholder="<p>Что произошло...</p><h3>Что изменилось</h3><ul><li>...</li></ul>"
+                    rows={7}
+                    className={`${inp} resize-y font-mono text-[12px]`}
                   />
                 </div>
 

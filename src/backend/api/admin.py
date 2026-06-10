@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -646,6 +648,34 @@ def _validate_extremist_payload(
         )
 
 
+def _json_list(raw: str) -> list[str]:
+    try:
+        value = json.loads(raw or "[]")
+        return [str(x) for x in value] if isinstance(value, list) else []
+    except (TypeError, ValueError):
+        return []
+
+
+def _extremist_out(item: ExtremistEntry) -> schemas.ExtremistEntryOut:
+    return schemas.ExtremistEntryOut(
+        id=item.id,
+        title=item.title,
+        category=item.category,
+        source_url=item.source_url,
+        source_name=item.source_name,
+        included_at=item.included_at,
+        last_checked_at=item.last_checked_at,
+        short_description=item.short_description,
+        cover_url=item.cover_url,
+        media_urls=_json_list(item.media_urls),
+        attachment_urls=_json_list(item.attachment_urls),
+        filters_json=item.filters_json,
+        status=item.status,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
 @router.get("/extremist-entries", response_model=list[schemas.ExtremistEntryOut])
 def admin_list_extremist_entries(
     status_filter: str | None = Query(default=None, alias="status"),
@@ -660,7 +690,17 @@ def admin_list_extremist_entries(
     if category_filter:
         stmt = stmt.where(ExtremistEntry.category == category_filter)
     items = db.scalars(stmt).all()
-    return [schemas.ExtremistEntryOut.model_validate(item) for item in items]
+    return [_extremist_out(item) for item in items]
+
+
+@router.get("/extremist-entries/{entry_id}", response_model=schemas.ExtremistEntryOut)
+def admin_get_extremist_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+):
+    """P7 — Детальная карточка записи для редактора/администратора."""
+    entry = _must_get(db, ExtremistEntry, entry_id, "Запись не найдена")
+    return _extremist_out(entry)
 
 
 @router.post(
@@ -675,14 +715,30 @@ def admin_create_extremist_entry(
 ):
     """P7 — Создать запись. source_url обязателен (валидируется Pydantic HttpUrl)."""
     _validate_extremist_payload(category=payload.category, status=payload.status)
-    obj = create_entity(db, ExtremistEntry, payload)
+    obj = ExtremistEntry(
+        title=payload.title,
+        category=payload.category,
+        source_url=str(payload.source_url),
+        source_name=payload.source_name,
+        included_at=payload.included_at,
+        last_checked_at=payload.last_checked_at,
+        short_description=payload.short_description,
+        cover_url=payload.cover_url,
+        media_urls=json.dumps(payload.media_urls, ensure_ascii=False),
+        attachment_urls=json.dumps(payload.attachment_urls, ensure_ascii=False),
+        filters_json=payload.filters_json,
+        status=payload.status,
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
     log_audit_event(
         db,
         actor=actor,
         action=f"Создана запись экстремистского реестра: «{obj.title}»",
         event_type="create",
     )
-    return schemas.ExtremistEntryOut.model_validate(obj)
+    return _extremist_out(obj)
 
 
 @router.patch("/extremist-entries/{entry_id}", response_model=schemas.ExtremistEntryOut)
@@ -695,14 +751,25 @@ def admin_update_extremist_entry(
     """P7 — Частичное обновление записи (можно править title, source_url, статус)."""
     entry = _must_get(db, ExtremistEntry, entry_id, "Запись не найдена")
     _validate_extremist_payload(category=payload.category, status=payload.status)
-    obj = update_entity(db, entry, payload)
+    data = payload.model_dump(exclude_unset=True, mode="json")
+    if "source_url" in data and data["source_url"] is not None:
+        data["source_url"] = str(data["source_url"])
+    if "media_urls" in data and data["media_urls"] is not None:
+        data["media_urls"] = json.dumps(data["media_urls"], ensure_ascii=False)
+    if "attachment_urls" in data and data["attachment_urls"] is not None:
+        data["attachment_urls"] = json.dumps(data["attachment_urls"], ensure_ascii=False)
+    for key, value in data.items():
+        if value is not None and hasattr(entry, key):
+            setattr(entry, key, value)
+    db.commit()
+    db.refresh(entry)
     log_audit_event(
         db,
         actor=actor,
-        action=f"Изменена запись экстремистского реестра: «{obj.title}»",
+        action=f"Изменена запись экстремистского реестра: «{entry.title}»",
         event_type="update",
     )
-    return schemas.ExtremistEntryOut.model_validate(obj)
+    return _extremist_out(entry)
 
 
 @router.delete("/extremist-entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)

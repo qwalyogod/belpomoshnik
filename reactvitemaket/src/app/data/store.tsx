@@ -27,6 +27,7 @@ type Store = {
   role: Role;
   setRole: (r: Role) => void;
   currentUser: AppUser;
+  authSession: AuthTokens | null;
   quickAccounts: AppUser[];
   isAuthenticated: boolean;
   signInAs: (userId: string) => void;
@@ -99,6 +100,10 @@ type Store = {
 
   profile: UserProfile;
   updateProfile: (patch: Partial<UserProfile>) => void;
+  // v1.2: загрузка обрезанного аватара (из редактора-кропера) на бэк и удаление.
+  // uploadAvatar бросает ошибку при неудаче — UI ловит и показывает сообщение.
+  uploadAvatar: (blob: Blob) => Promise<void>;
+  removeAvatar: () => Promise<void>;
   applyQuizResult: (correct: number, total: number) => void;
 
   // v1.1 (P4): пользовательские заметки (локальные).
@@ -1520,6 +1525,23 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         .catch(error => console.warn("Profile saved locally; backend update failed.", error));
     }
   }, [authSession?.access_token, profile, role]);
+
+  const uploadAvatar: Store["uploadAvatar"] = useCallback(async (blob) => {
+    if (!requireAccount()) return;
+    const token = authSession?.access_token;
+    if (!token) throw new Error("Нет активной сессии — войдите в аккаунт, чтобы сохранить аватар.");
+    const { avatar_url } = await apiClient.uploadUserAvatar(token, blob);
+    setProfile(p => ({ ...p, avatarDataUrl: `${API_BASE_URL}${avatar_url}` }));
+  }, [authSession?.access_token, role]);
+
+  const removeAvatar: Store["removeAvatar"] = useCallback(async () => {
+    if (!requireAccount()) return;
+    const token = authSession?.access_token;
+    if (!token) return;
+    await apiClient.deleteUserAvatar(token);
+    setProfile(p => ({ ...p, avatarDataUrl: undefined }));
+  }, [authSession?.access_token, role]);
+
   const updateSettings: Store["updateSettings"] = useCallback((patch) => {
     setSettings(s => ({ ...s, ...patch }));
     if (authSession?.access_token) {
@@ -1687,7 +1709,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const value: Store = useMemo(() => ({
     role, setRole,
-    currentUser, quickAccounts, isAuthenticated: role !== "guest",
+    currentUser, authSession, quickAccounts, isAuthenticated: role !== "guest",
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
     categories: mutableCategories, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
@@ -1700,7 +1722,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
-    profile, updateProfile, applyQuizResult,
+    profile, updateProfile, uploadAvatar, removeAvatar, applyQuizResult,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress,
     togglePreferredSource,
@@ -1713,7 +1735,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
-    role, currentUser, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
+    role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
     adminScenarios, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
     notes, addNote, updateNote, toggleNote, removeNote,
@@ -1726,7 +1748,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addTax, updateTax, deleteTax,
     reminders, allNotifications,
     markRead, markAllRead, unreadCount,
-    updateProfile, applyQuizResult, updateSettings, setLang,
+    updateProfile, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory, mutableCategories,

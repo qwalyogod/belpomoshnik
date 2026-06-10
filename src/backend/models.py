@@ -389,6 +389,7 @@ class LawUpdate(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, default="", nullable=False)
     source_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     affected_scenario_id: Mapped[int | None] = mapped_column(
         ForeignKey("scenarios.id", ondelete="SET NULL"),
@@ -448,6 +449,9 @@ class User(Base, TimestampMixin):
     # v1.1 (P4): JSON-массив адресов пользователя (до 5 шт.). Валидация
     # и нормализация — в api/user.py, здесь только ограничение длины.
     addresses_json: Mapped[str] = mapped_column(String(2000), default="[]", nullable=False)
+    # v1.2: путь к обрезанному аватару (/uploads/avatars/<uid>/<token>.<ext>)
+    # или "" если не задан. Файл лежит в data/uploads/avatars, загрузка — api/user.py.
+    avatar_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
@@ -769,6 +773,11 @@ class ExtremistEntry(Base, TimestampMixin):
     included_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_checked_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     short_description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    cover_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    # JSON-массивы URL. Файлы загружаются через общий /api/articles/upload,
+    # ссылки можно вставлять вручную из официального источника.
+    media_urls: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    attachment_urls: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     # JSON-словарь: {"content_types": ["social", "channels", "media", ...]}.
     # Храним как строку, чтобы не зависеть от диалекта JSON-типа.
     filters_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)

@@ -243,6 +243,7 @@ class SourceReferenceCreate(BaseModel):
 class LawUpdateBase(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     description: str = ""
+    body_html: str = ""
     source_url: HttpUrl
     affected_scenario_id: int | None = None
     affected_step_id: int | None = None
@@ -257,6 +258,7 @@ class LawUpdateCreate(LawUpdateBase):
 class LawUpdateUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     description: str | None = None
+    body_html: str | None = None
     source_url: HttpUrl | None = None
     affected_scenario_id: int | None = None
     affected_step_id: int | None = None
@@ -364,6 +366,7 @@ class LawUpdateOut(ORMModel):
     id: int
     title: str
     description: str
+    body_html: str
     source_url: str
     affected_scenario_id: int | None = None
     affected_step_id: int | None = None
@@ -600,6 +603,9 @@ class ExtremistEntryBase(BaseModel):
     included_at: datetime | None = None
     last_checked_at: datetime | None = None
     short_description: str = Field(default="", max_length=4000)
+    cover_url: str = Field(default="", max_length=1000)
+    media_urls: list[str] = Field(default_factory=list)
+    attachment_urls: list[str] = Field(default_factory=list)
     filters_json: str = Field(default="{}", max_length=4000)
     status: str = Field(default="draft", max_length=16)
 
@@ -616,6 +622,9 @@ class ExtremistEntryUpdate(BaseModel):
     included_at: datetime | None = None
     last_checked_at: datetime | None = None
     short_description: str | None = Field(default=None, max_length=4000)
+    cover_url: str | None = Field(default=None, max_length=1000)
+    media_urls: list[str] | None = None
+    attachment_urls: list[str] | None = None
     filters_json: str | None = Field(default=None, max_length=4000)
     status: str | None = Field(default=None, max_length=16)
 
@@ -629,6 +638,9 @@ class ExtremistEntryOut(ORMModel):
     included_at: datetime | None = None
     last_checked_at: datetime | None = None
     short_description: str
+    cover_url: str
+    media_urls: list[str]
+    attachment_urls: list[str]
     filters_json: str
     status: str
     created_at: datetime

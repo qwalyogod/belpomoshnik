@@ -17,7 +17,9 @@ import {
 } from "./data/types";
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
+import { apiClient } from "./services/api";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
+import { AvatarCropper, validateAvatarFile } from "./components/avatar-cropper";
 
 function PageSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -881,15 +883,30 @@ export function NewsPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   // P6: фильтр по sourceId (id из OFFICIAL_SOURCES).
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [sourceQuery, setSourceQuery] = useState("");
 
   // Helper: sourceId для конкретной записи (news|article или law).
   // Для law: приоритет sourceIds[0], иначе матч OFFICIAL_SOURCES по домену url.
   // Для article: sourceIds[0] или sourceUrl-матч по домену.
   const resolveSourceId = (record: { sourceIds?: string[]; sourceUrl?: string; sourceUrlDomain?: string }): string | null => {
     if (record.sourceIds && record.sourceIds.length > 0) return record.sourceIds[0];
-    const target = (record.sourceUrlDomain ?? record.sourceUrl ?? "").toLowerCase();
-    if (!target) return null;
-    const hit = OFFICIAL_SOURCES.find(s => s.url.toLowerCase().includes(target));
+    const normalizeHost = (value: string): string => {
+      const raw = value.trim();
+      if (!raw) return "";
+      try {
+        const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        return new URL(withProtocol).hostname.replace(/^www\./, "").toLowerCase();
+      } catch {
+        return raw.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase();
+      }
+    };
+    const targetHost = normalizeHost(record.sourceUrlDomain ?? record.sourceUrl ?? "");
+    if (!targetHost) return null;
+    const hit = OFFICIAL_SOURCES.find((s) => {
+      const sourceHost = normalizeHost(s.url);
+      return targetHost === sourceHost || targetHost.endsWith(`.${sourceHost}`) || sourceHost.endsWith(`.${targetHost}`);
+    });
     return hit?.id ?? null;
   };
 
@@ -971,6 +988,15 @@ export function NewsPage() {
       {c.label} {filterCounts[c.key] > 0 ? <span className="ml-1 opacity-60">{filterCounts[c.key]}</span> : null}
     </button>
   ));
+  const extremistChip = (
+    <button
+      type="button"
+      onClick={() => navigate("/extremist")}
+      className="shrink-0 rounded-full bg-red-50 px-3.5 py-2 text-[12px] tracking-tight text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/15"
+    >
+      Экстремистские материалы
+    </button>
+  );
 
   // P6: топ-3 источника, у которых есть хотя бы один материал.
   const sourceCount = new Map<string, number>();
@@ -983,11 +1009,14 @@ export function NewsPage() {
     .slice(0, 3)
     .map(([id]) => OFFICIAL_SOURCES.find(s => s.id === id))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  const visibleSources = OFFICIAL_SOURCES.filter((s) =>
+    matchesQuery(sourceQuery, [s.title, s.description, s.type, s.url]),
+  );
 
   const sourcePills = (
     <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [&::-webkit-scrollbar]:hidden">
       <button
-        onClick={() => setSourceFilter(null)}
+        onClick={() => setSourcesOpen(true)}
         className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] tracking-tight ${sourceFilter === null ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white text-black/65 hover:bg-black/[0.04] dark:bg-white/[0.06] dark:text-white/65 dark:hover:bg-white/[0.08]"}`}
       >
         Все источники
@@ -1028,6 +1057,82 @@ export function NewsPage() {
     </div>
   );
 
+  const sourcesModal = sourcesOpen && (
+    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/35 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setSourcesOpen(false)}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[88dvh] w-full max-w-[780px] overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl dark:bg-[#0F1117] sm:rounded-[28px] sm:p-6 [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">
+              <Shield size={13} /> Официальные источники
+            </div>
+            <div className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>
+              Реестр источников
+            </div>
+            <p className="mt-1 max-w-[56ch] text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+              Выберите источник, чтобы отфильтровать новости и закон-апдейты. Звёздочка поднимает материалы источника выше в ленте.
+            </p>
+          </div>
+          <button onClick={() => setSourcesOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/[0.04] text-black/65 dark:bg-white/[0.06] dark:text-white/70">
+            <X size={15} />
+          </button>
+        </div>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <div className="min-w-0 flex-1">
+            <PageSearch value={sourceQuery} onChange={setSourceQuery} placeholder="Найти источник, ведомство или сайт" />
+          </div>
+          <button
+            onClick={() => { setSourceFilter(null); setSourcesOpen(false); }}
+            className="h-11 rounded-2xl border border-black/10 px-4 text-[13px] tracking-tight text-black/65 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/65 dark:hover:bg-white/[0.06]"
+          >
+            Показать все материалы
+          </button>
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {visibleSources.map((s) => {
+            const selected = sourceFilter === s.id;
+            const preferred = preferredSourceIds.includes(s.id);
+            return (
+              <div key={s.id} className={`rounded-2xl border p-4 transition-colors ${selected ? "border-[#0056FF] bg-[#E3E7FC]/70 dark:bg-[#0E1A3A]" : "border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-white/[0.03]"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <Pill tone="lavender">{SOURCE_TYPE_LABEL[s.type] ?? s.type}</Pill>
+                  <button
+                    onClick={() => setPreferredSourceIds(s.id)}
+                    className={`grid h-8 w-8 place-items-center rounded-full ${preferred ? "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" : "bg-black/[0.04] text-black/35 dark:bg-white/[0.06] dark:text-white/35"}`}
+                    title={preferred ? "Убрать из приоритетных" : "Сделать приоритетным"}
+                  >
+                    <Star size={15} fill={preferred ? "currentColor" : "none"} />
+                  </button>
+                </div>
+                <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 15, lineHeight: 1.25 }}>{s.title}</div>
+                <div className="mt-1 line-clamp-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">{s.description}</div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 text-[12px] tracking-tight text-[#0056FF]">
+                    <ArrowUpRight size={13} />
+                    <span className="truncate">{s.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+                  </a>
+                  <button
+                    onClick={() => { setSourceFilter(s.id); setSourcesOpen(false); }}
+                    className="rounded-xl bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white"
+                  >
+                    Фильтровать
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {visibleSources.length === 0 && (
+          <div className="mt-5 rounded-2xl border border-dashed border-black/10 p-6 text-center text-[13px] tracking-tight text-black/45 dark:border-white/12 dark:text-white/45">
+            Источники по запросу не найдены.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const empty = combined.length === 0 && (
     <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
       <div>
@@ -1045,8 +1150,11 @@ export function NewsPage() {
         <div className="space-y-4 px-5">
           <ProposeButton kind="news" className="w-full justify-center" />
           {sourcesSection}
-          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">{filterChips}</div>
-          <div className="space-y-3">
+          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+            {filterChips}
+            {extremistChip}
+          </div>
+          <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2">
             {sorted.map((item, i) => (
               <NewsCard
                 key={`${item.kind}-${i}-${item.title}`}
@@ -1060,6 +1168,7 @@ export function NewsPage() {
           </div>
           {empty}
         </div>
+        {sourcesModal}
       </div>
     );
   }
@@ -1071,7 +1180,10 @@ export function NewsPage() {
       <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Редакционные материалы и релевантные изменения в законодательстве, подобранные под профиль.</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <ProposeButton kind="news" />
-        <div className="flex flex-wrap gap-2">{filterChips}</div>
+        <div className="flex flex-wrap gap-2">
+          {filterChips}
+          {extremistChip}
+        </div>
       </div>
       <div className="mt-6 max-w-[920px]">{sourcesSection}</div>
       <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -1087,6 +1199,7 @@ export function NewsPage() {
         ))}
       </div>
       {empty}
+      {sourcesModal}
     </div>
   );
 }
@@ -1106,9 +1219,9 @@ function NewsCard({
   return (
     <button
       onClick={() => isLaw ? navigate(`/law-detail/${item.id}`) : navigate("/news")}
-      className="block text-left"
+      className="block w-full text-left"
     >
-      <Card className="flex h-full flex-col p-5">
+      <Card className="flex h-full w-full flex-col p-5">
         <div className="flex items-center gap-2">
           <Pill tone={isLaw ? "warn" : "lavender"}>
             {isLaw ? "Закон-апдейт" : "Новость"}
@@ -1294,6 +1407,8 @@ export function LawDetailPage() {
     );
   }
 
+  const lawBodyHtml = item?.bodyHtml?.trim();
+
   return (
     <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"} space-y-6`}>
       {isMobile ? (
@@ -1313,6 +1428,15 @@ export function LawDetailPage() {
           </div>
         </div>
 
+        {lawBodyHtml && (
+          <Card className="mt-6 p-5">
+            <div
+              className="prose max-w-none text-[14px] leading-relaxed tracking-tight text-black/75 [&_h3]:mt-5 [&_h3]:text-[16px] [&_h3]:font-medium [&_h3]:text-black [&_li]:my-1 [&_ul]:pl-5 dark:text-white/75 dark:[&_h3]:text-white"
+              dangerouslySetInnerHTML={{ __html: lawBodyHtml }}
+            />
+          </Card>
+        )}
+
         <Card className="mt-6 p-5">
           <div className="font-medium text-[15px] mb-1">Что изменилось?</div>
           <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item!.whatChanged || item!.summary}</p>
@@ -1325,7 +1449,7 @@ export function LawDetailPage() {
         </Card>
 
         <div className="mt-6 rounded-2xl border border-amber-200/60 bg-amber-50 p-4 text-[13px] tracking-tight text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-          Информация носит справочный характер. Перед действиями рекомендуется сверить требования на официальном ресурсе.
+          Материал основан на официальных источниках. Перед подачей документов сверяйте актуальную редакцию и требования на сайте первоисточника.
         </div>
       </div>
     </div>
@@ -1399,8 +1523,10 @@ export function NotificationsPage() {
    ============================================================ */
 
 function ProfileAvatar({ size = "lg" }: { size?: "lg" | "md" }) {
-  const { profile, currentUser, updateProfile } = useStore();
+  const { profile, currentUser, uploadAvatar } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const dim = size === "lg" ? "h-24 w-24" : "h-14 w-14";
   const fontSize = size === "lg" ? "text-3xl" : "text-lg";
   const canEdit = currentUser.role !== "guest";
@@ -1408,37 +1534,49 @@ function ProfileAvatar({ size = "lg" }: { size?: "lg" | "md" }) {
   const initial = (profile?.name?.trim?.()?.[0] || "П").toUpperCase();
 
   const onFile = (file?: File | null) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = typeof reader.result === "string" ? reader.result : undefined;
-      if (data) updateProfile({ avatarDataUrl: data });
-    };
-    reader.readAsDataURL(file);
+    if (!file) return;
+    const validationError = validateAvatarFile(file);
+    if (validationError) { setError(validationError); return; }
+    setError(null);
+    setPendingFile(file); // открываем редактор-кропер
   };
 
   return (
-    <div className={`relative shrink-0 ${dim} rounded-3xl overflow-hidden bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white ${fontSize} font-medium`}>
-      {avatar
-        ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
-        : <span>{initial}</span>}
-      {canEdit && (
-        <>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition-opacity hover:opacity-100"
-            title="Загрузить фото"
-          >
-            <Camera size={size === "lg" ? 22 : 16} className="text-white" />
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => onFile(e.target.files?.[0] || null)}
-          />
-        </>
+    <div className="flex flex-col items-center gap-1.5">
+      <div className={`relative shrink-0 ${dim} rounded-full overflow-hidden bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white ${fontSize} font-medium`}>
+        {avatar
+          ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
+          : <span>{initial}</span>}
+        {canEdit && (
+          <>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition-opacity hover:opacity-100"
+              title="Изменить фото"
+            >
+              <Camera size={size === "lg" ? 22 : 16} className="text-white" />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => { onFile(e.target.files?.[0] || null); e.target.value = ""; }}
+            />
+          </>
+        )}
+      </div>
+      {error && <span className="max-w-[180px] text-center text-[11px] leading-tight text-red-500">{error}</span>}
+
+      {pendingFile && (
+        <AvatarCropper
+          file={pendingFile}
+          onCancel={() => setPendingFile(null)}
+          onApply={async (blob) => {
+            await uploadAvatar(blob);   // бросит ошибку → покажется в кропере
+            setPendingFile(null);       // успех → закрываем
+          }}
+        />
       )}
     </div>
   );
@@ -2768,6 +2906,11 @@ type ExtremistForm = {
   includedAt: string;
   lastCheckedAt: string;
   shortDescription: string;
+  coverUrl: string;
+  mediaUrls: string[];
+  attachmentUrls: string[];
+  mediaUrlInput: string;
+  attachmentUrlInput: string;
   contentTypes: ExtremistContentType[];
   status: ExtremistStatus;
 };
@@ -2780,6 +2923,11 @@ const emptyExtremistForm = (): ExtremistForm => ({
   includedAt: "",
   lastCheckedAt: "",
   shortDescription: "",
+  coverUrl: "",
+  mediaUrls: [],
+  attachmentUrls: [],
+  mediaUrlInput: "",
+  attachmentUrlInput: "",
   contentTypes: [],
   status: "draft",
 });
@@ -2794,20 +2942,199 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
+type RawExtremistEntry = {
+  id?: string | number;
+  title?: string;
+  category?: string;
+  source_url?: string;
+  source_name?: string;
+  included_at?: string | null;
+  last_checked_at?: string | null;
+  short_description?: string;
+  cover_url?: string;
+  media_urls?: string[];
+  attachment_urls?: string[];
+  filters_json?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+function parseExtremistContentTypes(raw: string | undefined): ExtremistContentType[] {
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    const values = Array.isArray(parsed?.content_types) ? parsed.content_types : [];
+    return values.filter((x: string): x is ExtremistContentType => EXTREMIST_ALL_CONTENT_TYPES.includes(x as ExtremistContentType));
+  } catch {
+    return [];
+  }
+}
+
+function adaptExtremistEntry(raw: RawExtremistEntry): ExtremistEntry {
+  return {
+    id: String(raw.id ?? `entry-${Date.now()}`),
+    title: raw.title ?? "",
+    category: EXTREMIST_CATEGORY_LABEL[raw.category as ExtremistCategory] ? raw.category as ExtremistCategory : "registry",
+    sourceUrl: raw.source_url ?? "",
+    sourceName: raw.source_name ?? "",
+    includedAt: raw.included_at ?? undefined,
+    lastCheckedAt: raw.last_checked_at ?? undefined,
+    shortDescription: raw.short_description ?? "",
+    coverUrl: raw.cover_url ?? "",
+    mediaUrls: Array.isArray(raw.media_urls) ? raw.media_urls : [],
+    attachmentUrls: Array.isArray(raw.attachment_urls) ? raw.attachment_urls : [],
+    contentTypes: parseExtremistContentTypes(raw.filters_json),
+    status: raw.status === "draft" ? "draft" : "published",
+    createdAt: raw.created_at ?? new Date().toISOString(),
+    updatedAt: raw.updated_at ?? new Date().toISOString(),
+  };
+}
+
+function formatExtremistDate(value?: string): string {
+  if (!value) return "не указана";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function sourceHost(value: string): string {
+  try {
+    return new URL(value).host.replace(/^www\./, "");
+  } catch {
+    return value || "официальный источник";
+  }
+}
+
+function isImageUrl(value: string): boolean {
+  return /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i.test(value);
+}
+
+function ExtremistEntryCard({
+  entry,
+  onOpen,
+}: {
+  entry: ExtremistEntry;
+  onOpen: () => void;
+}) {
+  const mediaCount = (entry.mediaUrls?.length ?? 0) + (entry.attachmentUrls?.length ?? 0);
+  const checkedLabel = entry.lastCheckedAt ? formatExtremistDate(entry.lastCheckedAt) : "требуется проверка";
+  return (
+    <Card className="group overflow-hidden p-0 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-46px_rgba(15,23,42,0.55)]">
+      {entry.coverUrl ? (
+        <button type="button" onClick={onOpen} className="block h-44 w-full overflow-hidden text-left">
+          <img src={entry.coverUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex h-32 w-full items-center justify-between overflow-hidden bg-gradient-to-br from-red-50 via-white to-blue-50 px-5 text-left dark:from-red-500/15 dark:via-white/[0.04] dark:to-blue-500/10"
+        >
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-200">
+            <AlertTriangle size={24} />
+          </div>
+          <div className="text-right text-[12px] uppercase tracking-[0.16em] text-black/35 dark:text-white/35">
+            официальный<br />источник
+          </div>
+        </button>
+      )}
+      <div className="p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Pill tone={entry.status === "published" ? "ok" : "ghost"}>{EXTREMIST_STATUS_LABEL[entry.status]}</Pill>
+          <Pill tone="warn">{EXTREMIST_CATEGORY_LABEL[entry.category]}</Pill>
+          {mediaCount > 0 && <Pill tone="lavender">{mediaCount} медиа</Pill>}
+        </div>
+        <button type="button" onClick={onOpen} className="mt-3 block w-full text-left">
+          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18, lineHeight: 1.18 }}>
+            {entry.title}
+          </div>
+          {entry.shortDescription && (
+            <div className="mt-2 line-clamp-3 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+              {entry.shortDescription}
+            </div>
+          )}
+        </button>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {entry.contentTypes.length > 0 ? entry.contentTypes.map((t) => (
+            <span key={t} className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] tracking-tight text-black/55 dark:bg-white/[0.06] dark:text-white/55">
+              {EXTREMIST_CONTENT_TYPE_LABEL[t]}
+            </span>
+          )) : (
+            <span className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] tracking-tight text-black/45 dark:bg-white/[0.06] dark:text-white/45">
+              тип не указан
+            </span>
+          )}
+        </div>
+        <div className="mt-4 rounded-2xl bg-black/[0.025] p-3 dark:bg-white/[0.045]">
+          <div className="flex items-start gap-2">
+            <Shield size={14} className="mt-0.5 shrink-0 text-[#0056FF]" />
+            <div className="min-w-0">
+              <div className="truncate text-[12px] tracking-tight text-black/60 dark:text-white/60">
+                {entry.sourceName || sourceHost(entry.sourceUrl)}
+              </div>
+              <div className="mt-0.5 text-[11px] tracking-tight text-black/38 dark:text-white/38">
+                Проверено: {checkedLabel}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/[0.06] pt-3 dark:border-white/[0.08]">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium tracking-tight text-[#0056FF]"
+          >
+            Подробнее <ArrowRight size={14} />
+          </button>
+          <a
+            href={entry.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] tracking-tight text-black/45 hover:text-[#0056FF] dark:text-white/45"
+          >
+            Источник <ArrowUpRight size={13} />
+          </a>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function ExtremistPage() {
   const { isMobile } = useContext(ShellContext);
-  const { role } = useStore();
+  const { role, uploadMedia, authSession } = useStore();
   const navigate = useNavigate();
   const canEdit = role === "editor" || role === "admin";
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
 
-  // P7: локальный пустой список. Реальные записи подгрузятся из API
-  // отдельным этапом — здесь только структура и UI.
-  const [entries] = useState<ExtremistEntry[]>([]);
+  const [entries, setEntries] = useState<ExtremistEntry[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | ExtremistStatus>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | ExtremistContentType>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ExtremistForm>(emptyExtremistForm);
   const [formError, setFormError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const reloadEntries = useCallback(async () => {
+    setLoadError("");
+    try {
+      const token = authSession?.access_token ?? apiClient.loadTokens()?.access_token;
+      const raw = canEdit && token
+        ? await apiClient.getAdminExtremistEntries<RawExtremistEntry[]>(token)
+        : await apiClient.getExtremistEntries<RawExtremistEntry[]>();
+      setEntries(raw.map(adaptExtremistEntry));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Не удалось загрузить записи.");
+      setEntries([]);
+    }
+  }, [authSession?.access_token, canEdit]);
+
+  useEffect(() => {
+    reloadEntries();
+  }, [reloadEntries]);
 
   const filtered = entries.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
@@ -2819,9 +3146,41 @@ export function ExtremistPage() {
     setFormOpen(false);
     setForm(emptyExtremistForm());
     setFormError("");
+    setSaving(false);
   };
 
-  const submitForm = () => {
+  const appendUrl = (field: "mediaUrls" | "attachmentUrls", inputField: "mediaUrlInput" | "attachmentUrlInput") => {
+    const value = form[inputField].trim();
+    if (!isValidHttpUrl(value)) {
+      setFormError("Вставьте корректную ссылку в формате http(s)://…");
+      return;
+    }
+    setForm({ ...form, [field]: [...form[field], value], [inputField]: "" });
+    setFormError("");
+  };
+
+  const removeUrl = (field: "mediaUrls" | "attachmentUrls", value: string) => {
+    setForm({ ...form, [field]: form[field].filter((x) => x !== value) });
+  };
+
+  const uploadSelectedFiles = async (files: FileList | null, target: "cover" | "media" | "attachment") => {
+    if (!files || files.length === 0) return;
+    setFormError("");
+    const uploaded: string[] = [];
+    for (const file of Array.from(files)) {
+      const remote = await uploadMedia(file);
+      uploaded.push(remote ?? URL.createObjectURL(file));
+    }
+    if (target === "cover") {
+      setForm((prev) => ({ ...prev, coverUrl: uploaded[0] ?? prev.coverUrl }));
+    } else if (target === "media") {
+      setForm((prev) => ({ ...prev, mediaUrls: [...prev.mediaUrls, ...uploaded] }));
+    } else {
+      setForm((prev) => ({ ...prev, attachmentUrls: [...prev.attachmentUrls, ...uploaded] }));
+    }
+  };
+
+  const submitForm = async () => {
     setFormError("");
     if (form.title.trim().length < 2) {
       setFormError("Введите название (минимум 2 символа).");
@@ -2831,9 +3190,34 @@ export function ExtremistPage() {
       setFormError("Укажите корректный URL официального источника (http(s)://…). Это обязательное поле.");
       return;
     }
-    // P7: запись пока сохраняется только в локальной форме. Сохранение на
-    // backend появится следующим этапом — после проверки официальных источников.
-    closeForm();
+    const token = apiClient.loadTokens()?.access_token;
+    if (!token) {
+      setFormError("Для сохранения нужна роль редактора или администратора с активной backend-сессией.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        category: form.category,
+        source_url: form.sourceUrl.trim(),
+        source_name: form.sourceName.trim(),
+        included_at: form.includedAt ? new Date(form.includedAt).toISOString() : null,
+        last_checked_at: form.lastCheckedAt ? new Date(form.lastCheckedAt).toISOString() : null,
+        short_description: form.shortDescription.trim(),
+        cover_url: form.coverUrl.trim(),
+        media_urls: form.mediaUrls.filter(isValidHttpUrl),
+        attachment_urls: form.attachmentUrls.filter(isValidHttpUrl),
+        filters_json: JSON.stringify({ content_types: form.contentTypes }),
+        status: form.status,
+      };
+      const created = await apiClient.createExtremistEntry<RawExtremistEntry>(token, payload);
+      setEntries((prev) => [adaptExtremistEntry(created), ...prev]);
+      closeForm();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Не удалось сохранить запись.");
+      setSaving(false);
+    }
   };
 
   const headerBlock = (
@@ -2910,29 +3294,17 @@ export function ExtremistPage() {
     </div>
   );
 
-  const accessGuard = (
-    <div className="mx-auto w-full max-w-[720px] px-5 py-10">
-      <div className="rounded-[28px] border border-black/[0.08] bg-white p-6 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04]">
-        <div className="text-[12px] font-medium uppercase tracking-[0.14em] text-[#0056FF]">Доступ ограничен</div>
-        <h1 className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 28, lineHeight: 1.1 }}>
-          Раздел «Экстремистский контент» доступен только редактору или администратору
-        </h1>
-        <p className="mt-3 max-w-[560px] text-[15px] leading-relaxed text-black/60 dark:text-white/60">
-          Этот раздел содержит юридически чувствительную информацию. Откройте его в роли редактора
-          контента или администратора, чтобы посмотреть и дополнить записи.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="mt-5 rounded-2xl bg-[#0056FF] px-5 py-3 text-[14px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
-        >
-          Вернуться на главную
-        </button>
-      </div>
+  const entriesGrid = filtered.length > 0 && (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {filtered.map((entry) => (
+        <ExtremistEntryCard
+          key={entry.id}
+          entry={entry}
+          onOpen={() => navigate(`/extremist/${entry.id}`)}
+        />
+      ))}
     </div>
   );
-
-  if (!canEdit) return accessGuard;
 
   const formModal = formOpen && (
     <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={closeForm}>
@@ -2940,6 +3312,9 @@ export function ExtremistPage() {
         onClick={(e) => e.stopPropagation()}
         className="max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl dark:bg-[#0F1117] sm:rounded-[28px] sm:p-6 [&::-webkit-scrollbar]:hidden"
       >
+        <input ref={coverInputRef} type="file" accept="image/*" hidden onChange={(e) => { void uploadSelectedFiles(e.target.files, "cover"); e.currentTarget.value = ""; }} />
+        <input ref={mediaInputRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { void uploadSelectedFiles(e.target.files, "media"); e.currentTarget.value = ""; }} />
+        <input ref={attachmentInputRef} type="file" accept=".pdf,image/*,video/*" multiple hidden onChange={(e) => { void uploadSelectedFiles(e.target.files, "attachment"); e.currentTarget.value = ""; }} />
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">P7 · каркас</div>
@@ -3043,6 +3418,110 @@ export function ExtremistPage() {
             />
           </label>
 
+          <div className="rounded-2xl border border-black/[0.06] p-3 dark:border-white/[0.08]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[13px] tracking-tight text-black dark:text-white">Обложка</div>
+                <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">Файл или ссылка на официальное изображение</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-black/10 px-3 text-[12px] tracking-tight text-black/65 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/65"
+              >
+                <Camera size={14} /> Файл
+              </button>
+            </div>
+            {form.coverUrl && (
+              <div className="mt-3 overflow-hidden rounded-xl">
+                <img src={form.coverUrl} alt="" className="h-32 w-full object-cover" />
+              </div>
+            )}
+            <input
+              value={form.coverUrl}
+              onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
+              placeholder="Или вставьте URL: https://…"
+              inputMode="url"
+              className="mt-3 w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-black/[0.06] p-3 dark:border-white/[0.08]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] tracking-tight text-black dark:text-white">Фото и видео</div>
+                  <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">Несколько ссылок или файлов</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => mediaInputRef.current?.click()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-black/10 px-3 text-[12px] tracking-tight text-black/65 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/65"
+                >
+                  <Camera size={14} /> Файл
+                </button>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={form.mediaUrlInput}
+                  onChange={(e) => setForm({ ...form, mediaUrlInput: e.target.value })}
+                  placeholder="https://…"
+                  inputMode="url"
+                  className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                />
+                <button type="button" onClick={() => appendUrl("mediaUrls", "mediaUrlInput")} className="rounded-xl bg-[#0056FF] px-3 text-[12px] tracking-tight text-white">
+                  Добавить
+                </button>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {form.mediaUrls.map((url) => (
+                  <div key={url} className="flex items-center gap-2 rounded-xl bg-black/[0.03] px-2.5 py-2 dark:bg-white/[0.05]">
+                    <Camera size={13} className="shrink-0 text-[#0056FF]" />
+                    <span className="min-w-0 flex-1 truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{url}</span>
+                    <button type="button" onClick={() => removeUrl("mediaUrls", url)} className="text-black/35 hover:text-red-500 dark:text-white/35"><X size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/[0.06] p-3 dark:border-white/[0.08]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] tracking-tight text-black dark:text-white">Файлы и вложения</div>
+                  <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">PDF, изображения, видео</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-black/10 px-3 text-[12px] tracking-tight text-black/65 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/65"
+                >
+                  <FileText size={14} /> Файл
+                </button>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={form.attachmentUrlInput}
+                  onChange={(e) => setForm({ ...form, attachmentUrlInput: e.target.value })}
+                  placeholder="https://…"
+                  inputMode="url"
+                  className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                />
+                <button type="button" onClick={() => appendUrl("attachmentUrls", "attachmentUrlInput")} className="rounded-xl bg-[#0056FF] px-3 text-[12px] tracking-tight text-white">
+                  Добавить
+                </button>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {form.attachmentUrls.map((url) => (
+                  <div key={url} className="flex items-center gap-2 rounded-xl bg-black/[0.03] px-2.5 py-2 dark:bg-white/[0.05]">
+                    <FileText size={13} className="shrink-0 text-[#0056FF]" />
+                    <span className="min-w-0 flex-1 truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{url}</span>
+                    <button type="button" onClick={() => removeUrl("attachmentUrls", url)} className="text-black/35 hover:text-red-500 dark:text-white/35"><X size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div>
             <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Тип контента (мульти-выбор)</span>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -3082,9 +3561,10 @@ export function ExtremistPage() {
             </button>
             <button
               onClick={submitForm}
-              className="rounded-xl bg-[#0056FF] px-5 py-2.5 text-[14px] font-medium tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
+              disabled={saving}
+              className="rounded-xl bg-[#0056FF] px-5 py-2.5 text-[14px] font-medium tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] disabled:opacity-55"
             >
-              Сохранить
+              {saving ? "Сохраняем…" : "Сохранить"}
             </button>
           </div>
         </div>
@@ -3109,6 +3589,12 @@ export function ExtremistPage() {
             </p>
           </div>
           {filtersBlock}
+          {loadError && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] tracking-tight text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+              {loadError}
+            </div>
+          )}
+          {entriesGrid}
           {filtered.length === 0 ? emptyBlock : null}
         </div>
         {formModal}
@@ -3141,9 +3627,311 @@ export function ExtremistPage() {
       <div className="mt-6 max-w-[920px] space-y-5">
         {headerBlock}
         {filtersBlock}
+        {loadError && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] tracking-tight text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+            {loadError}
+          </div>
+        )}
+        {entriesGrid}
         {filtered.length === 0 ? emptyBlock : null}
       </div>
       {formModal}
+    </div>
+  );
+}
+
+export function ExtremistDetailPage() {
+  const { isMobile } = useContext(ShellContext);
+  const { role, authSession } = useStore();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const canEdit = role === "editor" || role === "admin";
+  const [entry, setEntry] = useState<ExtremistEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadEntry = useCallback(async () => {
+    if (!id) {
+      setError("Запись не найдена.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const token = authSession?.access_token ?? apiClient.loadTokens()?.access_token;
+      const raw = canEdit && token
+        ? await apiClient.getAdminExtremistEntry<RawExtremistEntry>(token, id)
+        : await apiClient.getExtremistEntry<RawExtremistEntry>(id);
+      setEntry(adaptExtremistEntry(raw));
+    } catch (err) {
+      setEntry(null);
+      setError(err instanceof Error ? err.message : "Не удалось открыть запись.");
+    } finally {
+      setLoading(false);
+    }
+  }, [authSession?.access_token, canEdit, id]);
+
+  useEffect(() => {
+    loadEntry();
+  }, [loadEntry]);
+
+  const allMedia = entry ? [...(entry.mediaUrls ?? []), ...(entry.attachmentUrls ?? [])] : [];
+
+  const loadingBlock = (
+    <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-black/[0.06] bg-white p-8 text-center dark:border-white/[0.08] dark:bg-white/[0.04]">
+      <div>
+        <RefreshCw size={22} className="mx-auto animate-spin text-[#0056FF]" />
+        <div className="mt-3 text-[14px] tracking-tight text-black/55 dark:text-white/55">Загружаем карточку…</div>
+      </div>
+    </div>
+  );
+
+  const errorBlock = (
+    <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-red-200/70 bg-red-50 p-8 text-center dark:border-red-500/25 dark:bg-red-500/10">
+      <div>
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-200">
+          <AlertTriangle size={22} />
+        </div>
+        <div className="mt-4 tracking-tight text-red-900 dark:text-red-100" style={{ fontSize: 20 }}>
+          Карточка недоступна
+        </div>
+        <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-red-800/75 dark:text-red-200/75">
+          {error || "Запись не опубликована или была удалена."}
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/news")}
+            className="rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-[13px] tracking-tight text-red-700 dark:border-red-500/20 dark:bg-white/[0.05] dark:text-red-100"
+          >
+            Вернуться к новостям
+          </button>
+          <button
+            type="button"
+            onClick={loadEntry}
+            className="rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] tracking-tight text-white"
+          >
+            Повторить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const content = entry && (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="hidden items-center gap-2 text-[13px] tracking-tight text-black/45 hover:text-[#0056FF] dark:text-white/45 md:inline-flex"
+      >
+        <ChevronLeft size={15} /> Назад
+      </button>
+
+      <section className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white shadow-[0_24px_80px_-56px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+        {entry.coverUrl ? (
+          <div className="h-[260px] w-full overflow-hidden bg-black/[0.04] dark:bg-white/[0.04]">
+            <img src={entry.coverUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+        ) : (
+          <div className="flex min-h-[220px] items-end justify-between overflow-hidden bg-gradient-to-br from-red-50 via-white to-blue-50 p-6 dark:from-red-500/15 dark:via-white/[0.04] dark:to-blue-500/10">
+            <div className="grid h-16 w-16 place-items-center rounded-3xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-200">
+              <AlertTriangle size={28} />
+            </div>
+            <div className="max-w-[220px] text-right text-[12px] uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+              проверка только по официальному ресурсу
+            </div>
+          </div>
+        )}
+        <div className="p-5 md:p-7">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Pill tone={entry.status === "published" ? "ok" : "ghost"}>{EXTREMIST_STATUS_LABEL[entry.status]}</Pill>
+            <Pill tone="warn">{EXTREMIST_CATEGORY_LABEL[entry.category]}</Pill>
+            {entry.status === "draft" && canEdit && <Pill tone="lavender">видно редакции</Pill>}
+          </div>
+          <h1 className="mt-4 max-w-[880px] tracking-tight text-black dark:text-white" style={{ fontSize: isMobile ? 30 : 44, lineHeight: 1.03 }}>
+            {entry.title}
+          </h1>
+          {entry.shortDescription && (
+            <p className="mt-4 max-w-[760px] text-[16px] leading-relaxed tracking-tight text-black/60 dark:text-white/60">
+              {entry.shortDescription}
+            </p>
+          )}
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-black/[0.025] p-4 dark:bg-white/[0.045]">
+              <div className="flex items-center gap-2 text-[12px] tracking-tight text-black/40 dark:text-white/40">
+                <CalendarClock size={14} /> Дата включения
+              </div>
+              <div className="mt-2 text-[14px] tracking-tight text-black dark:text-white">
+                {formatExtremistDate(entry.includedAt)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-black/[0.025] p-4 dark:bg-white/[0.045]">
+              <div className="flex items-center gap-2 text-[12px] tracking-tight text-black/40 dark:text-white/40">
+                <Check size={14} /> Дата проверки
+              </div>
+              <div className="mt-2 text-[14px] tracking-tight text-black dark:text-white">
+                {formatExtremistDate(entry.lastCheckedAt)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-black/[0.025] p-4 dark:bg-white/[0.045]">
+              <div className="flex items-center gap-2 text-[12px] tracking-tight text-black/40 dark:text-white/40">
+                <Shield size={14} /> Источник
+              </div>
+              <div className="mt-2 truncate text-[14px] tracking-tight text-black dark:text-white">
+                {entry.sourceName || sourceHost(entry.sourceUrl)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-5">
+          <Card>
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/15 dark:text-red-200">
+                <AlertTriangle size={18} />
+              </span>
+              <div>
+                <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>
+                  Как использовать эту информацию
+                </div>
+                <p className="mt-2 text-[14px] leading-relaxed tracking-tight text-black/58 dark:text-white/58">
+                  Карточка носит справочный характер и помогает перейти к официальной записи.
+                  Перед любыми действиями проверяйте актуальность, формулировки и дату публикации
+                  на официальном ресурсе. Приложение не воспроизводит запрещённые материалы, а
+                  показывает только служебное описание и ссылку на источник.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>
+                  Типы и признаки записи
+                </div>
+                <p className="mt-1 text-[13px] tracking-tight text-black/50 dark:text-white/50">
+                  Эти метки используются для фильтрации раздела.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {entry.contentTypes.length > 0 ? entry.contentTypes.map((type) => (
+                <span
+                  key={type}
+                  className="rounded-full bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+                >
+                  {EXTREMIST_CONTENT_TYPE_LABEL[type]}
+                </span>
+              )) : (
+                <span className="rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] tracking-tight text-black/45 dark:bg-white/[0.06] dark:text-white/45">
+                  Метки не указаны
+                </span>
+              )}
+            </div>
+          </Card>
+
+          {allMedia.length > 0 && (
+            <Card>
+              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>
+                Медиа и вложения
+              </div>
+              <p className="mt-1 text-[13px] tracking-tight text-black/50 dark:text-white/50">
+                Файлы и ссылки добавляются только как справочные материалы к официальной записи.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {allMedia.map((url, index) => (
+                  <a
+                    key={`${url}-${index}`}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group overflow-hidden rounded-2xl border border-black/[0.06] bg-black/[0.02] transition hover:border-[#0056FF]/35 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                  >
+                    {isImageUrl(url) ? (
+                      <img src={url} alt="" className="h-36 w-full object-cover" />
+                    ) : (
+                      <div className="grid h-36 place-items-center bg-white dark:bg-white/[0.04]">
+                        <FileText size={28} className="text-black/30 dark:text-white/30" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 p-3">
+                      <Camera size={14} className="shrink-0 text-[#0056FF]" />
+                      <span className="min-w-0 flex-1 truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                        {sourceHost(url)}
+                      </span>
+                      <ExternalLink size={13} className="text-black/35 group-hover:text-[#0056FF] dark:text-white/35" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        <aside className="space-y-5">
+          <Card>
+            <div className="flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">
+              <Shield size={14} /> Официальный источник
+            </div>
+            <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+              {entry.sourceName || sourceHost(entry.sourceUrl)}
+            </div>
+            <div className="mt-2 break-all text-[12px] leading-relaxed tracking-tight text-black/45 dark:text-white/45">
+              {entry.sourceUrl}
+            </div>
+            <a
+              href={entry.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0056FF] px-4 py-3 text-[13px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
+            >
+              Открыть источник <ArrowUpRight size={14} />
+            </a>
+          </Card>
+
+          <Card>
+            <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+              Проверочный статус
+            </div>
+            <div className="mt-3 space-y-2 text-[13px] tracking-tight text-black/55 dark:text-white/55">
+              <div className="flex items-center justify-between gap-3">
+                <span>Статус</span>
+                <span className="text-black dark:text-white">{EXTREMIST_STATUS_LABEL[entry.status]}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>Проверка</span>
+                <span className="text-right text-black dark:text-white">{formatExtremistDate(entry.lastCheckedAt)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>Обновлено</span>
+                <span className="text-right text-black dark:text-white">{formatExtremistDate(entry.updatedAt)}</span>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
+        <MobileTopBar title="Материал" onBack={() => navigate(-1)} />
+        <div className="px-5">
+          {loading ? loadingBlock : entry ? content : errorBlock}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-[1180px] p-8">
+      {loading ? loadingBlock : entry ? content : errorBlock}
     </div>
   );
 }
