@@ -1,17 +1,47 @@
-"""In-process backend smoke test via FastAPI TestClient. Isolated temp sqlite db."""
+"""In-process backend smoke test via FastAPI TestClient. MySQL test-БД.
+
+Создаёт временную БД `belpomoshnik_smoke` в локальном MySQL, гоняет сценарии и
+дропает её. Переменные окружения выставляются ДО импорта backend.*
+"""
 import os
 import sys
-import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
-# Isolated temp DB BEFORE importing backend (engine reads env at import).
-_tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-_tmp.close()
-os.environ["BELPOMOSHNIK_DATABASE_URL"] = f"sqlite:///{_tmp.name}"
+import pymysql
+
+# Изолированная MySQL-БД ДО импорта backend (engine читает env при импорте).
+# Можно переопределить через BELPOMOSHNIK_SMOKE_DATABASE_URL.
+_DEFAULT_SMOKE_URL = "mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik_smoke?charset=utf8mb4"
+os.environ["BELPOMOSHNIK_DATABASE_URL"] = os.environ.get(
+    "BELPOMOSHNIK_SMOKE_DATABASE_URL", _DEFAULT_SMOKE_URL
+)
 os.environ["BELPOMOSHNIK_SECRET_KEY"] = "smoke-test-secret-key-256bit-aaaaaaaaaaaa"
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
+
+from backend.config import get_database_url  # noqa: E402
+
+# Создаём БД если её нет.
+_parsed = urlparse(get_database_url().replace("mysql+pymysql://", "mysql://", 1))
+_db_name = _parsed.path.lstrip("/").split("?")[0]
+_admin = pymysql.connect(
+    host=_parsed.hostname,
+    port=_parsed.port or 3306,
+    user=_parsed.username or "root",
+    password=_parsed.password or "",
+    charset="utf8mb4",
+)
+try:
+    with _admin.cursor() as cur:
+        cur.execute(
+            f"CREATE DATABASE IF NOT EXISTS `{_db_name}` "
+            "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
+    _admin.commit()
+finally:
+    _admin.close()
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -154,10 +184,21 @@ def main() -> int:
     check("old refresh revoked -> 401", r2.status_code == 401, str(r2.status_code))
 
     print(f"\n== RESULT: {PASS} passed, {FAIL} failed ==")
+    # Дропаем временную БД, чтобы не оставлять мусор.
     try:
-        os.unlink(_tmp.name)
-    except OSError:
-        pass
+        _drop = pymysql.connect(
+            host=_parsed.hostname,
+            port=_parsed.port or 3306,
+            user=_parsed.username or "root",
+            password=_parsed.password or "",
+            charset="utf8mb4",
+        )
+        with _drop.cursor() as cur:
+            cur.execute(f"DROP DATABASE IF EXISTS `{_db_name}`")
+        _drop.commit()
+        _drop.close()
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [WARN] не удалось дропнуть {_db_name}: {exc}")
     return 1 if FAIL else 0
 
 

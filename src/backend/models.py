@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -70,7 +71,7 @@ scenario_step_documents = Table(
 class Problem(Base, TimestampMixin):
     __tablename__ = "problems"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     short_description: Mapped[str] = mapped_column(String(500), default="", nullable=False)
@@ -79,11 +80,11 @@ class Problem(Base, TimestampMixin):
     category: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     # Rich «what to do» content (ported from the Flet PROBLEM_DETAIL set).
     what_to_do_now: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    steps_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
-    documents_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
-    deadlines_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
-    institutions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
-    mistakes_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    steps_json: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
+    documents_json: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
+    deadlines_json: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
+    institutions_json: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
+    mistakes_json: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
     status: Mapped[ContentStatus] = mapped_column(
         SQLEnum(ContentStatus, name="problem_status"),
         default=ContentStatus.DRAFT,
@@ -124,7 +125,7 @@ class Scenario(Base, TimestampMixin):
         Index("ix_scenarios_problem_id_status", "problem_id", "status"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     problem_id: Mapped[int] = mapped_column(ForeignKey("problems.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
@@ -176,7 +177,7 @@ class ScenarioStage(Base, TimestampMixin):
         Index("ix_scenario_stages_scenario_order", "scenario_id", "order_index"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     scenario_id: Mapped[int] = mapped_column(ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -194,7 +195,7 @@ class ScenarioStage(Base, TimestampMixin):
 class Authority(Base, TimestampMixin):
     __tablename__ = "authorities"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     website_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
@@ -211,7 +212,7 @@ class Authority(Base, TimestampMixin):
 class Deadline(Base, TimestampMixin):
     __tablename__ = "deadlines"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     duration_value: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -228,7 +229,7 @@ class Deadline(Base, TimestampMixin):
 class Document(Base, TimestampMixin):
     __tablename__ = "documents"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     document_type: Mapped[str] = mapped_column(String(120), default="", nullable=False)
@@ -254,7 +255,7 @@ class ScenarioStep(Base, TimestampMixin):
         Index("ix_scenario_steps_stage_order", "stage_id", "order_index"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     stage_id: Mapped[int] = mapped_column(ForeignKey("scenario_stages.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -294,7 +295,7 @@ class ScenarioStep(Base, TimestampMixin):
 class NotificationRule(Base, TimestampMixin):
     __tablename__ = "notification_rules"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     step_id: Mapped[int] = mapped_column(ForeignKey("scenario_steps.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -316,7 +317,7 @@ class ScenarioDependency(Base, TimestampMixin):
         Index("ix_scenario_dependencies_scenario", "scenario_id"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     scenario_id: Mapped[int] = mapped_column(ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False)
     step_id: Mapped[int] = mapped_column(ForeignKey("scenario_steps.id", ondelete="CASCADE"), nullable=False)
     depends_on_step_id: Mapped[int] = mapped_column(ForeignKey("scenario_steps.id", ondelete="CASCADE"), nullable=False)
@@ -339,7 +340,7 @@ class RelatedScenario(Base, TimestampMixin):
         UniqueConstraint("scenario_id", "related_scenario_id", "relation_type", name="uq_related_scenario"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     scenario_id: Mapped[int] = mapped_column(ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False)
     related_scenario_id: Mapped[int] = mapped_column(ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False)
     relation_type: Mapped[RelationType] = mapped_column(
@@ -365,7 +366,7 @@ class SourceReference(Base, TimestampMixin):
         Index("ix_source_references_sourceable", "sourceable_type", "sourceable_id"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     sourceable_type: Mapped[str] = mapped_column(String(60), nullable=False)
     sourceable_id: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -386,7 +387,7 @@ class LawUpdate(Base, TimestampMixin):
         Index("ix_law_updates_scenario_step", "affected_scenario_id", "affected_step_id"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     body_html: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -426,7 +427,7 @@ class User(Base, TimestampMixin):
     """H2, H3, H4, H5 — Пользователь приложения."""
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
@@ -445,7 +446,7 @@ class User(Base, TimestampMixin):
     owns_property: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     has_car: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_renter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    interest_tags: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    interest_tags: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
     # v1.1 (P4): JSON-массив адресов пользователя (до 5 шт.). Валидация
     # и нормализация — в api/user.py, здесь только ограничение длины.
     addresses_json: Mapped[str] = mapped_column(String(2000), default="[]", nullable=False)
@@ -477,9 +478,9 @@ class RefreshToken(Base):
     """H3 — JWT refresh-токен (хранится в БД, revoked = отозван)."""
     __tablename__ = "refresh_tokens"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    token: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -496,7 +497,7 @@ class UserNote(Base, TimestampMixin):
     """
     __tablename__ = "user_notes"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
@@ -515,7 +516,7 @@ class UserDocument(Base, TimestampMixin):
     """H7, G6 — Личный документ пользователя (паспорт, СНИЛС и т.д.)."""
     __tablename__ = "user_documents"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     doc_type: Mapped[str] = mapped_column(String(120), default="", nullable=False)
@@ -650,7 +651,7 @@ class EmailNotification(Base):
         Index("ix_email_notifications_scheduled", "status", "scheduled_at"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -676,7 +677,7 @@ class AuditLog(Base, TimestampMixin):
     """
     __tablename__ = "audit_logs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     role_id: Mapped[str] = mapped_column(String(64), nullable=False, default="content_editor")
     event_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
@@ -699,15 +700,15 @@ class Article(Base, TimestampMixin):
         Index("ix_articles_kind_status", "kind", "status"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     kind: Mapped[str] = mapped_column(String(16), default="news", nullable=False)  # news|scenario|problem
     title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
     body_html: Mapped[str] = mapped_column(Text, default="", nullable=False)
     cover: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     video: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
-    gallery: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list of urls
-    tags: Mapped[str] = mapped_column(Text, default="[]", nullable=False)     # JSON list of strings
+    gallery: Mapped[str] = mapped_column(String(2000), default="[]", nullable=False)  # JSON list of urls
+    tags: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)     # JSON list of strings
     category: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     specialization: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     audience: Mapped[str] = mapped_column(String(64), default="all", nullable=False)
@@ -763,7 +764,7 @@ class ExtremistEntry(Base, TimestampMixin):
         Index("ix_extremist_entries_category", "category"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     # kind: registry | news | explanation
     category: Mapped[str] = mapped_column(String(32), nullable=False, default="registry")
@@ -776,10 +777,10 @@ class ExtremistEntry(Base, TimestampMixin):
     cover_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     # JSON-массивы URL. Файлы загружаются через общий /api/articles/upload,
     # ссылки можно вставлять вручную из официального источника.
-    media_urls: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
-    attachment_urls: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    media_urls: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
+    attachment_urls: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)
     # JSON-словарь: {"content_types": ["social", "channels", "media", ...]}.
     # Храним как строку, чтобы не зависеть от диалекта JSON-типа.
-    filters_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    filters_json: Mapped[str] = mapped_column(String(500), default="{}", nullable=False)
     # draft | published. По умолчанию draft: контент не верифицирован.
     status: Mapped[str] = mapped_column(String(16), default="draft", nullable=False)

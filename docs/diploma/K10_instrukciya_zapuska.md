@@ -122,7 +122,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
 # Database
-DATABASE_URL=sqlite:///belpomoshnik.db
+DATABASE_URL=mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik?charset=utf8mb4
 ```
 
 > В MVP эти переменные **не обязательны** — приложение работает без `.env`.

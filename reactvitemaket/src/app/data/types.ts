@@ -1,6 +1,8 @@
 // Domain types — single source of truth. Future API responses will match these.
 
-export type Role = "guest" | "citizen" | "editor" | "admin";
+export type Role = "guest" | "citizen" | "content_editor" | "platform_admin" | "editor" | "admin";
+// NB: "editor" | "admin" оставлены для обратной совместимости со старыми quickAccounts
+// в localStorage. Новые записи (после security-фикса) используют "content_editor" / "platform_admin".
 export type Lang = "ru" | "be" | "en";
 
 export interface AppUser {
@@ -11,7 +13,6 @@ export interface AppUser {
   region?: string;
   city?: string;
   district?: string;
-  password?: string;
   isTestAccount?: boolean;
 }
 
@@ -108,6 +109,9 @@ export interface UserSituation {
   startedAt: string;          // ISO
   completedTaskIds: string[];
   backendTaskIds?: Record<string, string>; // scenario task id -> backend task id
+  // v1.2: серверный id ситуации. Локальный `id` остаётся стабильным (для роутинга
+  // /situations/:id), а backendId используется для backend-операций (delete/sync).
+  backendId?: string;
   notes: Record<string, string>; // taskId -> note
 }
 

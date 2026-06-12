@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from datetime import date, timedelta
 from pathlib import Path
@@ -20,13 +21,40 @@ from sqlalchemy.orm import Session
 
 from backend import schemas
 from backend.api.auth import get_current_user_email, require_role
-from backend.config import DEFAULT_DB_PATH
+from backend.config import get_upload_dir
 from backend.database import get_db
 from backend.models import Article, ArticleViewDaily, BlockedSubmitter, User
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Санитизация body_html (минимум, без внешних зависимостей)
+# Полноценный sanitize требует bleach/DOMPurify — TODO для production.
+# Здесь убираем только самые опасные теги/атрибуты.
+# ─────────────────────────────────────────────────────────────────────────────
+_DANGEROUS_TAGS = re.compile(
+    r"<\s*(?:script|iframe|object|embed|svg|math|style|link|meta|base|form|frame|frameset)\b",
+    re.IGNORECASE,
+)
+_DANGEROUS_ON_ATTRS = re.compile(r"""\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)""", re.IGNORECASE)
+_JS_HREF = re.compile(r"""\s+(?:href|src|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)""", re.IGNORECASE)
+
+
+def sanitize_html(value: str | None) -> str | None:
+    """Вырезает опасные теги и атрибуты из пользовательского HTML.
+
+    Не пытаемся быть полноценным sanitizer'ом — только блокируем самые
+    распространённые XSS-векторы. Для production → bleach (см. PROJECT_STATUS).
+    """
+    if not value:
+        return value
+    s = _DANGEROUS_TAGS.sub("<span data-belp-stripped", value)
+    s = _DANGEROUS_ON_ATTRS.sub(" data-belp-attr-stripped=", s)
+    s = _JS_HREF.sub(' data-belp-href-stripped="#"', s)
+    return s
+
 router = APIRouter(prefix="/api/articles", tags=["articles"])
 
-UPLOAD_DIR = Path(DEFAULT_DB_PATH).parent / "uploads"
+UPLOAD_DIR = Path(get_upload_dir())
 _MAX_UPLOAD = 15 * 1024 * 1024  # 15 MB
 _ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".ogg", ".pdf"}
 
@@ -193,7 +221,7 @@ def create_article(payload: schemas.ArticleCreate, email: str = Depends(get_curr
         kind=kind,
         title=payload.title.strip(),
         summary=payload.summary,
-        body_html=payload.body_html,
+        body_html=sanitize_html(payload.body_html),
         cover=payload.cover,
         video=payload.video,
         gallery=json.dumps(payload.gallery, ensure_ascii=False),
@@ -251,7 +279,11 @@ def update_article(article_id: int, payload: schemas.ArticleUpdate, email: str =
         if kind in _VALID_KIND:
             article.kind = kind
     for key, value in data.items():
-        if value is not None and hasattr(article, key):
+        if value is None or not hasattr(article, key):
+            continue
+        if key == "body_html":
+            setattr(article, key, sanitize_html(value))
+        else:
             setattr(article, key, value)
 
     # Редактор доработал предложение пользователя → «при поддержке {редактор}».

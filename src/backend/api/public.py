@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from backend.api.auth import require_role
 from backend.database import get_db
 from backend import schemas
 from backend.service import (
@@ -107,10 +108,15 @@ def get_law_update(law_update_id: int, db: Session = Depends(get_db)):
     return schemas.LawUpdateOut.model_validate(obj)
 
 
-@router.get("/admin/bootstrap/problems", response_model=list[schemas.ProblemPublicOut])
+@router.get(
+    "/admin/bootstrap/problems",
+    response_model=list[schemas.ProblemPublicOut],
+    dependencies=[Depends(require_role("content_editor"))],
+)
 def get_admin_bootstrap_problems(db: Session = Depends(get_db)):
     """
-    Временный endpoint для Flet админ-панели (MVP),
-    чтобы можно было отрисовать списки до полной CRUD-интеграции UI.
+    Исторически — временный endpoint для Flet админ-панели (MVP).
+    Сейчас защищён `require_role("content_editor")`: только редактор/админ
+    видят полный список проблем (включая draft).
     """
     return [schemas.ProblemPublicOut.model_validate(item) for item in list_problems_admin(db)]

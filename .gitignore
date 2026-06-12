@@ -2,6 +2,7 @@
 node_modules/
 **/node_modules/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .DS_Store
 **/.DS_Store
@@ -11,15 +12,50 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+
+# Secrets — ни в корне, ни во вложенных папках
 .env
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Runtime data (воссоздаётся через backend.bootstrap / scripts)
 data/*.db
+data/*.sqlite
 data/app_state.json
 data/app_state.backup.json
 data/private_uploads/
 data/exports/
 data/uploads/
 
+# Test/CI caches
+.coverage
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+htmlcov/
+coverage/
+
 # Stray / personal artefacts (keep out of the code repo)
 /package-lock.json
+yarn.lock
 documents/
 *.zip
+*.bak
+*.old
+*.log
+*.tmp
+
+# Native build artefacts
+reactvitemaket/android/app/build/
+reactvitemaket/android/.gradle/
+reactvitemaket/android/build/
+reactvitemaket/ios/build/
+reactvitemaket/ios/Pods/
+reactvitemaket/ios/DerivedData/
+
+# Figma snapshot (352 КБ) — не нужен в репо
+Web app design for Belpomoshch/

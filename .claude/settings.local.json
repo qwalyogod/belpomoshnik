@@ -148,7 +148,8 @@
       "Bash(BELPOMOSHNIK_DATABASE_URL=postgresql+psycopg://belposluga:belposluga@127.0.0.1:5432/belpomoshnik BELPOMOSHNIK_SECRET_KEY=belpomoshnik-dev-secret-key-256bit-ok SMTP_HOST=127.0.0.1 SMTP_PORT=1025 SMTP_TLS=false ../.venv/bin/python -m uvicorn backend.app:app --host 0.0.0.0 --port 8060 --log-level info)",
       "Bash(curl -sf http://127.0.0.1:8060/api/health)",
       "Bash(break)",
-      "Bash(awk '{print $2, $11, $12}')"
+      "Bash(awk '{print $2, $11, $12}')",
+      "Bash(git checkout *)"
     ]
   }
 }

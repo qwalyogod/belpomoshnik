@@ -1,23 +1,50 @@
-"""Pytest fixtures: isolated temp DB, seeded roles, TestClient, auth tokens.
+"""Pytest fixtures: изолированная MySQL-БД `belpomoshnik_test`, роли, TestClient, токены.
 
-Env vars set BEFORE importing backend (engine reads them at import time).
+Используется отдельная БД `belpomoshnik_test` в том же MySQL, что и dev-сборка.
+Между тестами схема дропается и пересоздаётся (`Base.metadata.drop_all/create_all`),
+так что .sql-миграции в тестах не гоняются — у ORM и миграций DDL должен совпадать.
+
+Env vars выставляются ДО импорта backend.* (engine читает URL один раз).
 """
 import os
 import sys
-import tempfile
 from pathlib import Path
 
-_tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-_tmp.close()
-# Run the suite against an alternate DB (e.g. PostgreSQL) by setting
-# BELPOMOSHNIK_TEST_DATABASE_URL; otherwise an isolated temp SQLite is used.
+# Можно переопределить через BELPOMOSHNIK_TEST_DATABASE_URL.
+# По умолчанию — отдельная БД `belpomoshnik_test` рядом с `belpomoshnik`.
+_DEFAULT_TEST_URL = "mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik_test?charset=utf8mb4"
 os.environ["BELPOMOSHNIK_DATABASE_URL"] = os.environ.get(
-    "BELPOMOSHNIK_TEST_DATABASE_URL", f"sqlite:///{_tmp.name}"
+    "BELPOMOSHNIK_TEST_DATABASE_URL", _DEFAULT_TEST_URL
 )
 os.environ["BELPOMOSHNIK_SECRET_KEY"] = "pytest-secret-key-256bit-aaaaaaaaaaaaaaaa"
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
+
+# Создаём БД `belpomoshnik_test` если её нет (MySQL не умеет в `CREATE DATABASE IF NOT EXISTS`
+# через SQLAlchemy URL — нужно коннектиться без указания database).
+import pymysql  # noqa: E402
+from urllib.parse import urlparse  # noqa: E402
+
+from backend.config import get_database_url  # noqa: E402
+
+_parsed = urlparse(get_database_url().replace("mysql+pymysql://", "mysql://", 1))
+_admin_conn = pymysql.connect(
+    host=_parsed.hostname,
+    port=_parsed.port or 3306,
+    user=_parsed.username or "root",
+    password=_parsed.password or "",
+    charset="utf8mb4",
+)
+try:
+    with _admin_conn.cursor() as cur:
+        cur.execute(
+            f"CREATE DATABASE IF NOT EXISTS `{_parsed.path.lstrip('/').split('?')[0]}` "
+            "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
+    _admin_conn.commit()
+finally:
+    _admin_conn.close()
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -76,10 +103,3 @@ def editor_token(client):
 @pytest.fixture
 def editor_headers(editor_token):
     return {"Authorization": f"Bearer {editor_token}"}
-
-
-def pytest_sessionfinish(session, exitstatus):
-    try:
-        os.unlink(_tmp.name)
-    except OSError:
-        pass

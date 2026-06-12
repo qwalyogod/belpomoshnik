@@ -134,12 +134,12 @@ async function refreshTokens(): Promise<AuthTokens | null> {
   if (!current?.refresh_token) return null;
   const p = (async () => {
     try {
-      const body = new URLSearchParams();
-      body.set("refresh_token", current.refresh_token);
+      // Бэкенд ожидает JSON-body: Pydantic RefreshRequest.
+      // form-urlencoded здесь даст 422, и пользователь будет выкинут из сессии через 30 мин.
       const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ refresh_token: current.refresh_token }),
       });
       if (!res.ok) {
         saveStoredTokens(null);
@@ -658,12 +658,11 @@ export const apiClient = {
     saveStoredTokens(null);
     if (!current?.refresh_token) return;
     try {
-      const body = new URLSearchParams();
-      body.set("refresh_token", current.refresh_token);
+      // Бэкенд ожидает JSON (Pydantic RefreshRequest). form-urlencoded → 422.
       await fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ refresh_token: current.refresh_token }),
         ...options,
       });
     } catch {

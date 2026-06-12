@@ -479,6 +479,7 @@ def admin_update_law_update(
 @router.get("/audit-logs", response_model=list[schemas.AuditLogOut])
 def admin_list_audit_logs(
     limit: int = Query(default=200, ge=1, le=1000),
+    _: str = Depends(require_role("content_editor")),
     db: Session = Depends(get_db),
 ):
     """H9 — Список последних записей аудита (действия редакторов/админов)."""
@@ -507,10 +508,9 @@ def admin_flush_email_queue(db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/audit-logs", response_model=list[schemas.AuditLogOut])
-def admin_audit_logs(_: str = Depends(require_role("content_editor")), db: Session = Depends(get_db)):
-    """H9 — Журнал действий (последние записи аудита)."""
-    return [schemas.AuditLogOut.model_validate(x) for x in list_audit_logs(db)]
+# ---------------------------------------------------------------------------
+# H5 — Управление пользователями (только platform_admin)
+# ---------------------------------------------------------------------------
 
 
 @router.get("/users", response_model=list[schemas.UserAdminOut])

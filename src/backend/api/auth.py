@@ -188,12 +188,13 @@ def list_test_accounts(db: Session = Depends(get_db)):
     """
     Список тестовых аккаунтов для UI-переключателя ролей.
 
+    ВАЖНО: по умолчанию endpoint ВЫКЛЮЧЕН. Включается явно через
+    BELPOMOSHNIK_ENABLE_TEST_SWITCHER=true в .env (или для тестов).
     Возвращает только пользователей с is_test_account=True. Обычные
-    регистрации сюда не попадают. В production отключить через флаг
-    BELPOMOSHNIK_ENABLE_TEST_SWITCHER=false (см. settings).
+    регистрации сюда не попадают.
     """
     import os as _os
-    if _os.getenv("BELPOMOSHNIK_ENABLE_TEST_SWITCHER", "true").lower() != "true":
+    if _os.getenv("BELPOMOSHNIK_ENABLE_TEST_SWITCHER", "false").lower() != "true":
         return []
     users = db.scalars(
         select(User).where(User.is_test_account == True).order_by(User.id)  # noqa: E712

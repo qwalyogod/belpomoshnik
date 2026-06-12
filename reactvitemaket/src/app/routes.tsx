@@ -67,7 +67,10 @@ function AdminPageWrapper() {
   const { role } = useStore();
   const navigate = useNavigate();
 
-  if (role !== "admin") {
+  // Поддерживаем оба варианта role (новый "platform_admin" и legacy "admin"
+  // из старых quickAccounts в localStorage).
+  const isAdmin = role === "platform_admin" || role === "admin";
+  if (!isAdmin) {
     return (
       <div className="mx-auto w-full max-w-[720px] px-5 py-10">
         <div className="rounded-[28px] border border-black/[0.08] bg-white p-6 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04]">
@@ -101,7 +104,10 @@ function EditorPageWrapper() {
   const { role } = useStore();
   const navigate = useNavigate();
 
-  if (role !== "editor" && role !== "admin") {
+  // Поддерживаем оба варианта: "content_editor"/"platform_admin" (новые)
+  // и "editor"/"admin" (legacy, из старых quickAccounts в LS).
+  const isStaff = role === "content_editor" || role === "platform_admin" || role === "editor" || role === "admin";
+  if (!isStaff) {
     return (
       <div className="mx-auto w-full max-w-[720px] px-5 py-10">
         <div className="rounded-[28px] border border-black/[0.08] bg-white p-6 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.45)] dark:border-white/[0.08] dark:bg-white/[0.04]">

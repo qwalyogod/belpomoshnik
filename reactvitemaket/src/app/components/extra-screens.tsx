@@ -39,8 +39,20 @@ export function ScenarioDetail({
 }) {
   const { role, createSituation, favorites, toggleFavorite, situationByScenario, scenarioById, profile } = useStore();
   const isFav = favorites.includes(scenario.id);
-  const matchedInstitutions = matchInstitutions(scenario.institutions, profile);
-  const hasLocation = hasProfileLocation(profile);
+  // v1.2: ближайшие учреждения подбираем по ОСНОВНОМУ адресу пользователя
+  // (а не по legacy city/region). Нет основного — берём первый адрес, иначе
+  // fallback на city/region профиля.
+  const primaryAddress = profile.addresses?.find(a => a.isPrimary)
+    ?? profile.addresses?.[0]
+    ?? { city: profile.city, region: profile.region, district: profile.district };
+  const hasLocation = hasProfileLocation(primaryAddress);
+  const nearInstitutions = matchInstitutions(scenario.institutions, primaryAddress);
+  const nearIds = new Set(nearInstitutions.map(i => i.id));
+  // Ближайшие (matched) — первыми, затем остальные, чтобы список не был пустым.
+  const matchedInstitutions = [
+    ...nearInstitutions,
+    ...scenario.institutions.filter(i => !nearIds.has(i.id)).map(i => ({ ...i, matched: false as const })),
+  ];
   const existing = situationByScenario(scenario.id);
 
   const handleCreate = () => {
@@ -70,15 +82,15 @@ export function ScenarioDetail({
           <p className="mt-2 tracking-tight text-black/60 dark:text-white/60">{scenario.longDescription}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <button
             onClick={() => toggleFavorite(scenario.id)}
             aria-label="В избранное"
-            className={`grid h-11 w-11 place-items-center rounded-xl border ${isFav ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.08] bg-white text-black/55 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/55"}`}
+            className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border transition-colors ${isFav ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.08] bg-white text-black/55 hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/55"}`}
           >
-            <Star size={16} fill={isFav ? "currentColor" : "none"} />
+            <Star size={18} fill={isFav ? "currentColor" : "none"} />
           </button>
-          <PrimaryButton onClick={handleCreate} className="h-11 px-5">
+          <PrimaryButton onClick={handleCreate} className="flex-1 px-5 sm:flex-none">
             {existing ? "Открыть мою ситуацию" : "Создать мою ситуацию"}
           </PrimaryButton>
         </div>
@@ -91,7 +103,20 @@ export function ScenarioDetail({
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Этапы и задачи</div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Этапы и задачи</div>
+            {existing ? (
+              <button onClick={() => onOpenMySituation(existing.id)} className="inline-flex items-center gap-1 text-[13px] tracking-tight text-[#0056FF]">
+                Перейти к выполнению <ChevronRight size={14} />
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F7FB] px-3 py-1.5 text-[11px] tracking-tight text-black/55 dark:bg-white/[0.05] dark:text-white/55">
+                <Lock size={11} /> Отмечать можно после добавления в «Мои ситуации»
+              </span>
+            )}
+          </div>
+          {/* В режиме просмотра задачи — read-only (без чекбоксов). Отметка
+              выполнения доступна только в «Моей ситуации» после добавления. */}
           {scenario.stages.map((stage, idx) => (
             <Card key={stage.id} className="p-5">
               <div className="flex items-center gap-3">
@@ -103,8 +128,8 @@ export function ScenarioDetail({
                   const blocked = t.blockedBy && t.blockedBy.length > 0;
                   return (
                     <div key={t.id} className="flex items-start gap-3 rounded-2xl bg-[#F6F7FB] px-3.5 py-3 dark:bg-white/[0.03]">
-                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border border-black/15 bg-white text-black/30 dark:border-white/15 dark:bg-white/[0.05]">
-                        {blocked ? <Lock size={12} /> : null}
+                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center text-black/30 dark:text-white/30">
+                        {blocked ? <Lock size={12} /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
                       </span>
                       <div className="flex-1">
                         <div className="tracking-tight text-black dark:text-white">{t.title}</div>
@@ -162,11 +187,15 @@ export function ScenarioDetail({
           <Card className="p-5">
             <div className="flex items-center gap-2">
               <div className="tracking-tight text-black dark:text-white">Куда обращаться</div>
-              {hasLocation && <Pill tone="lavender">{profile.city || profile.region}</Pill>}
+              {hasLocation && <Pill tone="lavender">{primaryAddress.city || primaryAddress.region}</Pill>}
             </div>
-            {hasLocation && (
+            {hasLocation ? (
               <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">
-                Подобрано по вашему адресу из профиля.
+                Ближайшие — по вашему основному адресу из профиля.
+              </div>
+            ) : (
+              <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+                Укажите основной адрес в профиле, чтобы подобрать ближайшие учреждения.
               </div>
             )}
             <div className="mt-3 space-y-3">
@@ -480,34 +509,9 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
         </div>
       </Card>
 
-      {/* Карточка «Разработка» видна только в нативной Capacitor-оболочке. */}
-      {typeof window !== "undefined" &&
-        (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-          .Capacitor?.isNativePlatform?.() && (
-          <Card className="p-5">
-            <div className="flex items-center gap-2">
-              <Wrench size={15} className="text-[#0056FF]" />
-              <div className="tracking-tight text-black dark:text-white">Разработка</div>
-            </div>
-            <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">
-              Приложение получает интерфейс с компьютера разработчика. Если вы
-              переехали в другую сеть, укажите новый адрес.
-            </div>
-            <div className="mt-3">
-              <button
-                onClick={() => {
-                  const w = window as unknown as {
-                    belpomoshnik?: { resetServer?: () => void };
-                  };
-                  w.belpomoshnik?.resetServer?.();
-                }}
-                className="rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
-              >
-                Сменить сервер разработки
-              </button>
-            </div>
-          </Card>
-        )}
+      {/* Карточка «Разработка» скрыта: смена сервера теперь происходит в нативной
+          оболочке (ServerPicker на экране ввода адресов). В вебе менять сервер
+          не нужно — Vite dev запускается на :8560, бэк на :8060. */}
     </div>
   );
 }

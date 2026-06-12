@@ -1,0 +1,37 @@
+# Локальный dev-стенд Белпомощника: только MySQL.
+#
+# Запуск:
+#   docker compose up -d mysql
+#   # дождаться healthy
+#   PYTHONPATH=src python -m backend.scripts.init_db
+#   PYTHONPATH=src python -m backend.scripts.seed_db
+#
+# Данные MySQL сохраняются в named volume `belp_mysql_data`,
+# чтобы не терялись между перезапусками контейнера.
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: belp_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: belp_root
+      MYSQL_DATABASE: belpomoshnik
+      MYSQL_USER: belp
+      MYSQL_PASSWORD: belp_root
+    ports:
+      - "3306:3306"
+    volumes:
+      - belp_mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pbelp_root"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  belp_mysql_data:
+    name: belp_mysql_data

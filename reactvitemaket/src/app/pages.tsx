@@ -2,13 +2,14 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 import { ShellContext, MobileTopBar } from "./App";
 import { useStore, DOC_TYPE_LABEL, maskDocumentNumber } from "./data/store";
+import { cityForDistrict } from "./data/geo";
 import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
-  ArrowUpRight, ArrowRight, X, ScanLine, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks, RefreshCw
+  ArrowUpRight, ArrowRight, X, ScanLine, Eye, EyeOff, Baby, Award, BookOpen, Star, Trash2,
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks, RefreshCw, ImagePlus
 } from "lucide-react";
-import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker } from "./components/belp-ui";
+import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker, RegionSearch, DistrictSearch, CitySearch } from "./components/belp-ui";
 import { motion } from "motion/react";
 import {
   CategoryId, Problem, Scenario, UserDocument, ExtremistEntry, ExtremistCategory, ExtremistStatus, ExtremistContentType,
@@ -413,6 +414,9 @@ export function DocumentsPage() {
           <button onClick={onAddDoc} className="grid h-10 w-10 place-items-center rounded-full bg-[#0056FF] text-white shadow-sm"><Plus size={16} /></button>
         } />
         <div className="px-5">
+          <div className="mb-3 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+            <strong className="font-medium">Демо-режим.</strong> Сканы не шифруются. Не загружайте реальные паспортные данные.
+          </div>
           <div className="mb-3"><PageSearch value={query} onChange={setQuery} placeholder="Поиск по документам" /></div>
           <div className="flex gap-2 overflow-x-auto pb-1 mb-4 [&::-webkit-scrollbar]:hidden">
             <button onClick={() => setFilter("all")} className={`shrink-0 rounded-full px-3.5 py-2 text-[12px] tracking-tight ${filter==="all" ? "bg-[#0056FF] text-white" : "bg-white text-black/70 dark:bg-white/[0.06] dark:text-white/70"}`}>Все</button>
@@ -472,6 +476,10 @@ export function DocumentsPage() {
           <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Храните данные документов и следите за сроками</p>
         </div>
         <PrimaryButton onClick={onAddDoc} className="gap-2 px-5"><Plus size={16}/> Добавить документ</PrimaryButton>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+        <strong className="font-medium">Демо-режим.</strong> Сканы хранятся локально и не шифруются. Не загружайте реальные паспортные данные.
       </div>
 
       <div className="mt-6 max-w-[420px]"><PageSearch value={query} onChange={setQuery} placeholder="Поиск по документам" /></div>
@@ -603,13 +611,6 @@ export function WelcomePage() {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
 
-  const publicCategories = [
-    { id: "documents", label: "Документы", icon: <Shield size={18} />, to: "/catalog?category=documents&type=all" },
-    { id: "housing", label: "ЖКХ", icon: <Home size={18} />, to: "/catalog?category=housing&type=all" },
-    { id: "taxes", label: "Налоги", icon: <Wallet size={18} />, to: "/catalog?category=taxes&type=all" },
-    { id: "family", label: "Семья", icon: <Heart size={18} />, to: "/catalog?category=family&type=all" },
-  ];
-
   const publicSteps = [
     { title: "Найдите проблему", desc: "Для быстрых вопросов откройте карточку: что сделать сейчас, какие документы нужны и куда обращаться.", icon: <Search size={20} /> },
     { title: "Выберите жизненный сценарий", desc: "Если ситуация длительная, создайте личный план с этапами, задачами и сроками.", icon: <FileText size={20} /> },
@@ -623,22 +624,8 @@ export function WelcomePage() {
         <div className="absolute left-1/2 top-28 h-px w-[min(980px,90vw)] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#0056FF]/20 to-transparent" />
       </div>
 
-      <div className="relative mx-auto max-w-[1240px] px-5 pb-24 pt-6 sm:px-8 lg:pt-8">
-        <div className="flex items-center justify-between">
-          <button onClick={() => navigate("/welcome")} className="flex items-center gap-2">
-            <Logo size={30} />
-          </button>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/catalog")} className="hidden rounded-2xl px-4 py-2 text-[13px] tracking-tight text-black/60 transition-colors hover:bg-black/[0.04] dark:text-white/60 dark:hover:bg-white/[0.06] sm:block">
-              Каталог
-            </button>
-            <button onClick={() => navigate("/login")} className="rounded-2xl border border-black/[0.08] bg-white px-4 py-2 text-[13px] tracking-tight text-black/70 shadow-sm transition-colors hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/[0.08]">
-              Войти
-            </button>
-          </div>
-        </div>
-
-        <section className="grid gap-10 pb-12 pt-12 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:pb-20 lg:pt-20">
+      <div className="relative mx-auto max-w-[1240px] px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.5rem)] sm:px-8 lg:pt-[calc(env(safe-area-inset-top)+2rem)]">
+        <section className="grid gap-10 pb-12 pt-4 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:pb-20 lg:pt-10">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#0056FF]/15 bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:border-[#7FA8FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
               <Sparkles size={12} /> гражданский помощник · Беларусь
@@ -652,7 +639,7 @@ export function WelcomePage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <PrimaryButton onClick={() => navigate("/register")} className="px-7 sm:w-auto">Создать аккаунт</PrimaryButton>
-              <GhostButton onClick={() => navigate("/catalog")} className="px-7">Посмотреть каталог</GhostButton>
+              <GhostButton onClick={() => navigate("/login")} className="px-7">Войти</GhostButton>
             </div>
 
             <div className="mt-8 grid max-w-[680px] grid-cols-3 gap-3">
@@ -722,34 +709,22 @@ export function WelcomePage() {
         </section>
 
         <section className="mt-16">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div className="flex flex-col justify-between gap-4 rounded-[32px] border border-black/[0.06] bg-white p-6 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.5)] dark:border-white/[0.06] dark:bg-white/[0.04] sm:flex-row sm:items-end sm:p-8">
             <div>
-              <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Попробуйте</div>
-              <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Популярные направления</h2>
+              <div className="text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">Доступно без регистрации</div>
+              <h2 className="mt-1 tracking-tight text-black dark:text-white" style={{ fontSize: 30 }}>Каталог помощи и новости</h2>
               <p className="mt-2 max-w-[560px] text-[14px] leading-relaxed text-black/55 dark:text-white/55">
-                Начните без регистрации: посмотрите, какие карточки и сценарии уже доступны в каталоге.
+                Смотрите проблемы и жизненные сценарии в каталоге и читайте закон-апдейты простыми словами — всё открыто без аккаунта. Регистрация нужна только для личных планов, документов и напоминаний.
               </p>
             </div>
-            <button onClick={() => navigate("/catalog")} className="inline-flex items-center gap-2 rounded-2xl bg-[#0056FF] px-4 py-3 text-[13px] font-medium text-white shadow-[0_18px_42px_-22px_rgba(0,86,255,0.85)]">
-              Открыть каталог <ArrowRight size={15} />
-            </button>
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {publicCategories.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => navigate(c.to)}
-                className="flex items-center gap-3 rounded-3xl border border-black/[0.06] bg-white p-4 text-left shadow-[0_18px_50px_-38px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-0.5 hover:border-[#0056FF]/30 dark:border-white/[0.06] dark:bg-white/[0.04]"
-              >
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                  {c.icon}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium tracking-tight text-black dark:text-white">{c.label}</span>
-                  <span className="block text-[12px] tracking-tight text-black/45 dark:text-white/45">Проблемы и сценарии</span>
-                </span>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <button onClick={() => navigate("/catalog")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0056FF] px-5 py-3 text-[14px] font-medium text-white shadow-[0_18px_42px_-22px_rgba(0,86,255,0.85)]">
+                Открыть каталог <ArrowRight size={15} />
               </button>
-            ))}
+              <button onClick={() => navigate("/news")} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-5 py-3 text-[14px] font-medium tracking-tight text-black/70 transition-colors hover:bg-black/[0.03] dark:border-white/[0.1] dark:bg-white/[0.04] dark:text-white/70">
+                Новости
+              </button>
+            </div>
           </div>
         </section>
 
@@ -832,7 +807,7 @@ export function OnboardingPage() {
     <div className="relative min-h-[100dvh] overflow-hidden">
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0056FF]/15 blur-3xl" />
       <div className="pointer-events-none absolute -right-24 top-40 h-80 w-80 rounded-full bg-[#2277FF]/10 blur-3xl" />
-      <div className="relative mx-auto flex min-h-[100dvh] max-w-[1100px] flex-col justify-center px-5 py-12 sm:px-8">
+      <div className="relative mx-auto flex min-h-[100dvh] max-w-[1100px] flex-col justify-center px-5 pb-12 pt-[calc(env(safe-area-inset-top)+3rem)] sm:px-8">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="flex items-center justify-between">
             <Logo size={30} />
@@ -1216,10 +1191,18 @@ function NewsCard({
   isPreferred?: boolean;
 }) {
   const isLaw = item.kind === "law";
+  // Карточка должна быть «кликабельной» (навигация на детальную), но внутри неё
+  // живут настоящие <button> (звезда) и <a target="_blank"> (источник) — это
+  // interactive content, который запрещено вкладывать в <button>. Используем
+  // <div role="button"> + Enter/Space на keyDown для клавиатурной доступности.
+  const go = () => navigate(isLaw ? `/law-detail/${item.id}` : "/news");
   return (
-    <button
-      onClick={() => isLaw ? navigate(`/law-detail/${item.id}`) : navigate("/news")}
-      className="block w-full text-left"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={go}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }}
+      className="block w-full text-left cursor-pointer"
     >
       <Card className="flex h-full w-full flex-col p-5">
         <div className="flex items-center gap-2">
@@ -1264,7 +1247,7 @@ function NewsCard({
           </span>
         </div>
       </Card>
-    </button>
+    </div>
   );
 }
 
@@ -1458,8 +1441,27 @@ export function LawDetailPage() {
 
 export function NotificationsPage() {
   const { isMobile } = useContext(ShellContext);
-  const { notifications, markAllRead } = useStore();
+  const { notifications, markAllRead, markRead } = useStore();
   const navigate = useNavigate();
+
+  const targetFor = (it: { kind: string; link?: { page: string; id?: string | number } }): string => {
+    if (it.link?.page) {
+      if (it.link.id != null) return `/${it.link.page}/${it.link.id}`;
+      return `/${it.link.page}`;
+    }
+    switch (it.kind) {
+      case "task_due":         return "/situations";
+      case "step_done":        return "/situations";
+      case "document_expiring": return "/documents";
+      case "legal_update":     return "/news";
+      default:                  return "/news";
+    }
+  };
+
+  const onClickNotif = (it: { id: string; read: boolean; kind: string; link?: { page: string; id?: string | number } }) => {
+    if (!it.read) markRead(it.id);
+    navigate(targetFor(it));
+  };
 
   if (isMobile) {
     return (
@@ -1469,17 +1471,19 @@ export function NotificationsPage() {
         } />
         <div className="px-5 space-y-3">
           {notifications.map((it) => (
-            <Card key={it.id} className={`flex items-start gap-3 p-4 ${it.read ? 'opacity-60' : ''}`}>
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
-                (it.kind === "task_due" || it.kind === "document_expiring") ? "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" :
-                it.kind === "step_done" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" :
-                "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
-              }`}><Bell size={15} /></span>
-              <div className="flex-1">
-                <div className="tracking-tight text-black dark:text-white leading-tight mb-1">{it.title}</div>
-                <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{it.body}</div>
-              </div>
-            </Card>
+            <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
+              <Card className={`flex items-start gap-3 p-4 ${it.read ? 'opacity-60' : ''}`}>
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
+                  (it.kind === "task_due" || it.kind === "document_expiring") ? "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" :
+                  it.kind === "step_done" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" :
+                  "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+                }`}><Bell size={15} /></span>
+                <div className="flex-1">
+                  <div className="tracking-tight text-black dark:text-white leading-tight mb-1">{it.title}</div>
+                  <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{it.body}</div>
+                </div>
+              </Card>
+            </button>
           ))}
           {notifications.length === 0 && <div className="text-center mt-10 text-[13px] text-black/55 dark:text-white/55">Уведомлений пока нет.</div>}
         </div>
@@ -1499,18 +1503,20 @@ export function NotificationsPage() {
 
       <div className="mt-6 space-y-3">
         {notifications.map((it) => (
-          <Card key={it.id} className={`flex items-start gap-4 p-5 ${it.read ? 'opacity-60' : ''}`}>
-            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-              (it.kind === "task_due" || it.kind === "document_expiring") ? "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" :
-              it.kind === "step_done" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" :
-              "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
-            }`}><Bell size={18} /></span>
-            <div className="flex-1">
-              <div className="tracking-tight text-black dark:text-white font-medium">{it.title}</div>
-              <div className="mt-1 text-[13px] tracking-tight text-black/60 dark:text-white/60">{it.body}</div>
-              <div className="mt-3 text-[11px] text-black/40 dark:text-white/40">{it.createdAt}</div>
-            </div>
-          </Card>
+          <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
+            <Card className={`flex items-start gap-4 p-5 ${it.read ? 'opacity-60' : ''}`}>
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                (it.kind === "task_due" || it.kind === "document_expiring") ? "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300" :
+                it.kind === "step_done" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" :
+                "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+              }`}><Bell size={18} /></span>
+              <div className="flex-1">
+                <div className="tracking-tight text-black dark:text-white font-medium">{it.title}</div>
+                <div className="mt-1 text-[13px] tracking-tight text-black/60 dark:text-white/60">{it.body}</div>
+                <div className="mt-3 text-[11px] text-black/40 dark:text-white/40">{it.createdAt}</div>
+              </div>
+            </Card>
+          </button>
         ))}
       </div>
     </div>
@@ -1523,15 +1529,29 @@ export function NotificationsPage() {
    ============================================================ */
 
 function ProfileAvatar({ size = "lg" }: { size?: "lg" | "md" }) {
-  const { profile, currentUser, uploadAvatar } = useStore();
+  const { profile, currentUser, uploadAvatar, removeAvatar } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dim = size === "lg" ? "h-24 w-24" : "h-14 w-14";
   const fontSize = size === "lg" ? "text-3xl" : "text-lg";
   const canEdit = currentUser.role !== "guest";
   const avatar = profile?.avatarDataUrl;
-  const initial = (profile?.name?.trim?.()?.[0] || "П").toUpperCase();
+  // Если аватарки нет — показываем первую букву имени на синем фоне.
+  // Fallback: имя → первая буква email → нейтральный «П».
+  const initial = (() => {
+    const trimmed = (profile?.name ?? currentUser.name ?? "").trim();
+    if (trimmed) return trimmed[0]!.toUpperCase();
+    const mail = (profile?.email ?? currentUser.email ?? "").trim();
+    if (mail) {
+      const at = mail.indexOf("@");
+      const head = (at > 0 ? mail.slice(0, at) : mail).trim();
+      if (head) return head[0]!.toUpperCase();
+    }
+    return "П";
+  })();
 
   const onFile = (file?: File | null) => {
     if (!file) return;
@@ -1541,31 +1561,73 @@ function ProfileAvatar({ size = "lg" }: { size?: "lg" | "md" }) {
     setPendingFile(file); // открываем редактор-кропер
   };
 
+  const handleRemove = async () => {
+    setMenuOpen(false);
+    setError(null);
+    setBusy(true);
+    try { await removeAvatar(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Не удалось удалить фото."); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <div className={`relative shrink-0 ${dim} rounded-full overflow-hidden bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white ${fontSize} font-medium`}>
-        {avatar
-          ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
-          : <span>{initial}</span>}
-        {canEdit && (
-          <>
+      {/* relative-обёртка — якорь для контекстного меню (вне overflow-hidden круга) */}
+      <div className="relative">
+        <div className={`relative shrink-0 ${dim} rounded-full overflow-hidden bg-gradient-to-br from-[#0056FF] to-[#2277FF] flex items-center justify-center text-white ${fontSize} font-medium`}>
+          {avatar
+            ? <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
+            : <span>{initial}</span>}
+          {canEdit && (
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => setMenuOpen(v => !v)}
               className="absolute inset-0 grid place-items-center bg-black/35 opacity-0 transition-opacity hover:opacity-100"
               title="Изменить фото"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
             >
               <Camera size={size === "lg" ? 22 : 16} className="text-white" />
             </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => { onFile(e.target.files?.[0] || null); e.target.value = ""; }}
-            />
+          )}
+        </div>
+
+        {canEdit && (
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => { onFile(e.target.files?.[0] || null); e.target.value = ""; }}
+          />
+        )}
+
+        {/* Контекстное меню: выбрать новое фото / удалить текущее */}
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
+            <div role="menu" className="absolute left-0 top-[calc(100%+8px)] z-[95] w-52 rounded-2xl border border-black/[0.08] bg-white p-1.5 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0F1117]">
+              <button
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); fileRef.current?.click(); }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14px] tracking-tight text-black transition-colors hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.05]"
+              >
+                <ImagePlus size={16} className="text-black/45 dark:text-white/45" /> Выбрать новое фото
+              </button>
+              {avatar && (
+                <button
+                  role="menuitem"
+                  onClick={handleRemove}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14px] tracking-tight text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                >
+                  <Trash2 size={16} /> Удалить фото
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
+
+      {busy && <span className="text-[11px] text-black/40 dark:text-white/40">Сохранение…</span>}
       {error && <span className="max-w-[180px] text-center text-[11px] leading-tight text-red-500">{error}</span>}
 
       {pendingFile && (
@@ -1687,16 +1749,38 @@ function ProfileNotes() {
 }
 
 function ProfileAddresses() {
-  const { profile, addAddress, updateAddress, removeAddress } = useStore();
+  const { profile, currentUser, addAddress, updateAddress, removeAddress } = useStore();
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ label: "", region: "", district: "", city: "", street: "" });
+  const seeded = useRef(false);
   const list = profile?.addresses ?? [];
   const canAdd = list.length < 5;
+
+  // v1.3: авто-seed основного адреса из `currentUser.region/city/district`,
+  // если addresses[] пуст и в currentUser есть данные. Делаем только один раз.
+  useEffect(() => {
+    if (seeded.current) return;
+    if (list.length > 0) { seeded.current = true; return; }
+    const region = currentUser.region;
+    const city = currentUser.city;
+    const district = currentUser.district;
+    if (region || city) {
+      seeded.current = true;
+      addAddress({
+        label: "Основной",
+        region: region || "",
+        district: district || "",
+        city: city || "",
+        street: "",
+        isPrimary: true,
+      });
+    }
+  }, [currentUser.region, currentUser.city, currentUser.district, list.length, addAddress]);
 
   const reset = () => { setForm({ label: "", region: "", district: "", city: "", street: "" }); };
 
   const submit = () => {
-    if (!form.label.trim() && !form.street.trim() && !form.city.trim()) return;
+    if (!form.region && !form.city) return;
     addAddress({ ...form, isPrimary: list.length === 0 });
     reset();
     setAdding(false);
@@ -1721,9 +1805,27 @@ function ProfileAddresses() {
         <div className="mb-3 rounded-2xl border border-black/[0.06] bg-black/[0.02] p-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <input value={form.label} onChange={(e) => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Метка (Дом, Работа, Дача)" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
-            <input value={form.region} onChange={(e) => setForm(f => ({ ...f, region: e.target.value }))} placeholder="Область / регион" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
-            <input value={form.district} onChange={(e) => setForm(f => ({ ...f, district: e.target.value }))} placeholder="Район" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
-            <input value={form.city} onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Город / населённый пункт" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
+            <div>
+              <RegionSearch
+                value={form.region}
+                onChange={(next) => setForm(f => ({ ...f, region: next, district: "", city: "" }))}
+              />
+            </div>
+            <div>
+              <DistrictSearch
+                region={form.region}
+                value={form.district}
+                onChange={(next) => setForm(f => ({ ...f, district: next, city: cityForDistrict(f.region, next) }))}
+              />
+            </div>
+            <div>
+              <CitySearch
+                region={form.region}
+                district={form.district}
+                value={form.city}
+                onChange={(next) => setForm(f => ({ ...f, city: next }))}
+              />
+            </div>
             <input value={form.street} onChange={(e) => setForm(f => ({ ...f, street: e.target.value }))} placeholder="Улица, дом, квартира" className="rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] tracking-tight sm:col-span-2 dark:border-white/10 dark:bg-white/[0.04] dark:text-white" />
           </div>
           <div className="mt-2 flex gap-2">
@@ -1773,36 +1875,60 @@ function ProfileSourcePreferences() {
   // так звёздочки в ленте и птички в профиле всегда синхронизированы.
   const [preferredSourceIds, togglePreferredSource] = usePreferredSourceIds();
   const selected = new Set(preferredSourceIds);
+  // По умолчанию свёрнуто — список из 17 источников занимает много места
+  // в профиле. Раскрывается по тапу на заголовок.
+  const [expanded, setExpanded] = useState(false);
   return (
     <Card className="p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <ListChecks size={15} className="text-[#0056FF]" />
-        <div className="font-medium text-[15px] text-black dark:text-white">Источники новостей</div>
-        <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{selected.size} выбрано</span>
-      </div>
-      <p className="text-[12px] tracking-tight text-black/55 dark:text-white/55 mb-3">Выбранные источники будут показываться выше в ленте «Новости».</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {OFFICIAL_SOURCES.map((s) => {
-          const on = selected.has(s.id);
-          return (
-            <label
-              key={s.id}
-              className={`flex items-start gap-2 rounded-2xl border p-2.5 cursor-pointer transition-colors ${on ? "border-[#0056FF] bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "border-black/[0.05] hover:border-black/15 dark:border-white/[0.06] dark:hover:border-white/15"}`}
-            >
-              <input
-                type="checkbox"
-                checked={on}
-                onChange={() => togglePreferredSource(s.id)}
-                className="mt-1 h-4 w-4 accent-[#0056FF]"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] tracking-tight text-black dark:text-white truncate">{s.title}</div>
-                <div className="text-[11px] tracking-tight text-black/50 dark:text-white/50 truncate">{s.url.replace(/^https?:\/\//, "")}</div>
-              </div>
-            </label>
-          );
-        })}
-      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="flex w-full items-center gap-2 text-left"
+        aria-expanded={expanded}
+        aria-controls="profile-source-preferences-list"
+      >
+        <ListChecks size={15} className="text-[#0056FF] shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-[15px] text-black dark:text-white">Источники новостей</span>
+            <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">{selected.size} выбрано</span>
+          </div>
+          {!expanded && (
+            <p className="text-[12px] tracking-tight text-black/55 dark:text-white/55 mt-1">Нажмите, чтобы выбрать предпочтительные источники для ленты «Новости».</p>
+          )}
+        </div>
+        <ChevronRight
+          size={16}
+          className={`shrink-0 text-black/40 dark:text-white/40 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+        />
+      </button>
+      {expanded && (
+        <>
+          <p className="text-[12px] tracking-tight text-black/55 dark:text-white/55 mt-3 mb-3">Выбранные источники будут показываться выше в ленте «Новости».</p>
+          <div id="profile-source-preferences-list" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {OFFICIAL_SOURCES.map((s) => {
+              const on = selected.has(s.id);
+              return (
+                <label
+                  key={s.id}
+                  className={`flex items-start gap-2 rounded-2xl border p-2.5 cursor-pointer transition-colors ${on ? "border-[#0056FF] bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "border-black/[0.05] hover:border-black/15 dark:border-white/[0.06] dark:hover:border-white/15"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => togglePreferredSource(s.id)}
+                    className="mt-1 h-4 w-4 accent-[#0056FF]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] tracking-tight text-black dark:text-white truncate">{s.title}</div>
+                    <div className="text-[11px] tracking-tight text-black/50 dark:text-white/50 truncate">{s.url.replace(/^https?:\/\//, "")}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
     </Card>
   );
 }
@@ -1813,7 +1939,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
   const canEdit = currentUser.role !== "guest";
-  const isStaff = currentUser.role === "admin" || currentUser.role === "editor";
+  const isStaff = currentUser.role === "platform_admin" || currentUser.role === "content_editor" || currentUser.role === "admin" || currentUser.role === "editor";
 
   if (isMobile) {
     return (
@@ -1862,7 +1988,7 @@ export function ProfilePage() {
             </button>
             {isStaff && (
               <button onClick={openAdmin} className="flex w-full items-center justify-between p-3 text-left border-t border-black/5 dark:border-white/5">
-                <span className="text-[14px] text-[#0056FF]">{currentUser.role === "editor" ? "Редактор контента" : "Админ-панель"}</span>
+                <span className="text-[14px] text-[#0056FF]">{currentUser.role === "content_editor" || currentUser.role === "editor" ? "Редактор контента" : "Админ-панель"}</span>
                 <ChevronRight size={16} className="text-[#0056FF]/50" />
               </button>
             )}
@@ -1952,7 +2078,7 @@ export function ProblemDetailPage() {
   const { isMobile } = useContext(ShellContext);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { problemById } = useStore();
+  const { problemById, toggleFavorite, favorites, isAuthenticated } = useStore();
   const item = problemById(params?.id || "");
   const [checks, setChecks] = useState<Record<string, boolean>>({});
 
@@ -1961,6 +2087,15 @@ export function ProblemDetailPage() {
   const total = item.steps.length;
   const done = item.steps.filter(s => checks[s.id]).length;
   const progress = total ? Math.round((done / total) * 100) : 0;
+  const isFav = favorites.includes(item.id);
+  const onCreatePlan = () => {
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=/problems/${item.id}&reason=create-plan`);
+    } else {
+      navigate("/catalog?from=" + item.id);
+    }
+  };
+  const onToggleFav = () => toggleFavorite(item.id);
 
   return (
     <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"} space-y-6`}>
@@ -2048,10 +2183,48 @@ export function ProblemDetailPage() {
         </Card>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <PrimaryButton className="flex-1 text-[14px]">Создать персональный план</PrimaryButton>
-          <GhostButton className="flex-1 text-[14px]">Сохранить в избранное</GhostButton>
+          <PrimaryButton onClick={onCreatePlan} className="flex-1 text-[14px]">
+            Создать персональный план
+          </PrimaryButton>
+          <GhostButton onClick={onToggleFav} className="flex-1 text-[14px]">
+            {isFav ? "★ В избранном" : "Сохранить в избранное"}
+          </GhostButton>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2 text-[11px] text-black/45 dark:text-white/45">
+          <Pill tone="warn">Черновик</Pill>
+          <span>Источник: открытые данные РБ. Перед подачей документов сверяйтесь с актуальными редакциями НПА.</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Поле пароля с кнопкой показать/скрыть (глазик). Используется на входе и
+// регистрации, чтобы пользователь мог проверить введённый пароль.
+function PasswordInput({
+  value, onChange, placeholder, onKeyDown,
+}: { value: string; onChange: (v: string) => void; placeholder: string; onKeyDown?: (e: React.KeyboardEvent) => void }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 pr-12 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? "Скрыть пароль" : "Показать пароль"}
+        className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-black/40 transition-colors hover:text-black/70 dark:text-white/40 dark:hover:text-white/70"
+      >
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
     </div>
   );
 }
@@ -2090,7 +2263,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative mx-auto grid min-h-[calc(100dvh-150px)] w-full max-w-[1120px] items-center overflow-hidden rounded-[34px] bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6 lg:p-6">
+    <div className="relative mx-auto grid min-h-[100dvh] w-full max-w-[1120px] items-center overflow-hidden bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:min-h-[calc(100dvh-150px)] lg:rounded-[34px] lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6 lg:p-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,86,255,0.14),transparent_30%),radial-gradient(circle_at_88%_80%,rgba(34,119,255,0.10),transparent_32%)]" />
       <AuthAside mode="login" />
       <div className="relative z-10 flex justify-center">
@@ -2113,7 +2286,7 @@ export function LoginPage() {
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
           </div>
           <div>
-            <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
+            <PasswordInput placeholder="Пароль" value={password} onChange={setPassword} onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }} />
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="remember" className="rounded text-[#0056FF] w-4 h-4 cursor-pointer" />
@@ -2168,10 +2341,10 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="relative mx-auto grid min-h-[calc(100dvh-150px)] w-full max-w-[1120px] items-center overflow-hidden rounded-[34px] bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:p-6">
+    <div className="relative mx-auto grid min-h-[100dvh] w-full max-w-[1120px] items-center overflow-hidden bg-[#F6F7FB] p-4 dark:bg-[#0B0D13] lg:min-h-[calc(100dvh-150px)] lg:rounded-[34px] lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-6 lg:p-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(0,86,255,0.14),transparent_32%),radial-gradient(circle_at_86%_76%,rgba(34,119,255,0.10),transparent_34%)]" />
       <AuthAside mode="register" />
-      <div className="relative z-10 flex max-h-[calc(100dvh-190px)] justify-center overflow-y-auto py-2 [&::-webkit-scrollbar]:hidden">
+      <div className="relative z-10 flex justify-center py-2 lg:max-h-[calc(100dvh-190px)] lg:overflow-y-auto [&::-webkit-scrollbar]:hidden">
         <Card className="h-fit w-full max-w-[440px] border-0 p-6 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.55)] sm:p-8">
           <div className="mb-6 flex justify-center">
             <div className="flex items-center gap-2">
@@ -2189,8 +2362,8 @@ export function RegisterPage() {
           <div className="space-y-4">
             <input type="text" placeholder="Имя и фамилия" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
-            <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
-            <input type="password" placeholder="Повтор пароля" value={repeat} onChange={(e) => setRepeat(e.target.value)} className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-3.5 text-[14px] outline-none transition-all focus:border-[#0056FF] focus:bg-white dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:border-[#0056FF] dark:focus:bg-[#0F1117]" />
+            <PasswordInput placeholder="Пароль" value={password} onChange={setPassword} />
+            <PasswordInput placeholder="Повтор пароля" value={repeat} onChange={setRepeat} />
             <LocationPicker value={loc} onChange={setLoc} className="!grid-cols-1" />
             <p className="text-[11px] tracking-tight text-black/40 dark:text-white/40">Регион и город нужны, чтобы подсказывать ближайшие учреждения.</p>
             {error && <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700 dark:bg-red-500/10 dark:text-red-200">{error}</div>}
@@ -3104,7 +3277,7 @@ export function ExtremistPage() {
   const { isMobile } = useContext(ShellContext);
   const { role, uploadMedia, authSession } = useStore();
   const navigate = useNavigate();
-  const canEdit = role === "editor" || role === "admin";
+  const canEdit = role === "editor" || role === "admin" || role === "content_editor" || role === "platform_admin";
   const coverInputRef = useRef<HTMLInputElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
@@ -3645,7 +3818,7 @@ export function ExtremistDetailPage() {
   const { role, authSession } = useStore();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const canEdit = role === "editor" || role === "admin";
+  const canEdit = role === "editor" || role === "admin" || role === "content_editor" || role === "platform_admin";
   const [entry, setEntry] = useState<ExtremistEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

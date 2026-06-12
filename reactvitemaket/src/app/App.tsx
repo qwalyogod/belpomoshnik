@@ -8,8 +8,8 @@ import {
   Plus, ScanLine, EyeOff, Building2, Clock, Bookmark, ArrowUpRight, Settings,
   Users, BookOpen, LayoutGrid, Baby, ChevronLeft, X, LogOut, UserPlus, Newspaper,
 } from "lucide-react";
-import { Logo, Pill, Card, PrimaryButton, GhostButton } from "./components/belp-ui";
-import { AppStoreProvider, useStore } from "./data/store";
+import { Logo, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "./components/belp-ui";
+import { AppStoreProvider, useStore, readAvatarForUser } from "./data/store";
 import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
 import { AdminWindowMount } from "./components/admin-window";
@@ -44,6 +44,17 @@ const AUTH_ROUTES = new Set<string>(["/login", "/register", "/welcome"]);
 
 /* Hidden nav: админ/редактор — это служебные разделы, в таб-баре не нужны. */
 const NAV_HIDDEN_ROUTES = new Set<string>(["/admin", "/editor", "/extremist"]);
+
+/** Роль имеет доступ к служебным разделам (редактор/админ).
+ *  Поддерживаем оба варианта значений: новые ("content_editor"/"platform_admin")
+ *  и legacy ("editor"/"admin") из старых quickAccounts в localStorage. */
+function isStaffRole(role: string | undefined | null): boolean {
+  return role === "content_editor" || role === "platform_admin" || role === "editor" || role === "admin";
+}
+
+function isAdminRole(role: string | undefined | null): boolean {
+  return role === "platform_admin" || role === "admin";
+}
 
 function isTopLevelRoute(pathname: string): boolean {
   // Служебные / auth / скрытые разделы — не top-level.
@@ -188,7 +199,7 @@ export function MobileTopBar(_props: { title: string; onBack?: () => void; right
    лого+имя «Белпомощник», на остальных — back+title раздела, всегда —
    колокольчик справа. Title берётся из pathname (fallback — сегмент URL). */
 const MOBILE_TITLES: Record<string, string> = {
-  "/": "Главная",
+  "/": "Белпомощник",
   "/onboarding": "Добро пожаловать",
   "/welcome": "Добро пожаловать",
   "/catalog": "Каталог помощи",
@@ -224,8 +235,9 @@ function mobileTitleFromPath(pathname: string): string {
 export function MobileBrandBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { role } = useStore();
   // Top-level (главные разделы: /, /news, /profile, /catalog...) — НЕ back,
-  // показываем логотип/название. Detail (/scenarios/:id, /situations/:id,
+  // показываем логотип. Detail (/scenarios/:id, /situations/:id,
   // /problem-detail/:id, /law-detail/:id) — back-кнопка.
   const isTopLevel = isTopLevelRoute(location.pathname);
   const title = mobileTitleFromPath(location.pathname);
@@ -241,17 +253,17 @@ export function MobileBrandBar() {
         ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
       }}
     >
-      {/* Левая зона: 40px */}
-      <div className="flex w-10 shrink-0 items-center">
-        {isTopLevel ? (
-          <button
-            onClick={() => navigate("/")}
-            aria-label="На главную"
-            className="flex items-center gap-2"
-          >
-            <Logo size={26} />
-          </button>
-        ) : (
+      {/* Левая зона: back (на detail) ИЛИ логотип (на top-level) */}
+      {isTopLevel ? (
+        <button
+          onClick={() => navigate("/")}
+          aria-label="На главную"
+          className="shrink-0"
+        >
+          <Logo size={26} />
+        </button>
+      ) : (
+        <div className="flex w-10 shrink-0 items-center">
           <button
             onClick={() => navigate(-1)}
             aria-label="Назад"
@@ -259,31 +271,45 @@ export function MobileBrandBar() {
           >
             <ChevronLeft size={18} className="text-black dark:text-white" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Центр: title (или лого+имя на top-level) */}
+      {/* Центр: title на всех страницах. На главной — "Белпомощник",
+          на остальных — название раздела (Каталог помощи, Профиль и т.д.). */}
       <div className="min-w-0 flex-1 text-center">
-        {isTopLevel && location.pathname === "/" ? (
-          <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
-            Белпомощник
-          </div>
-        ) : (
-          <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
-            {title}
-          </div>
-        )}
+        <div className="truncate text-[15px] font-semibold tracking-tight text-black dark:text-white">
+          {title}
+        </div>
       </div>
 
-      {/* Правая зона: bell 40px */}
-      <div className="flex w-10 shrink-0 items-center justify-end">
-        <button
-          onClick={() => navigate("/notifications")}
-          aria-label="Уведомления"
-          className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
-        >
-          <Bell size={17} className="text-black dark:text-white" />
-        </button>
+      {/* Правая зона: гость видит «Войти» (настройки/уведомления ему недоступны),
+          остальные — settings + bell. */}
+      <div className="flex shrink-0 items-center justify-end gap-1.5">
+        {role === "guest" ? (
+          <button
+            onClick={() => navigate("/login")}
+            className="grid h-10 place-items-center rounded-full bg-[#0056FF] px-4 text-[13px] font-medium tracking-tight text-white shadow-sm"
+          >
+            Войти
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => navigate("/settings")}
+              aria-label="Настройки"
+              className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
+            >
+              <Settings size={17} className="text-black dark:text-white" />
+            </button>
+            <button
+              onClick={() => navigate("/notifications")}
+              aria-label="Уведомления"
+              className="relative grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"
+            >
+              <Bell size={17} className="text-black dark:text-white" />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -294,7 +320,7 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
   const navigate = useNavigate();
   const { currentUser, quickAccounts, signInAs, signOut } = useStore();
   if (!open) return null;
-  const accounts = [{ id: "guest", name: "Гость", email: "", role: "guest" }, ...quickAccounts];
+  const accounts = [{ id: "guest", name: "Гость", email: "", role: "guest" as const }, ...quickAccounts];
   const choose = (id: string) => { signInAs(id); onClose(); navigate("/"); };
   return (
     <div className="fixed inset-0 z-[100] flex items-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -308,10 +334,9 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
         <div className="space-y-1">
           {accounts.map((a) => {
             const activeAcc = a.id === "guest" ? currentUser.role === "guest" : currentUser.id === a.id;
-            const initial = a.role === "guest" ? "Г" : (a.name || "П").slice(0, 1).toUpperCase();
             return (
               <button key={a.id} onClick={() => choose(a.id)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${activeAcc ? "bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"}`}>
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#0056FF]/10 text-[14px] font-medium text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">{initial}</span>
+                <UserAvatarCircle src={a.id === "guest" ? undefined : readAvatarForUser(a.id)} name={a.name} email={a.email} size={40} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] tracking-tight text-black dark:text-white">{a.name}</span>
                   <span className="block truncate text-[12px] tracking-tight text-black/45 dark:text-white/45">{roleTitle(a.role)}</span>
@@ -333,6 +358,8 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
 
 function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
   const { openAssistant } = React.useContext(ShellContext);
+  const { role } = useStore();
+  const isGuest = role === "guest";
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const holdTimer = useRef<number | undefined>(undefined);
   const held = useRef(false);
@@ -360,10 +387,17 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
     { id: "home", i: <Home size={20} />, n: "Главная" },
     { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
   ];
-  const right: { id: Page; i: React.ReactNode; n: string }[] = [
-    { id: "news", i: <Newspaper size={20} />, n: "Новости" },
-    { id: "profile", i: <User size={20} />, n: "Профиль" },
-  ];
+  // Гость не ведёт «Мои ситуации» (нужен аккаунт) — ему показываем «Новости»;
+  // залогиненному — быстрый доступ к ситуациям.
+  const right: { id: Page; i: React.ReactNode; n: string }[] = isGuest
+    ? [
+        { id: "news", i: <Newspaper size={20} />, n: "Новости" },
+        { id: "profile", i: <User size={20} />, n: "Профиль" },
+      ]
+    : [
+        { id: "situations", i: <FileText size={20} />, n: "Ситуации" },
+        { id: "profile", i: <User size={20} />, n: "Профиль" },
+      ];
   return (
     <>
       {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
@@ -967,15 +1001,15 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
 
 function HeaderUserMenu() {
   const navigate = useNavigate();
-  const { currentUser, quickAccounts, signInAs, signOut, resetSession } = useStore();
+  const { currentUser, profile, quickAccounts, signInAs, signOut, resetSession } = useStore();
   const [open, setOpen] = useState(false);
-  const initial = currentUser.role === "guest" ? "Г" : (currentUser.name || "П").slice(0, 1).toUpperCase();
+  const isGuest = currentUser.role === "guest";
   const menuAccounts = [{ id: "guest", name: "Гость", email: "", role: "guest" }, ...quickAccounts];
   const switchTo = (id: string) => { signInAs(id); setOpen(false); navigate("/"); };
   return (
     <div className="relative">
       <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 rounded-full bg-[#F6F7FB] py-1 pl-1 pr-2.5 transition-colors hover:bg-black/[0.05] dark:bg-white/[0.05] dark:hover:bg-white/[0.08]">
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#0056FF] to-[#2277FF] text-[13px] font-medium text-white">{initial}</span>
+        <UserAvatarCircle src={isGuest ? undefined : profile?.avatarDataUrl} name={isGuest ? "Гость" : currentUser.name} size={36} />
         <ChevronRight size={14} className={`text-black/35 transition-transform dark:text-white/35 ${open ? "rotate-90" : ""}`} />
       </button>
       {open && (
@@ -988,7 +1022,7 @@ function HeaderUserMenu() {
                 const isActive = account.id === currentUser.id || (account.id === "guest" && currentUser.role === "guest");
                 return (
                   <button key={account.id} onClick={() => switchTo(account.id)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${isActive ? "bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"}`}>
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F6F7FB] text-[13px] font-medium text-[#0056FF] dark:bg-white/[0.06] dark:text-[#7FA8FF]">{(account.name || "П").slice(0, 1).toUpperCase()}</span>
+                    <UserAvatarCircle src={account.id === "guest" ? undefined : readAvatarForUser(account.id)} name={account.name} email={account.email} size={36} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[14px] tracking-tight text-black dark:text-white">{account.name}</span>
                       <span className="block truncate text-[12px] tracking-tight text-black/50 dark:text-white/50">{roleTitle(account.role)}</span>
@@ -1049,8 +1083,8 @@ function DesktopHeaderShell() {
               </button>
             );
           })}
-          {(role === "admin" || role === "editor") && (
-            <button onClick={openAdmin} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"><Users size={16} />{role === "editor" ? "Редактор" : "Админ"}</button>
+          {isStaffRole(role) && (
+            <button onClick={openAdmin} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"><Users size={16} />{isAdminRole(role) ? "Админ" : "Редактор"}</button>
           )}
         </nav>
         {/* v0.6: на desktop поиск inline в header — input + dropdown с подсказками.
@@ -1082,7 +1116,7 @@ function DesktopHeaderShell() {
 }
 
 function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
-  const { currentUser, role, quickAccounts, signInAs, signOut, resetSession } = useStore();
+  const { currentUser, profile, role, quickAccounts, signInAs, signOut, resetSession } = useStore();
   const { openAdmin } = React.useContext(ShellContext);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1103,7 +1137,7 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       <Logo size={26} />
       <div className="relative mt-6">
         <button onClick={() => setMenuOpen(v => !v)} className="flex w-full items-center gap-3 rounded-2xl bg-[#F6F7FB] px-3 py-2 text-left transition-colors hover:bg-black/[0.05] dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
-          <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-[#0056FF] to-[#2277FF]" />
+          <UserAvatarCircle src={currentUser.role === "guest" ? undefined : profile?.avatarDataUrl} name={currentUser.role === "guest" ? "Гость" : currentUser.name} size={32} />
           <div className="min-w-0 flex-1">
             <div className="truncate tracking-tight text-black dark:text-white">{currentUser.role === "guest" ? "Гость" : currentUser.name}</div>
             <div className="truncate text-[11px] tracking-tight text-black/50 dark:text-white/50">{roleTitle(currentUser.role)}{currentUser.city ? ` · ${currentUser.city}` : ""}</div>
@@ -1153,7 +1187,7 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>
         {item("finance", <Wallet size={16} />, "ЖКХ и налоги")}
         {item("profile", <User size={16} />, "Профиль")}
-        {(role === "admin" || role === "editor") && (
+        {isStaffRole(role) && (
           <button onClick={openAdmin} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]">
             <span className="grid h-5 w-5 place-items-center"><Users size={16} /></span>
             <span className="flex-1 text-[14px]">{role === "editor" ? "Редактор контента" : "Админ-панель"}</span>
@@ -1173,6 +1207,8 @@ function roleTitle(role: string) {
     citizen: "Гражданин",
     editor: "Редактор",
     admin: "Администратор",
+    content_editor: "Редактор контента",
+    platform_admin: "Администратор платформы",
   } as Record<string, string>)[role] ?? role;
 }
 
@@ -1360,9 +1396,7 @@ function UserSwitcher() {
                   onClick={() => choose(account.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${active ? "bg-[#E3E7FC] dark:bg-[#0E1A3A]" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"}`}
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F6F7FB] text-[13px] font-medium text-[#0056FF] dark:bg-white/[0.06] dark:text-[#7FA8FF]">
-                    {(account.name || "П").slice(0, 1).toUpperCase()}
-                  </span>
+                  <UserAvatarCircle src={account.id === "guest" ? undefined : readAvatarForUser(account.id)} name={account.name} email={account.email} size={40} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] tracking-tight text-black dark:text-white">{account.name}</span>
                     <span className="block truncate text-[12px] tracking-tight text-black/50 dark:text-white/50">{roleTitle(account.role)} · {account.email}</span>
@@ -1996,13 +2030,14 @@ function AssistantFab() {
   );
 }
 
-// First-run welcome: send brand-new guests to /onboarding once.
+// Гость на '/' -> /welcome (лендинг). Остальное гость смотрит read-only;
+// действия, требующие аккаунт (создать ситуацию, сохранить, добавить документ),
+// гейтятся guest-guard модалкой через requireAccount/protectedGuard.
+// /onboarding оставлен для залогиненных (первый запуск после регистрации).
 function OnboardingGate() {
   const { role } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
-  // v1.0: гость на '/' -> /welcome (лендинг). /onboarding оставлен для
-  // залогиненых (первый запуск после регистрации -> 4 шага -> '/').
   useEffect(() => {
     if (role !== "guest") return;
     if (location.pathname === "/") navigate("/welcome", { replace: true });

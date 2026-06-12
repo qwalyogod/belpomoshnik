@@ -55,20 +55,19 @@ function isCapacitorShell(): boolean {
 }
 
 export function ServerPicker() {
-  // Не рендерить в браузере / Vite dev
-  if (typeof window === "undefined" || !isCapacitorShell()) return null;
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // Хуки вызываются ВСЕГДА в одном порядке, чтобы React-правила не нарушались.
+  // Решение о рендере принимается ПОСЛЕ хуков на основе их результата.
   const [open, setOpen] = useState(false);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [serverValue, setServerValue] = useState("");
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [apiValue, setApiValue] = useState("");
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    // Не рендерить в браузере / Vite dev
+    if (typeof window === "undefined" || !isCapacitorShell()) {
+      setOpen(false);
+      return;
+    }
     // Уже на внешнем сервере (http/https) — пикер не нужен
     if (window.location.protocol !== "capacitor:") {
       setOpen(false);

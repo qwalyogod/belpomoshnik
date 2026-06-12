@@ -5,13 +5,15 @@
       "name": "belpomoshnik-react",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["-C", "reactvitemaket", "dev"],
-      "port": 8560
+      "port": 8560,
+      "autoPort": false
     },
     {
       "name": "belpomoshnik-api",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": ["-m", "uvicorn", "--app-dir", "src", "backend.app:app", "--host", "127.0.0.1", "--port", "8060"],
-      "port": 8060
+      "port": 8060,
+      "autoPort": false
     },
     {
       "name": "belpomoshnik-web",

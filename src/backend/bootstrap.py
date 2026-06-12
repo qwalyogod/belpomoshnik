@@ -1,14 +1,13 @@
 """
-DB-agnostic bootstrap — работает на SQLite (dev) и PostgreSQL (production).
+Bootstrap MySQL-схемы: создаёт таблицы, роли, тест-аккаунты.
 
-В отличие от scripts/migrate.py (raw sqlite3 + .sql, только SQLite),
-здесь схема создаётся через SQLAlchemy Base.metadata.create_all, поэтому
-DDL генерируется под нужный диалект автоматически.
+Схема создаётся через SQLAlchemy Base.metadata.create_all — DDL генерируется
+под MySQL-диалект автоматически (модели используют MySQL-совместимые типы).
 
 Использование:
-    # SQLite (dev) или PostgreSQL (prod) — одинаково:
-    BELPOMOSHNIK_DATABASE_URL=postgresql+psycopg://user:pass@host/db \
-        python -m backend.bootstrap
+    # По умолчанию — MySQL из docker-compose:
+    # BELPOMOSHNIK_DATABASE_URL=mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik
+    python -m backend.bootstrap
 
     # с созданием администратора:
     BELPOMOSHNIK_ADMIN_EMAIL=admin@bel.by \

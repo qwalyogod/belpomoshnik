@@ -680,9 +680,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     </div>
   );
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [catEditing, setCatEditing] = useState<string | null>(null);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [catDraft, setCatDraft] = useState("");
   const startCatEdit = (id: string, name: string) => { setCatEditing(id); setCatDraft(name); };
   const saveCat = (id: string) => { updateCategory(id, catDraft); setCatEditing(null); };
@@ -843,7 +841,6 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
   );
 
   type RuleState = { enabled: boolean; days: number };
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [ruleStates, setRuleStates] = useState<Record<string, RuleState>>(() => {
     try { const s = window.localStorage.getItem("belp.rules"); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });

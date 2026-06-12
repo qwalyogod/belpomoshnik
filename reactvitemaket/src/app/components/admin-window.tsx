@@ -152,6 +152,10 @@ function AdminWindow({ open, isMobile, editor, signal, onClose }: { open: boolea
 export function AdminWindowMount() {
   const { role } = useStore();
   const { isMobile, adminOpen, adminSignal, closeAdmin } = React.useContext(ShellContext);
-  if (role !== "admin" && role !== "editor") return null;
-  return <AdminWindow open={adminOpen} isMobile={isMobile} editor={role === "editor"} signal={adminSignal} onClose={closeAdmin} />;
+  // Поддерживаем оба варианта role: "platform_admin"/"content_editor" (новые) и
+  // "admin"/"editor" (legacy, из старых quickAccounts в LS).
+  const isStaff = role === "platform_admin" || role === "content_editor" || role === "admin" || role === "editor";
+  if (!isStaff) return null;
+  const editor = role === "content_editor" || role === "editor";
+  return <AdminWindow open={adminOpen} isMobile={isMobile} editor={editor} signal={adminSignal} onClose={closeAdmin} />;
 }

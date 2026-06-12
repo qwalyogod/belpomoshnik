@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -313,6 +314,35 @@ def get_settings(user: User = Depends(get_current_user)):
         return {}
 
 
+# Allow-list ключей для PATCH /settings. Защищает от подделки внутренних
+# флагов через этот endpoint. Расширять по мере появления новых настроек.
+# Явно запрещены: role, is_admin, is_active, password, is_test_account.
+_ALLOWED_SETTINGS_KEYS: set[str] = {
+    "language",
+    "lang",
+    "theme",
+    "themeMode",
+    "dark_theme",
+    "largeFont",
+    "highContrast",
+    "reminderLeadDays",
+    "doc_reminder_days",
+    "preferredSourceIds",
+    "maskDocuments",
+    "notifications",
+    "address",
+    "digestTime",
+    "accessibility",
+}
+
+
+def _is_allowed_settings_key(k: str) -> bool:
+    if k in _ALLOWED_SETTINGS_KEYS:
+        return True
+    root = k.split(".", 1)[0]
+    return root in {"notifications", "accessibility", "ui", "privacy"}
+
+
 @router.patch("/settings")
 def update_settings(
     payload: dict,
@@ -325,7 +355,10 @@ def update_settings(
             current = {}
     except (json.JSONDecodeError, TypeError):
         current = {}
-    current.update(payload or {})
+    # Фильтруем payload по allow-list — лишние/потенциально опасные ключи
+    # (например, role, is_admin) отбрасываются.
+    safe = {k: v for k, v in (payload or {}).items() if _is_allowed_settings_key(k)}
+    current.update(safe)
     user.settings = json.dumps(current, ensure_ascii=False)
     db.commit()
     return current
@@ -595,6 +628,30 @@ def delete_document_scan(
             pass
     doc.scan_path = ""
     db.commit()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Защищённый download сканов. ВАЖНО: /uploads/documents/* static-mount оставлен
+# для обратной совместимости, но в коде UI нужно использовать этот endpoint
+# (FileResponse требует JWT + owner-check). TODO: переключить UI и удалить mount.
+# ─────────────────────────────────────────────────────────────────────────────
+@router.get("/documents/{doc_id}/scan")
+def download_document_scan(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = _owned_document(db, user, doc_id)
+    if not doc.scan_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Скан не загружен.")
+    full = Path(doc.scan_path)
+    if not full.exists() or not full.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл скана не найден.")
+    return FileResponse(
+        path=str(full),
+        media_type="application/pdf",
+        filename=f"document-{doc_id}.pdf",
+    )
 
 
 # ---------------------------------------------------------------------------

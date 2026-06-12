@@ -31,7 +31,8 @@ pip install pytest httpx
 
 | Переменная | Назначение | Дефолт |
 |---|---|---|
-| `BELPOMOSHNIK_DATABASE_URL` | URL БД (SQLAlchemy) | `sqlite:///data/belpomoshnik.db` |
+| `BELPOMOSHNIK_DATABASE_URL` | URL БД (SQLAlchemy → MySQL 8) | `mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik?charset=utf8mb4` |
+| `BELPOMOSHNIK_UPLOAD_DIR`   | директория загрузок (аватары, обложки, сканы) | `<корень проекта>/data/uploads` |
 | `BELPOMOSHNIK_SECRET_KEY` | ключ JWT + шифрования сканов | dev-заглушка (сменить!) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | TTL access-токена | `30` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | TTL refresh-токена | `7` |
@@ -43,26 +44,26 @@ pip install pytest httpx
 
 ## 3. Инициализация БД
 
-### SQLite (dev)
+MySQL — единственная поддерживаемая СУБД. Поднимите её локально через
+`docker compose up -d mysql` (см. `docker-compose.yml`) либо установите
+mysql-server вручную и создайте БД/пользователя:
+
+```sql
+CREATE DATABASE belpomoshnik CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'belp'@'%' IDENTIFIED BY 'belp_root';
+GRANT ALL ON belpomoshnik.* TO 'belp'@'%';
+```
+
+Затем — миграции + bootstrap одним скриптом (`scripts/init_db.py` сейчас
+эквивалентен `migrate.py` + `bootstrap`):
 
 ```bash
-PYTHONPATH=src python -m backend.scripts.init_db   # применит .sql-миграции
+PYTHONPATH=src python -m backend.scripts.init_db   # .sql-миграции + роли + тест-аккаунты
 PYTHONPATH=src python -m backend.scripts.seed_db   # демо-контент (опц.)
 ```
 
-### PostgreSQL (production)
-
-```bash
-export BELPOMOSHNIK_DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/belpomoshnik"
-export BELPOMOSHNIK_ADMIN_EMAIL="admin@bel.by"
-export BELPOMOSHNIK_ADMIN_PASSWORD="<надёжный-пароль>"
-PYTHONPATH=src python -m backend.bootstrap
-```
-
-`backend.bootstrap` создаёт схему через SQLAlchemy `create_all` (DDL под
-нужный диалект), сидит роли и (опц.) администратора. Идемпотентно.
-`init_db` сам выбирает путь: SQLite → миграции, иначе → bootstrap.
-`migrate.py` на non-SQLite намеренно падает с подсказкой.
+`init_db` идемпотентен: применённые миграции записываются в таблицу
+`schema_migrations` и не переигрываются.
 
 ## 4. Запуск API
 
@@ -82,7 +83,8 @@ uvicorn backend.app:app --host 0.0.0.0 --port 8060
 python -m pytest          # 53 теста: auth, security, admin, dashboard, bootstrap
 ```
 
-Изолированная temp-SQLite, схема пересоздаётся на каждый тест.
+Изолированная MySQL-БД `belpomoshnik_test`, схема пересоздаётся на каждый тест
+через `Base.metadata.drop_all/create_all` (env override — `BELPOMOSHNIK_TEST_DATABASE_URL`).
 
 ## 6. HTTPS (production)
 

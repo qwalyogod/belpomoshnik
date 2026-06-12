@@ -20,7 +20,24 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 from jose import JWTError, jwt
 
-SECRET_KEY: str = os.getenv("BELPOMOSHNIK_SECRET_KEY", "change-me-in-production-use-256-bit-key")
+# SECRET_KEY обязателен. Никаких публичных fallback'ов: если переменная не задана
+# или совпадает с известной dev-заглушкой, приложение стартует с ошибкой.
+# Сгенерировать: `python -c "import secrets; print(secrets.token_hex(32))"`
+_SECRET_KEY_RAW = os.getenv("BELPOMOSHNIK_SECRET_KEY", "").strip()
+_FORBIDDEN_FALLBACK = {
+    "",
+    "change-me-in-production-use-256-bit-key",
+    "change-me-in-production",
+    "secret",
+    "dev",
+}
+if _SECRET_KEY_RAW in _FORBIDDEN_FALLBACK or len(_SECRET_KEY_RAW) < 32:
+    raise RuntimeError(
+        "BELPOMOSHNIK_SECRET_KEY is required and must be at least 32 chars. "
+        "Set it in .env (see .env.example) or the app will refuse to start. "
+        "Generate: python -c 'import secrets; print(secrets.token_hex(32))'"
+    )
+SECRET_KEY: str = _SECRET_KEY_RAW
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))

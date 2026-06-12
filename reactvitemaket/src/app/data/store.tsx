@@ -188,32 +188,35 @@ const TEST_ACCOUNTS: AppUser[] = [
     region: "Минская область",
     city: "Минск",
     district: "Центральный",
-    password: "Test12345!",
     isTestAccount: true,
   },
   {
     id: "test-editor",
     name: "Тестовый редактор",
     email: "editor@test.local",
-    role: "editor",
+    role: "content_editor",
     region: "Минская область",
     city: "Минск",
     district: "Центральный",
-    password: "Test12345!",
     isTestAccount: true,
   },
   {
     id: "test-admin",
     name: "Тестовый администратор",
     email: "admin@test.local",
-    role: "admin",
+    role: "platform_admin",
     region: "Минская область",
     city: "Минск",
     district: "Центральный",
-    password: "Test12345!",
     isTestAccount: true,
   },
 ];
+
+// Публичный demo-пароль для тест-аккаунтов (citizen/editor/admin).
+// Пароль одинаковый во всех bootstrap-аккаунтах (см. backend/bootstrap.py).
+// Используется ТОЛЬКО для входа через `signInAs` (быстрый вход).
+// В localStorage НЕ пишется (безопасность).
+const DEMO_PASSWORD = "Test12345!";
 
 const QUICK_ACCOUNTS_KEY = "belp.quickAccounts";
 const CURRENT_USER_KEY = "belp.currentUserId";
@@ -255,10 +258,48 @@ function safeWrite<T>(key: string, value: T) {
   }
 }
 
+/**
+ * Возвращает копию объекта без чувствительных полей (`password`).
+ * Используем перед записью в localStorage, чтобы случайно не утекали
+ * пароли зарегистрированных пользователей в браузер.
+ */
+function stripSensitiveFields<T extends Record<string, unknown>>(obj: T): Omit<T, "password"> {
+  const { password: _password, ...rest } = obj as T & { password?: unknown };
+  void _password;
+  return rest as Omit<T, "password">;
+}
+
+function safeWriteQuickAccounts(accounts: AppUser[]) {
+  const sanitized = accounts
+    .filter(account => !account.isTestAccount)
+    .map(account => stripSensitiveFields(account as unknown as Record<string, unknown>) as AppUser);
+  safeWrite(QUICK_ACCOUNTS_KEY, sanitized);
+}
+
 function mergeById<T extends { id: string }>(base: T[], incoming: T[]) {
   const items = new Map(base.map(item => [item.id, item]));
   incoming.forEach(item => items.set(item.id, { ...items.get(item.id), ...item }));
   return Array.from(items.values());
+}
+
+// v1.2: ситуаций у пользователя не больше одной на сценарий, поэтому при
+// мерже с бэкендом дедуплицируем по scenarioId. Это сохраняет стабильный
+// локальный id (для роутинга) и не плодит дубликаты, когда оптимистично
+// созданная ситуация уже есть локально с тем же scenarioId.
+function mergeSituations(base: UserSituation[], incoming: UserSituation[]): UserSituation[] {
+  const result = [...base];
+  const indexByScenario = new Map(base.map((s, i) => [s.scenarioId, i]));
+  incoming.forEach(inc => {
+    const idx = indexByScenario.get(inc.scenarioId);
+    if (idx !== undefined) {
+      const local = result[idx];
+      // Бэкенд — источник истины по составу/прогрессу, но id берём локальный.
+      result[idx] = { ...inc, id: local.id, backendId: inc.backendId ?? inc.id };
+    } else {
+      result.push({ ...inc, backendId: inc.backendId ?? inc.id });
+    }
+  });
+  return result;
 }
 
 // Settings are stored backend-side as an opaque JSON blob written by this same
@@ -332,6 +373,18 @@ function normalizeQuickAccounts(saved: AppUser[]) {
 
 function userDataKey(userId: string) {
   return `${USER_DATA_PREFIX}${userId}`;
+}
+
+/**
+ * Возвращает сохранённую аватарку пользователя (dataURL или null).
+ * Используется в user-switcher (MobileUserSwitcher / HeaderUserMenu / UserSwitcher),
+ * чтобы показывать аватарку каждого юзера в выпадающем списке, а не только
+ * текущего. Читает ТОЛЬКО из localStorage — без обращения к бэку.
+ */
+export function readAvatarForUser(userId: string): string | undefined {
+  if (!userId || userId === "guest") return undefined;
+  const data = safeRead<Partial<PersistedUserData> | null>(userDataKey(userId), null);
+  return data?.profile?.avatarDataUrl;
 }
 
 function profileForUser(user: AppUser): UserProfile {
@@ -450,11 +503,30 @@ function reconcileApiFirst<T extends PublicListItem>(
   return { items: [...reconciledBase, ...nextIncoming], aliases };
 }
 
+/**
+ * Начальный список quick-аккаунтов: TEST_ACCOUNTS (citizen/editor/admin из bootstrap)
+ * + зарегистрированные пользователи из LS. TEST_ACCOUNTS в LS НЕ пишутся
+ * (см. safeWriteQuickAccounts), но в RAM-сторе они всегда доступны — иначе
+ * после reload пропадает `currentUser` и admin/editor не могут зайти.
+ */
+function initialQuickAccounts(): AppUser[] {
+  const saved = normalizeQuickAccounts(safeRead<AppUser[]>(QUICK_ACCOUNTS_KEY, []));
+  // byId собирает уникальных по id; saved идут ПОСЛЕ TEST_ACCOUNTS,
+  // чтобы зарегистрированный юзер перезаписал тестовый при совпадении id.
+  const byId = new Map<string, AppUser>();
+  TEST_ACCOUNTS.forEach(a => byId.set(a.id, a));
+  saved.forEach(a => byId.set(a.id, a));
+  return Array.from(byId.values());
+}
+
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [quickAccounts, setQuickAccounts] = useState<AppUser[]>(() => normalizeQuickAccounts(safeRead<AppUser[]>(QUICK_ACCOUNTS_KEY, [])));
+  const [quickAccounts, setQuickAccounts] = useState<AppUser[]>(() => initialQuickAccounts());
   const [currentUser, setCurrentUser] = useState<AppUser>(() => {
     const storedUserId = safeRead<string>(CURRENT_USER_KEY, "guest");
-    return normalizeQuickAccounts(safeRead<AppUser[]>(QUICK_ACCOUNTS_KEY, [])).find(account => account.id === storedUserId) ?? GUEST_USER;
+    if (storedUserId === "guest") return GUEST_USER;
+    // Ищем среди TEST_ACCOUNTS + сохранённых не-тестовых.
+    const all = initialQuickAccounts();
+    return all.find(account => account.id === storedUserId) ?? GUEST_USER;
   });
   const role = currentUser.role;
   const [scenarios, setScenarios] = useState<Scenario[]>(SCENARIOS);
@@ -495,8 +567,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     safeWrite(CURRENT_USER_KEY, currentUser.id);
-    const customAccounts = quickAccounts.filter(account => !account.isTestAccount);
-    safeWrite(QUICK_ACCOUNTS_KEY, customAccounts);
+    // Не сохраняем пароли зарегистрированных пользователей в localStorage.
+    // Для теста/демо пароль вводится в LoginPage вручную.
+    safeWriteQuickAccounts(quickAccounts);
   }, [currentUser.id, quickAccounts]);
 
   useEffect(() => {
@@ -514,34 +587,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setHydratedUserId(currentUser.id);
   }, [currentUser]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setAuthSession(null);
-    // Сбросить токены в shared-хранилище apiClient, чтобы 401-refresh не сработал
-    // от предыдущего пользователя.
-    apiClient.saveTokens(null);
-
-    if (currentUser.role === "guest" || !currentUser.email || !currentUser.password) {
-      return () => controller.abort();
-    }
-
-    apiClient.login<AuthTokens>(currentUser.email, currentUser.password, { signal: controller.signal })
-      .then(tokens => {
-        if (!controller.signal.aborted) {
-          setAuthSession(tokens);
-          apiClient.saveTokens(tokens);
-        }
-      })
-      .catch(error => {
-        if (!controller.signal.aborted) {
-          console.warn("Backend auth is unavailable; React keeps local user state.", error);
-          setAuthSession(null);
-          apiClient.saveTokens(null);
-        }
-      });
-
-    return () => controller.abort();
-  }, [currentUser.email, currentUser.password, currentUser.role]);
+  // Удалён старый useEffect авто-логина (полагался на currentUser.password из LS,
+  // который мы убрали в рамках security-фикса). Теперь authSession ставится
+  // явно из signInAs / signInWithEmail / registerUser / signOut / applyUser(guest).
 
   useEffect(() => {
     if (hydratedUserId !== currentUser.id) return;
@@ -767,7 +815,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       .then(items => {
         if (controller.signal.aborted || !Array.isArray(items) || items.length === 0) return;
         const apiSituations = items.map(item => adaptUserSituation(item, scenarios));
-        setSituations(prev => mergeById(prev, apiSituations));
+        setSituations(prev => mergeSituations(prev, apiSituations));
       })
       .catch(error => {
         if (!controller.signal.aborted) {
@@ -912,7 +960,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const applyUser = useCallback((user: AppUser) => {
     setCurrentUser(user);
-    if (user.role !== "guest") {
+    if (user.role === "guest") {
+      // Гость: чистим authSession, чтобы backend-операции падали чисто,
+      // а не от имени прошлого юзера.
+      setAuthSession(null);
+      apiClient.saveTokens(null);
+    } else {
       setProfile(prev => ({
         ...prev,
         name: user.name || prev.name,
@@ -924,30 +977,62 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signInAs = useCallback((userId: string) => {
+  const signInAs = useCallback(async (userId: string) => {
     if (userId === "guest") {
       applyUser(GUEST_USER);
       return;
     }
     const account = quickAccounts.find(item => item.id === userId);
-    if (account) applyUser(account);
+    if (!account) return;
+    applyUser(account);
+    // Для тест-аккаунтов: дёргаем backend login с публичным demo-паролем,
+    // чтобы получить валидный authSession. Пароль известен — см. backend/bootstrap.py.
+    // Если backend недоступен — `authSession` остаётся null, UI работает
+    // в локальном режиме (моки + LS), uploadAvatar/документы сохранятся
+    // локально и синкнутся на следующем успешном логине.
+    if (account.isTestAccount && account.email) {
+      try {
+        const tokens = await apiClient.login<AuthTokens>(account.email, DEMO_PASSWORD);
+        setAuthSession(tokens);
+        apiClient.saveTokens(tokens);
+      } catch (e) {
+        // Offline / backend down: чисто локальный режим.
+        if (typeof console !== "undefined") {
+          console.warn(`[auth] signInAs test-login failed for ${account.email}; using local-only mode.`, e);
+        }
+        setAuthSession(null);
+        apiClient.saveTokens(null);
+      }
+    }
   }, [applyUser, quickAccounts]);
 
-  const signInWithEmail = useCallback((email: string, password: string) => {
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
     const account = quickAccounts.find(item => item.email.toLowerCase() === normalizedEmail);
     if (!account) return false;
-    if ((account.password ?? "Test12345!") !== password) return false;
-    applyUser(account);
-    return true;
+    try {
+      // Реальный backend login (вместо локального сравнения `account.password`).
+      // Если backend недоступен — функция вернёт false, UI покажет ошибку.
+      const tokens = await apiClient.login<AuthTokens>(email, password);
+      setAuthSession(tokens);
+      apiClient.saveTokens(tokens);
+      applyUser(account);
+      return true;
+    } catch (e) {
+      if (typeof console !== "undefined") {
+        console.warn(`[auth] signInWithEmail failed for ${normalizedEmail}.`, e);
+      }
+      return false;
+    }
   }, [applyUser, quickAccounts]);
 
-  const registerUser = useCallback((payload: Pick<AppUser, "name" | "email" | "password" | "region" | "city">) => {
+  const registerUser = useCallback((payload: { name: string; email: string; password: string; region?: string; city?: string }) => {
+    const trimmedEmail = payload.email.trim().toLowerCase();
+    const trimmedName = payload.name.trim() || "Новый пользователь";
     const fresh: AppUser = {
       id: uid("user"),
-      name: payload.name.trim() || "Новый пользователь",
-      email: payload.email.trim().toLowerCase(),
-      password: payload.password || "Test12345!",
+      name: trimmedName,
+      email: trimmedEmail,
       role: "citizen",
       region: payload.region?.trim() || "Минская область",
       city: payload.city?.trim() || "Минск",
@@ -956,9 +1041,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     };
     setQuickAccounts(prev => normalizeQuickAccounts([...prev, fresh]));
     applyUser(fresh);
-    if (fresh.email && fresh.password) {
-      apiClient.register<AuthTokens>({ email: fresh.email, password: fresh.password, name: fresh.name })
-        .then(tokens => setAuthSession(tokens))
+    if (trimmedEmail && payload.password) {
+      // Регистрируем на бэке и сохраняем токены — иначе authSession останется
+      // null и UI будет в локальном режиме без синка.
+      apiClient.register<AuthTokens>({ email: trimmedEmail, password: payload.password, name: trimmedName })
+        .then(tokens => {
+          setAuthSession(tokens);
+          apiClient.saveTokens(tokens);
+        })
         .catch(error => {
           console.warn("Backend register is unavailable; React registered local user only.", error);
         });
@@ -1132,7 +1222,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       apiClient.createUserSituation<Record<string, unknown>>(authSession.access_token, apiSituationPayload(scenario))
         .then(saved => {
           const apiSituation = adaptUserSituation(saved, scenarios);
-          setSituations(prev => prev.map(item => item.id === fresh.id ? apiSituation : item));
+          // ВАЖНО: НЕ подменяем локальный id серверным — иначе открытая
+          // страница /situations/<local-id> ломается («не найдена»). Держим
+          // стабильный локальный id, серверный кладём в backendId.
+          setSituations(prev => prev.map(item =>
+            item.id === fresh.id
+              ? { ...apiSituation, id: fresh.id, backendId: apiSituation.id }
+              : item,
+          ));
         })
         .catch(error => {
           console.warn("Situation was created locally; backend create failed.", error);
@@ -1192,15 +1289,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const deleteSituation = useCallback((situationId: string) => {
     if (!requireAccount()) return;
+    const target = situations.find(s => s.id === situationId);
+    // backendId (если синхронизирована) или сам id, если он уже серверный.
+    const backendId = target?.backendId ?? (isBackendSituationId(situationId) ? situationId : undefined);
     setSituations(prev => prev.filter(s => s.id !== situationId));
 
-    if (authSession?.access_token && isBackendSituationId(situationId)) {
-      apiClient.deleteUserSituation(authSession.access_token, situationId)
+    if (authSession?.access_token && backendId) {
+      apiClient.deleteUserSituation(authSession.access_token, backendId)
         .catch(error => {
           console.warn("Situation was deleted locally; backend delete failed.", error);
         });
     }
-  }, [authSession?.access_token, role]);
+  }, [authSession?.access_token, role, situations]);
 
   const addDocument: Store["addDocument"] = useCallback((doc) => {
     if (!requireAccount()) return;
@@ -1529,7 +1629,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const uploadAvatar: Store["uploadAvatar"] = useCallback(async (blob) => {
     if (!requireAccount()) return;
     const token = authSession?.access_token;
-    if (!token) throw new Error("Нет активной сессии — войдите в аккаунт, чтобы сохранить аватар.");
+    if (!token) {
+      // Demo / offline: сохраняем blob локально как data URL. Аватарка
+      // показывается сразу; синк на бэк — при следующем успешном логине.
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      setProfile(p => ({ ...p, avatarDataUrl: dataUrl }));
+      return;
+    }
     const { avatar_url } = await apiClient.uploadUserAvatar(token, blob);
     setProfile(p => ({ ...p, avatarDataUrl: `${API_BASE_URL}${avatar_url}` }));
   }, [authSession?.access_token, role]);
@@ -1537,8 +1648,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const removeAvatar: Store["removeAvatar"] = useCallback(async () => {
     if (!requireAccount()) return;
     const token = authSession?.access_token;
-    if (!token) return;
-    await apiClient.deleteUserAvatar(token);
+    if (token) {
+      try { await apiClient.deleteUserAvatar(token); }
+      catch (e) { console.warn("[avatar] backend remove failed, clearing local only.", e); }
+    }
     setProfile(p => ({ ...p, avatarDataUrl: undefined }));
   }, [authSession?.access_token, role]);
 

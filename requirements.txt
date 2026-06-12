@@ -4,6 +4,8 @@ flet==0.85.2
 flet-cli==0.85.2
 flet-desktop==0.85.2
 flet-webview==0.85.2
+
+# Backend stack
 fastapi==0.116.1
 uvicorn==0.35.0
 sqlalchemy==2.0.41
@@ -13,8 +15,11 @@ python-jose[cryptography]>=3.3.0
 cryptography>=41.0.0
 email-validator>=2.0.0
 
-# PostgreSQL (production) — раскомментировать при переходе с SQLite:
-# psycopg[binary]>=3.1
+# MySQL — единственная СУБД проекта.
+# PyMySQL — чистый-Python драйвер (без C-зависимостей), поддерживает MySQL 5.7+/8.0+.
+# cryptography нужен для caching_sha2_password (auth plugin по умолчанию в MySQL 8).
+pymysql==1.1.1
+cryptography>=41.0.0
 
 # Тесты:
 # pytest>=8.0

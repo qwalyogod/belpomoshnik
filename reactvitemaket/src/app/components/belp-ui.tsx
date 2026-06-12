@@ -1,12 +1,51 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { REGION_NAMES, districtsForRegion, cityForDistrict } from "../data/geo";
+import { useStore } from "../data/store";
 
 export const COLORS = {
   royal: "#0056FF",
   azure: "#2277FF",
   lavender: "#E3E7FC",
 };
+
+// v1.2: единый кружок-аватар. Показывает фото (object-cover) либо инициал на
+// фирменном градиенте. Используется в хедере (desktop), меню (tablet/sidebar) и
+// на странице профиля — чтобы аватар выглядел одинаково везде.
+//
+// v1.3 (2026-06-11): если ни `src`, ни имя не дают осмысленного символа,
+// показываем первую букву email, иначе — нейтральный «П». Это гарантирует,
+// что у гостя с именем «Гость» отображается «Г», у залогиненного с именем
+// «Алексей» — «А», а у безымянного аккаунта — первая буква email до «@».
+function avatarInitial(name?: string, email?: string): string {
+  const trimmed = (name ?? "").trim();
+  if (trimmed) return trimmed[0]!.toUpperCase();
+  const mail = (email ?? "").trim();
+  if (mail) {
+    const at = mail.indexOf("@");
+    const head = (at > 0 ? mail.slice(0, at) : mail).trim();
+    if (head) return head[0]!.toUpperCase();
+  }
+  return "П";
+}
+
+export function UserAvatarCircle({
+  src,
+  name,
+  email,
+  size = 36,
+  className = "",
+}: { src?: string; name?: string; email?: string; size?: number; className?: string }) {
+  const initial = avatarInitial(name, email);
+  return (
+    <span
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#0056FF] to-[#2277FF] font-medium text-white ${className}`}
+      style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.4)) }}
+    >
+      {src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <span>{initial}</span>}
+    </span>
+  );
+}
 
 export function Pill({ children, tone = "lavender" }: { children: ReactNode; tone?: "lavender" | "royal" | "azure" | "ghost" | "warn" | "ok" }) {
   const map: Record<string, string> = {
@@ -152,5 +191,209 @@ export function Logo({ size = 28, white = false }: { size?: number; white?: bool
         Белпомощник
       </span>
     </div>
+  );
+}
+
+/**
+ * Бэйдж "Backend" / "Mock-данные" — показывает, откуда UI получает контент.
+ * Помогает на защите: сразу видно, идёт ли запрос в FastAPI или показываются
+ * встроенные fallback-моки.
+ */
+export function DataModeBadge({ className = "" }: { className?: string }) {
+  const status = useStore(s => (s as { publicContentStatus?: "loading" | "api" | "fallback" }).publicContentStatus);
+  const label =
+    status === "api" ? "Backend" :
+    status === "loading" ? "Загрузка…" :
+    "Mock-данные";
+  const tone =
+    status === "api" ? "ok" :
+    status === "loading" ? "ghost" :
+    "warn";
+  return (
+    <Pill tone={tone as "ok" | "ghost" | "warn"}>
+      <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </Pill>
+  );
+}
+
+/* ============================================================
+   RegionSearch / DistrictSearch — autocomplete из geo-regions.json
+   Пользователь НЕ может ввести произвольный текст: только выбор из базы.
+   ============================================================ */
+
+const searchFieldCls =
+  "w-full appearance-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[14px] tracking-tight text-black outline-none transition-colors focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white";
+const searchLabelCls =
+  "mb-1.5 block text-[11px] uppercase tracking-[0.12em] text-black/45 dark:text-white/45";
+
+/** Autocomplete-инпут: фильтрует options по подстроке, позволяет выбрать только из базы. */
+function AutocompleteInput({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  label?: string;
+  value: string;
+  options: string[];
+  onChange: (next: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const filtered = (() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options.slice(0, 50);
+    return options.filter(o => o.toLowerCase().includes(q)).slice(0, 50);
+  })();
+
+  const onPick = (next: string) => {
+    onChange(next);
+    setQuery(next);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      {label && <label className={searchLabelCls}>{label}</label>}
+      <input
+        type="text"
+        value={query}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        className={searchFieldCls}
+        autoComplete="off"
+      />
+      {open && !disabled && filtered.length > 0 && (
+        <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-black/10 bg-white shadow-[0_18px_44px_-22px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[#0F1117]">
+          {filtered.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onPick(opt)}
+              className="block w-full px-3 py-2 text-left text-[14px] tracking-tight text-black hover:bg-[#E3E7FC] dark:text-white dark:hover:bg-[#0E1A3A]"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && !disabled && filtered.length === 0 && (
+        <div className="absolute z-30 mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] text-black/55 shadow dark:border-white/10 dark:bg-[#0F1117] dark:text-white/55">
+          Ничего не найдено. Регион/район/город должны быть в базе.
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function RegionSearch({
+  value,
+  onChange,
+  label = "Область / регион",
+  disabled,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <AutocompleteInput
+      label={label}
+      value={value}
+      options={REGION_NAMES}
+      onChange={onChange}
+      placeholder="Начните вводить: Минск, Гомел…"
+      disabled={disabled}
+    />
+  );
+}
+
+export function DistrictSearch({
+  region,
+  value,
+  onChange,
+  label = "Район",
+  disabled,
+}: {
+  region: string;
+  value: string;
+  onChange: (next: string) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
+  const districtNames = districtsForRegion(region).map(d => d.name);
+  return (
+    <AutocompleteInput
+      label={label}
+      value={value}
+      options={districtNames}
+      onChange={onChange}
+      placeholder={region ? "Начните вводить район…" : "Сначала выберите регион"}
+      disabled={disabled || !region}
+    />
+  );
+}
+
+export function CitySearch({
+  region,
+  district,
+  value,
+  onChange,
+  label = "Город / населённый пункт",
+  disabled,
+}: {
+  region: string;
+  district: string;
+  value: string;
+  onChange: (next: string) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
+  // Города = центры районов выбранной области. Если ничего не выбрано — пустой список.
+  const cities = (() => {
+    if (!region) return [];
+    const ds = districtsForRegion(region);
+    // Собираем уникальные города из центров районов.
+    const set = new Set<string>();
+    ds.forEach(d => { if (d.center) set.add(d.center); });
+    // Также сам центр региона.
+    const regionObj = (() => {
+      try {
+        // Через loadGeo нельзя извне, но REGION_NAMES + districtsForRegion
+        // уже умеют. Просто добавим «областной центр» если найдём.
+        return null;
+      } catch { return null; }
+    })();
+    return Array.from(set).sort();
+  })();
+  return (
+    <AutocompleteInput
+      label={label}
+      value={value}
+      options={cities}
+      onChange={onChange}
+      placeholder={region && district ? "Начните вводить город…" : "Сначала выберите регион и район"}
+      disabled={disabled || !region}
+    />
   );
 }

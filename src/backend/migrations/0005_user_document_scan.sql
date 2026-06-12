@@ -1,4 +1,4 @@
 -- A: путь к зашифрованному скану личного документа (для Client->API wiring).
--- SQLite (MVP). PostgreSQL получает колонку через backend.bootstrap (create_all).
+-- MySQL (via pymysql/SQLAlchemy)
 
-ALTER TABLE user_documents ADD COLUMN scan_path TEXT NOT NULL DEFAULT '';
+ALTER TABLE user_documents ADD COLUMN scan_path VARCHAR(255) NOT NULL DEFAULT '';
