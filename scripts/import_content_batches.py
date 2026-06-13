@@ -298,14 +298,19 @@ def import_sources(db: Session, sourceable_type: str, sourceable_id: int, source
 
 def upsert_article(db: Session, item: dict[str, Any], counts: dict[str, int]) -> Article:
     source_url = item.get("sourceUrl") or ""
-    stmt = select(Article).where(Article.source_url == source_url) if source_url else select(Article).where(Article.title == item.get("title"))
+    title = item.get("title") or "Новость"
+    stmt = (
+        select(Article).where(Article.title == title, Article.source_url == source_url)
+        if source_url
+        else select(Article).where(Article.title == title)
+    )
     article = db.scalar(stmt)
     created = article is None
     if article is None:
-        article = Article(kind="news", title=item.get("title") or "Новость")
+        article = Article(kind="news", title=title)
         db.add(article)
     article.kind = "news"
-    article.title = item.get("title") or article.title
+    article.title = title
     article.summary = item.get("summary") or ""
     article.body_html = item.get("bodyHtml") or ""
     article.cover = item.get("cover") or ""
@@ -316,7 +321,7 @@ def upsert_article(db: Session, item: dict[str, Any], counts: dict[str, int]) ->
     article.source = item.get("source") or ""
     article.source_url = source_url
     article.status = "published"
-    article.author_name = "Редакция Белпомощника"
+    article.author_name = "Тестовый редактор"
     article.author_role = "content_editor"
     article.proposed_by = ""
     article.proposer_id = None

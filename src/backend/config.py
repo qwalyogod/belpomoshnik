@@ -6,14 +6,14 @@ def get_database_url() -> str:
     """
     Возвращает URL для подключения к MySQL.
 
-    По умолчанию — локальный MySQL 8 в docker-compose (localhost:3306,
-    user=root, password=belp_root, database=belpomoshnik).
+    По умолчанию — root БЕЗ пароля на localhost:3306. Подходит и для
+    локального XAMPP MariaDB, и для docker-compose (MYSQL_ALLOW_EMPTY_PASSWORD).
 
     Переопределяется переменной BELPOMOSHNIK_DATABASE_URL в .env.
     """
     return os.getenv(
         "BELPOMOSHNIK_DATABASE_URL",
-        "mysql+pymysql://root:belp_root@127.0.0.1:3306/belpomoshnik?charset=utf8mb4",
+        "mysql+pymysql://root@127.0.0.1:3306/belpomoshnik?charset=utf8mb4",
     )
 
 

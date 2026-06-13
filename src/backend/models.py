@@ -196,15 +196,53 @@ class Authority(Base, TimestampMixin):
     __tablename__ = "authorities"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    external_id: Mapped[str] = mapped_column(String(255), default="", nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     website_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     phone: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    email: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     address: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     working_hours: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     type: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     region: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    district: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     city: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    settlement: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    services_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    tags_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    related_scenario_categories_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    related_scenarios_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    source_ids_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    source_urls_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    last_checked_at: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    confidence: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    @property
+    def services(self) -> list:
+        return _json_list(self.services_json)
+
+    @property
+    def tags(self) -> list:
+        return _json_list(self.tags_json)
+
+    @property
+    def related_scenario_categories(self) -> list:
+        return _json_list(self.related_scenario_categories_json)
+
+    @property
+    def related_scenarios(self) -> list:
+        return _json_list(self.related_scenarios_json)
+
+    @property
+    def source_ids(self) -> list:
+        return _json_list(self.source_ids_json)
+
+    @property
+    def source_urls(self) -> list:
+        return _json_list(self.source_urls_json)
 
     steps: Mapped[list[ScenarioStep]] = relationship(back_populates="authority")
 

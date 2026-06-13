@@ -1,0 +1,16 @@
+ALTER TABLE articles
+  MODIFY summary TEXT NOT NULL,
+  MODIFY body_html LONGTEXT NOT NULL,
+  MODIFY gallery VARCHAR(2000) NOT NULL DEFAULT '[]',
+  MODIFY tags VARCHAR(500) NOT NULL DEFAULT '[]';
+
+ALTER TABLE law_updates
+  MODIFY description TEXT NOT NULL,
+  MODIFY body_html LONGTEXT NOT NULL,
+  MODIFY source_url VARCHAR(1000) NOT NULL DEFAULT '';
+
+ALTER TABLE extremist_entries
+  MODIFY short_description TEXT NOT NULL,
+  MODIFY media_urls VARCHAR(500) NOT NULL DEFAULT '[]',
+  MODIFY attachment_urls VARCHAR(500) NOT NULL DEFAULT '[]',
+  MODIFY filters_json VARCHAR(4000) NOT NULL DEFAULT '{}';

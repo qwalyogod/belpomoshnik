@@ -13,7 +13,13 @@ import { useNavigate } from "react-router";
 import { useStore, maskDocumentNumber, DOC_TYPE_LABEL } from "../data/store";
 import { apiClient, API_BASE_URL } from "../services/api";
 import { buildSuggestions, getRecentSearches, addRecentSearch, POPULAR_QUERIES, SuggestionItem } from "../services/search";
-import { matchInstitutions, hasProfileLocation } from "../services/institutions";
+import {
+  institutionsForScenario,
+  matchInstitutions,
+  matchInstitutionsForAddresses,
+  hasProfileLocation,
+  profileAddresses,
+} from "../services/institutions";
 import { LEARNING_QUIZ, LEARNING_CATEGORIES, ACHIEVEMENTS_CATALOG } from "../data/mock";
 import { Scenario, UserDocumentType, Lang, Article, ArticleKind, CustomField } from "../data/types";
 
@@ -37,26 +43,30 @@ export function ScenarioDetail({
   onOpenScenario: (id: string) => void;
   onProtected: () => boolean; // returns true if allowed
 }) {
-  const { role, createSituation, favorites, toggleFavorite, situationByScenario, scenarioById, profile } = useStore();
+  const { role, createSituation, favorites, toggleFavorite, situationByScenario, scenarioById, profile, authorities } = useStore();
   const isFav = favorites.includes(scenario.id);
   // v1.2: ближайшие учреждения подбираем по ОСНОВНОМУ адресу пользователя
   // (а не по legacy city/region). Нет основного — берём первый адрес, иначе
   // fallback на city/region профиля.
-  const primaryAddress = profile.addresses?.find(a => a.isPrimary)
-    ?? profile.addresses?.[0]
-    ?? { city: profile.city, region: profile.region, district: profile.district };
+  const profileAddressList = profileAddresses(profile);
+  const primaryAddress = profileAddressList[0] ?? { city: profile.city, region: profile.region, district: profile.district };
   const hasLocation = hasProfileLocation(primaryAddress);
-  const nearInstitutions = matchInstitutions(scenario.institutions, primaryAddress);
+  const scenarioInstitutionPool = institutionsForScenario(scenario.institutions, authorities, scenario.category, scenario.title);
+  const nearInstitutions = matchInstitutions(scenarioInstitutionPool, primaryAddress);
   const nearIds = new Set(nearInstitutions.map(i => i.id));
   // Ближайшие (matched) — первыми, затем остальные, чтобы список не был пустым.
   const matchedInstitutions = [
     ...nearInstitutions,
-    ...scenario.institutions.filter(i => !nearIds.has(i.id)).map(i => ({ ...i, matched: false as const })),
-  ];
+    ...scenarioInstitutionPool.filter(i => !nearIds.has(i.id)).map(i => ({ ...i, matched: false as const })),
+  ].slice(0, 12);
   const existing = situationByScenario(scenario.id);
 
   const handleCreate = () => {
     if (!onProtected()) return;
+    if (existing) {
+      onOpenMySituation(existing.id);
+      return;
+    }
     const id = createSituation(scenario.id);
     if (!id) return;
     onOpenMySituation(id);
@@ -82,17 +92,32 @@ export function ScenarioDetail({
           <p className="mt-2 tracking-tight text-black/60 dark:text-white/60">{scenario.longDescription}</p>
         </div>
 
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <button
-            onClick={() => toggleFavorite(scenario.id)}
-            aria-label="В избранное"
-            className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border transition-colors ${isFav ? "border-[#0056FF] bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.08] bg-white text-black/55 hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/55"}`}
-          >
-            <Star size={18} fill={isFav ? "currentColor" : "none"} />
-          </button>
-          <PrimaryButton onClick={handleCreate} className="flex-1 px-5 sm:flex-none">
-            {existing ? "Открыть мою ситуацию" : "Создать мою ситуацию"}
-          </PrimaryButton>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[330px]">
+          <div className="flex w-full items-center gap-2">
+            <button
+              onClick={() => toggleFavorite(scenario.id)}
+              aria-label={isFav ? "Убрать из избранного" : "В избранное"}
+              className={`grid h-[54px] w-[54px] shrink-0 place-items-center rounded-[22px] border transition-all active:translate-y-[1px] ${isFav ? "border-[#0056FF]/20 bg-[#E3E7FC] text-[#0056FF] dark:border-[#7FA8FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "border-black/[0.08] bg-white text-black/55 hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/55 dark:hover:bg-white/[0.08]"}`}
+            >
+              <Star size={19} fill={isFav ? "currentColor" : "none"} />
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="inline-flex min-h-[54px] flex-1 items-center justify-center rounded-[22px] bg-[#0056FF] px-5 py-3 text-[15px] font-semibold leading-tight tracking-tight text-white shadow-[0_16px_42px_-18px_rgba(0,86,255,0.65)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"
+            >
+              <span className="inline-flex max-w-full items-center justify-center gap-2 text-center">
+                {existing ? <Check size={18} className="shrink-0" /> : <Plus size={18} className="shrink-0" />}
+                <span>{existing ? "Открыть мою ситуацию" : "Создать мою ситуацию"}</span>
+              </span>
+            </button>
+          </div>
+          {existing && (
+            <div className="inline-flex items-center gap-2 rounded-[18px] bg-emerald-50 px-3 py-2 text-[12px] font-medium tracking-tight text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <Check size={14} />
+              Уже добавлено в «Мои ситуации»
+            </div>
+          )}
         </div>
       </div>
 
@@ -269,7 +294,7 @@ function taskKindLabel(k: string) {
 
 /* ---------------- MY SITUATION DETAIL (interactive) ---------------- */
 export function MySituationDetail({ situationId, onBack }: { situationId: string; onBack: () => void }) {
-  const { situations, scenarioById, toggleTask, taskIsBlocked, situationProgress, deleteSituation, setNote } = useStore();
+  const { situations, scenarioById, toggleTask, taskIsBlocked, situationProgress, deleteSituation, setNote, profile, authorities } = useStore();
   const situation = situations.find(s => s.id === situationId);
   const scenario = situation ? scenarioById(situation.scenarioId) : undefined;
   const [openNote, setOpenNote] = useState<string | null>(null);
@@ -287,6 +312,10 @@ export function MySituationDetail({ situationId, onBack }: { situationId: string
 
   const progress = situationProgress(situation);
   const totalTasks = scenario.stages.reduce((n, st) => n + st.tasks.length, 0);
+  const addressGroups = matchInstitutionsForAddresses(
+    institutionsForScenario(scenario.institutions, authorities, scenario.category, scenario.title),
+    profileAddresses(profile),
+  );
 
   return (
     <div className="space-y-6">
@@ -320,6 +349,54 @@ export function MySituationDetail({ situationId, onBack }: { situationId: string
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.06]">
           <motion.div initial={false} animate={{ width: `${progress}%` }} transition={{ duration: 0.6 }} className="h-full rounded-full" style={{ background: "linear-gradient(90deg,#0056FF,#2277FF)" }} />
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center gap-2">
+          <Building2 size={16} className="text-[#0056FF]" />
+          <div className="tracking-tight text-black dark:text-white">Куда обращаться</div>
+        </div>
+        <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+          Учреждения подбираются по адресу из профиля. Если адресов несколько, показываем отдельные группы.
+        </div>
+        <div className="mt-4 space-y-4">
+          {addressGroups.map(group => {
+            const title = group.address.label || group.address.city || group.address.region || "Адрес";
+            const subtitle = [group.address.city, group.address.district, group.address.region].filter(Boolean).join(" · ");
+            const items = group.items.slice(0, 5);
+            return (
+              <div key={group.address.id || title} className="rounded-2xl bg-[#F6F7FB] p-3.5 dark:bg-white/[0.03]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone="lavender">{title}</Pill>
+                  {subtitle && <span className="text-[11px] tracking-tight text-black/45 dark:text-white/45">{subtitle}</span>}
+                </div>
+                <div className="mt-3 space-y-2.5">
+                  {items.map(ins => (
+                    <div key={ins.id} className="flex items-start gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                        <Building2 size={15} />
+                      </span>
+                      <div className="min-w-0 flex-1 text-[13px] tracking-tight">
+                        <div className="text-black dark:text-white">{ins.name}</div>
+                        <div className="text-black/55 dark:text-white/55">{ins.address || ins.matchReason || "Адрес уточняется"}</div>
+                        {(ins.phone || ins.hours) && (
+                          <div className="mt-0.5 text-[12px] text-black/45 dark:text-white/45">
+                            {[ins.phone, ins.hours].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {items.length === 0 && (
+                    <div className="text-[13px] tracking-tight text-black/55 dark:text-white/55">
+                      Для этого адреса точное учреждение пока не найдено. Проверьте город/район в профиле.
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Card>
 

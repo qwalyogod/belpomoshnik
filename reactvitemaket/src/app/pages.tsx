@@ -19,6 +19,7 @@ import {
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
 import { apiClient } from "./services/api";
+import { institutionsForScenario, matchInstitutionsForAddresses, profileAddresses } from "./services/institutions";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
 import { AvatarCropper, validateAvatarFile } from "./components/avatar-cropper";
 
@@ -118,6 +119,43 @@ const toCatalogItems = (problems: Problem[], scenarios: Scenario[]): CatalogItem
     route: `/scenarios/${scenario.id}`,
   }));
   return [...problemItems, ...scenarioItems];
+};
+
+const normalizeLookupText = (value: string) => (
+  value
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^a-zа-я0-9]+/gi, " ")
+    .trim()
+);
+
+const lookupTokens = (value: string) => (
+  normalizeLookupText(value)
+    .split(" ")
+    .filter(token => token.length > 3)
+    .map(token => token.slice(0, 6))
+);
+
+const scenarioForProblem = (problem: Problem, scenarios: Scenario[]) => {
+  const problemTitle = normalizeLookupText(problem.title);
+  const problemTokens = new Set(lookupTokens(problem.title));
+  const scored = scenarios
+    .map((scenario) => {
+      const scenarioTitle = normalizeLookupText(scenario.title);
+      const scenarioTokens = new Set(lookupTokens(`${scenario.title} ${scenario.shortDescription}`));
+      const titleMatch = problemTitle && scenarioTitle
+        ? scenarioTitle.includes(problemTitle) || problemTitle.includes(scenarioTitle)
+        : false;
+      const overlap = Array.from(problemTokens).filter(token => scenarioTokens.has(token)).length;
+      const score =
+        (scenario.category === problem.category ? 2 : 0) +
+        (titleMatch ? 6 : 0) +
+        overlap * 2;
+      return { scenario, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.score >= 4 ? scored[0].scenario : undefined;
 };
 
 export function CatalogPage() {
@@ -2245,7 +2283,10 @@ export function ProblemDetailPage() {
   const { isMobile } = useContext(ShellContext);
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { problemById, toggleFavorite, favorites, isAuthenticated } = useStore();
+  const {
+    problemById, toggleFavorite, favorites, isAuthenticated, authorities, profile,
+    scenarios, createSituation, situationByScenario,
+  } = useStore();
   const item = problemById(params?.id || "");
   const [checks, setChecks] = useState<Record<string, boolean>>({});
 
@@ -2255,14 +2296,35 @@ export function ProblemDetailPage() {
   const done = item.steps.filter(s => checks[s.id]).length;
   const progress = total ? Math.round((done / total) * 100) : 0;
   const isFav = favorites.includes(item.id);
+  const problemInstitutions = institutionsForScenario([], authorities, item.category, item.title);
+  const problemInstitutionGroups = matchInstitutionsForAddresses(problemInstitutions, profileAddresses(profile));
+  const relatedScenario = scenarioForProblem(item, scenarios);
+  const existingSituation = relatedScenario ? situationByScenario(relatedScenario.id) : undefined;
   const onCreatePlan = () => {
     if (!isAuthenticated) {
-      navigate(`/login?redirect=/problems/${item.id}&reason=create-plan`);
-    } else {
-      navigate("/catalog?from=" + item.id);
+      navigate(`/login?redirect=/problem-detail/${item.id}&reason=create-plan`);
+      return;
     }
+
+    if (existingSituation) {
+      navigate(`/situations/${existingSituation.id}`);
+      return;
+    }
+
+    if (relatedScenario) {
+      const id = createSituation(relatedScenario.id);
+      if (id) navigate(`/situations/${id}`);
+      return;
+    }
+
+    navigate(`/catalog?category=${item.category}&type=scenario&from=${item.id}`);
   };
   const onToggleFav = () => toggleFavorite(item.id);
+  const planButtonText = existingSituation
+    ? "Открыть в моих ситуациях"
+    : relatedScenario
+      ? "Добавить в мои ситуации"
+      : "Подобрать сценарий";
 
   return (
     <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"} space-y-6`}>
@@ -2335,9 +2397,40 @@ export function ProblemDetailPage() {
             <div className="text-[14px] tracking-tight font-medium mb-3 text-black dark:text-white flex items-center gap-2">
               <Building2 size={16} className="text-[#0056FF]" /> Куда обращаться
             </div>
-            <ul className="list-disc pl-4 space-y-1.5 text-[14px] text-black/70 dark:text-white/70">
-              {item.institutions.map((d, i) => <li key={i}>{d}</li>)}
-            </ul>
+            {item.institutions.length > 0 && (
+              <ul className="list-disc pl-4 space-y-1.5 text-[14px] text-black/70 dark:text-white/70">
+                {item.institutions.map((d, i) => <li key={i}>{d}</li>)}
+              </ul>
+            )}
+            <div className="mt-4 space-y-3">
+              {problemInstitutionGroups.map(group => {
+                const title = group.address.label || group.address.city || group.address.region || "Адрес";
+                const items = group.items.slice(0, 4);
+                return (
+                  <div key={group.address.id || title} className="rounded-2xl bg-[#F6F7FB] p-3 dark:bg-white/[0.03]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Pill tone="lavender">{title}</Pill>
+                      <span className="text-[11px] tracking-tight text-black/45 dark:text-white/45">
+                        {[group.address.city, group.address.district, group.address.region].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {items.map(ins => (
+                        <div key={ins.id} className="text-[13px] tracking-tight">
+                          <div className="text-black dark:text-white">{ins.name}</div>
+                          <div className="text-black/55 dark:text-white/55">{ins.address || ins.matchReason || "Адрес уточняется"}</div>
+                        </div>
+                      ))}
+                      {items.length === 0 && (
+                        <div className="text-[13px] tracking-tight text-black/55 dark:text-white/55">
+                          Уточните город и район в профиле, чтобы подобрать учреждение точнее.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
         </Card>
 
         <Card className="mt-5 p-5 border border-red-100 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10">
@@ -2349,13 +2442,53 @@ export function ProblemDetailPage() {
             </ul>
         </Card>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <PrimaryButton onClick={onCreatePlan} className="flex-1 text-[14px]">
-            Создать персональный план
-          </PrimaryButton>
-          <GhostButton onClick={onToggleFav} className="flex-1 text-[14px]">
-            {isFav ? "★ В избранном" : "Сохранить в избранное"}
-          </GhostButton>
+        {relatedScenario && (
+          <div className={`mt-6 flex items-start gap-3 rounded-[24px] border px-4 py-3.5 ${
+            existingSituation
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100"
+              : "border-[#C9D2FF] bg-[#F3F6FF] text-[#102A72] dark:border-[#264C9F] dark:bg-[#0E1A3A] dark:text-[#D8E3FF]"
+          }`}>
+            <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-2xl ${
+              existingSituation ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300" : "bg-white text-[#0056FF] dark:bg-white/10 dark:text-[#7FA8FF]"
+            }`}>
+              {existingSituation ? <Check size={16} /> : <Sparkles size={16} />}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] font-semibold tracking-tight">
+                {existingSituation ? "Этот план уже добавлен в «Мои ситуации»" : "Для этой проблемы найден подходящий сценарий"}
+              </div>
+              <div className="mt-0.5 text-[12px] leading-snug opacity-75">
+                {relatedScenario.title}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onCreatePlan}
+            className="group inline-flex min-h-[56px] w-full items-center justify-center rounded-[24px] bg-[#0056FF] px-5 py-3.5 text-[15px] font-semibold leading-tight tracking-tight text-white shadow-[0_16px_42px_-18px_rgba(0,86,255,0.65)] transition-all hover:bg-[#0049DB] active:translate-y-[1px] dark:shadow-[0_16px_42px_-20px_rgba(0,86,255,0.9)]"
+          >
+            <span className="inline-flex max-w-full items-center justify-center gap-2 text-center">
+              {existingSituation ? <Check size={18} className="shrink-0" /> : relatedScenario ? <Plus size={18} className="shrink-0" /> : <ArrowRight size={18} className="shrink-0" />}
+              <span>{planButtonText}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleFav}
+            className={`inline-flex min-h-[56px] w-full items-center justify-center rounded-[24px] border px-5 py-3.5 text-[15px] font-semibold leading-tight tracking-tight transition-all active:translate-y-[1px] ${
+              isFav
+                ? "border-[#0056FF]/20 bg-[#E3E7FC] text-[#0056FF] dark:border-[#7FA8FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+                : "border-black/[0.08] bg-white text-black/80 hover:bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white/80 dark:hover:bg-white/[0.08]"
+            }`}
+          >
+            <span className="inline-flex max-w-full items-center justify-center gap-2 text-center">
+              <Star size={18} className="shrink-0" fill={isFav ? "currentColor" : "none"} />
+              <span>{isFav ? "В избранном" : "Сохранить в избранное"}</span>
+            </span>
+          </button>
         </div>
 
         <div className="mt-4 flex items-center gap-2 text-[11px] text-black/45 dark:text-white/45">

@@ -222,6 +222,85 @@ def normalize_news_media_notes(data: dict[str, Any]) -> bool:
     return changed
 
 
+def normalize_batch_meta_category(path: Path, data: dict[str, Any]) -> bool:
+    batch_meta = data.setdefault("batch_meta", {})
+    if not isinstance(batch_meta, dict):
+        data["batch_meta"] = batch_meta = {}
+    expected_by_file = {
+        "content_news_calendar_2022_2026.json": "news_calendar",
+        "content_law_updates_2022_2026.json": "law_updates",
+        "content_extremist_materials_2022_2026.json": "extremist_materials",
+    }
+    expected = expected_by_file.get(path.name)
+    if expected and batch_meta.get("category_id") != expected:
+        batch_meta["category_id"] = expected
+        return True
+    return False
+
+
+def dedupe_string_list(values: Any) -> tuple[list[str], bool]:
+    if not isinstance(values, list):
+        return [], False
+    seen: set[str] = set()
+    result: list[str] = []
+    changed = False
+    for value in values:
+        if not isinstance(value, str):
+            changed = True
+            continue
+        key = value.strip().casefold()
+        if not key:
+            changed = True
+            continue
+        if key in seen:
+            changed = True
+            continue
+        seen.add(key)
+        result.append(value.strip())
+    return result, changed
+
+
+def normalize_news_tags(data: dict[str, Any]) -> bool:
+    changed = False
+    for item in data.get("news_articles") or []:
+        if not isinstance(item, dict):
+            continue
+        tags, fixed = dedupe_string_list(item.get("tags"))
+        if fixed:
+            item["tags"] = tags
+            changed = True
+    return changed
+
+
+def slugify(value: str) -> str:
+    text = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return text or "source"
+
+
+def normalize_law_source_ids(data: dict[str, Any]) -> bool:
+    changed = False
+    for item in data.get("law_updates") or []:
+        if not isinstance(item, dict):
+            continue
+        source = item.get("source")
+        if not isinstance(source, dict):
+            continue
+        current = source.get("id")
+        if isinstance(current, str) and current.startswith("src-"):
+            continue
+        source_ids = item.get("sourceIds")
+        base = ""
+        if isinstance(source_ids, list) and source_ids and isinstance(source_ids[0], str):
+            base = source_ids[0].replace("source-", "")
+        elif isinstance(current, str) and current:
+            base = current.replace("source-", "")
+        elif isinstance(source.get("title"), str):
+            base = source["title"]
+        source["id"] = f"src-{slugify(base)}"
+        changed = True
+    return changed
+
+
 def reject_unresolved_news(data: dict[str, Any]) -> bool:
     changed = False
     kept: list[dict[str, Any]] = []
@@ -256,6 +335,9 @@ def normalize_batch(path: Path, dry_run: bool = False) -> tuple[bool, list[str]]
         notes.append("repaired malformed stages JSON")
 
     checked_at = str((data.get("batch_meta") or {}).get("checked_at") or "2026-06-08")
+    if normalize_batch_meta_category(path, data):
+        changed = True
+        notes.append("normalized batch_meta.category_id")
     official_sources = normalize_official_sources(data, checked_at)
 
     old_sources = data.get("official_sources_used")
@@ -272,6 +354,12 @@ def normalize_batch(path: Path, dry_run: bool = False) -> tuple[bool, list[str]]
     if normalize_news_media_notes(data):
         changed = True
         notes.append("filled empty news media_notes")
+    if normalize_news_tags(data):
+        changed = True
+        notes.append("deduplicated news tags")
+    if normalize_law_source_ids(data):
+        changed = True
+        notes.append("normalized law source ids")
     if reject_unresolved_news(data):
         changed = True
         notes.append("moved unresolved non-official news to rejected_items")

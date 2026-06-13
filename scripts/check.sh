@@ -32,11 +32,11 @@ else
   echo "  → pnpm/node_modules не готовы, пропускаю tsc"
 fi
 
-echo "== [5/5] Миграции: 0001..0017 без пропусков (0007 — noop) =="
-EXPECTED_COUNT=17
+echo "== [5/5] Миграции: 0001..0019 без пропусков (0007 — noop) =="
+EXPECTED_COUNT=19
 LISTED_COUNT=$(ls src/backend/migrations/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$LISTED_COUNT" -eq "$EXPECTED_COUNT" ]; then
-  echo "  ✓ миграций: $LISTED_COUNT (0001..0017, включая 0007_noop)"
+  echo "  ✓ миграций: $LISTED_COUNT (0001..0019, включая 0007_noop)"
 else
   echo "  ✗ найдено $LISTED_COUNT миграций, ожидалось $EXPECTED_COUNT" >&2
   ls src/backend/migrations/ >&2

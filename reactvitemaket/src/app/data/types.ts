@@ -60,8 +60,23 @@ export interface Institution {
   address: string;
   hours?: string;
   phone?: string;
+  email?: string;
+  websiteUrl?: string;
+  type?: string;
   region?: string;
+  district?: string;
   city?: string;
+  settlement?: string;
+  services?: string[];
+  tags?: string[];
+  relatedScenarioCategories?: string[];
+  relatedScenarios?: string[];
+  sourceIds?: string[];
+  sourceUrls?: string[];
+  lastCheckedAt?: string;
+  confidence?: string;
+  notes?: string;
+  isActive?: boolean;
 }
 
 export interface DocumentRef {

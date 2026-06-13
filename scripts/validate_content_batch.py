@@ -77,7 +77,7 @@ SOURCE_CANDIDATE_TYPES = {
 }
 
 DIFFICULTIES = {"Простая", "Средняя", "Сложная"}
-EXTREMIST_CATEGORIES = {"registry"}
+EXTREMIST_CATEGORIES = {"registry", "news", "explanation"}
 EXTREMIST_CONTENT_TYPES = {
     "social",
     "channels",
@@ -809,8 +809,8 @@ def validate_extremist_entry(ctx: ValidationContext, obj: Any, path: str) -> str
     title = expect_string(ctx, obj, path, "title")
     if obj.get("category") not in EXTREMIST_CATEGORIES:
         ctx.error(f"{path}.category", "`category` для этого батча должен быть `registry`.")
-    if obj.get("status") != "draft":
-        ctx.error(f"{path}.status", "`status` юридически чувствительной записи должен быть `draft` до ручной проверки.")
+    if obj.get("status") not in {"draft", "published"}:
+        ctx.error(f"{path}.status", "`status` юридически чувствительной записи должен быть `draft` или `published`.")
     for key in ("source_name", "short_description", "verification_notes"):
         expect_string(ctx, obj, path, key)
     if not is_https_url(obj.get("source_url")):

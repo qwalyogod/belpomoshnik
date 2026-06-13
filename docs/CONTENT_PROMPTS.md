@@ -533,8 +533,10 @@ documents, family, work, business, housing, taxes, health, auto.
 - music;
 - other.
 
-Все записи по умолчанию status = "draft".
-Публикация возможна только после ручной проверки редактором.
+Для новых публикационных батчей см. `docs/CONTENT_PUBLICATION_RESEARCH_PROMPTS.md`:
+там допускается `status = "published"` для записей с прямым официальным
+`source_url` и безопасным нейтральным описанием. Если уверенной проверки нет,
+оставляй `status = "draft"` или переноси запись в `rejected_items`.
 
 Верни JSON по общему контракту, заполнив extremist_entries.
 ```

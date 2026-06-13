@@ -15,10 +15,10 @@ services:
     container_name: belp_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: belp_root
+      # Пустой пароль root — единый .env работает и на локальном XAMPP MariaDB,
+      # и в этом docker-контейнере (см. .env / .env.example). Только для dev/демо.
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: belpomoshnik
-      MYSQL_USER: belp
-      MYSQL_PASSWORD: belp_root
     ports:
       - "3306:3306"
     volumes:
@@ -27,7 +27,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pbelp_root"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot"]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -1,0 +1,3893 @@
+{
+"batch_meta": {
+"country": "BY",
+"region_scope": "Минск",
+"generated_at": "2026-06-13",
+"sources_policy": "official_only",
+"notes": "Часть 1. Собраны официально подтверждённые учреждения только по городу Минску: ЗАГС, службы «одно окно», администрации районов, налоговые инспекции, суды, органы соцзащиты и занятости, отдельные подразделения ОГиМ, ГАИ, нотариальные учреждения и регистрация недвижимости. Минская область и Минский район исключены. Здравоохранение, ЖКХ/РСЦ и полный перечень нотариальных бюро лучше вынести в часть 2 из-за большого объёма. Основано на пользовательском промпте: "
+},
+"institutions": [
+{
+"external_id": "by-minsk-city-one-window-mingorispolkom-001",
+"short_name": "Одно окно Мингорисполкома",
+"full_name": "Служба «одно окно» Минского городского исполнительного комитета",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "пр-т Независимости, 8",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"одно окно",
+"административные процедуры",
+"справки",
+"документы"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение административной справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5194/](https://minsk.gov.by/ru/org/5194/)",
+"[https://book.onewin.by/](https://book.onewin.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Подтверждён официальный городской источник; для карточки приложения указан справочный номер службы."
+},
+{
+"external_id": "by-minsk-city-zavodskoy-one-window-001",
+"short_name": "Одно окно Заводского района",
+"full_name": "Служба «одно окно» администрации Заводского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220026, г. Минск, ул. Жилуновича, 17",
+"phone": "8 (017) 389-26-82; 8 (017) 389-26-84; 8 (017) 389-26-83",
+"email": "[zav.okno@minsk.gov.by](mailto:zav.okno@minsk.gov.by)",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "Пн–пт 08:00–20:00; сб 09:00–13:00; вс выходной",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Заводской район",
+"одно окно",
+"административные процедуры",
+"документы"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5171/](https://minsk.gov.by/ru/org/5171/)",
+"[https://mgaon.by/](https://mgaon.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-one-window-001",
+"short_name": "Одно окно Ленинского района",
+"full_name": "Служба «одно окно» администрации Ленинского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220006, г. Минск, ул. Маяковского, 83",
+"phone": "142",
+"email": "[len.okno@minsk.gov.by](mailto:len.okno@minsk.gov.by)",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Ленинский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5184/](https://minsk.gov.by/ru/org/5184/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-one-window-001",
+"short_name": "Одно окно Московского района",
+"full_name": "Служба «одно окно» администрации Московского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220036, г. Минск, пр-т Дзержинского, 10",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Московский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5170/](https://minsk.gov.by/ru/org/5170/)",
+"[https://book.onewin.by/](https://book.onewin.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-one-window-001",
+"short_name": "Одно окно Октябрьского района",
+"full_name": "Служба «одно окно» администрации Октябрьского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220039, г. Минск, ул. Чкалова, 6",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Октябрьский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5189/](https://minsk.gov.by/ru/org/5189/)",
+"[https://okt.minsk.gov.by/kontakty/](https://okt.minsk.gov.by/kontakty/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-one-window-001",
+"short_name": "Одно окно Партизанского района",
+"full_name": "Служба «одно окно» администрации Партизанского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220088, г. Минск, ул. Захарова, 53",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Партизанский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5161/](https://minsk.gov.by/ru/org/5161/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-one-window-001",
+"short_name": "Одно окно Первомайского района",
+"full_name": "Служба «одно окно» администрации Первомайского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, пр-т Независимости, 134",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Первомайский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5141/](https://minsk.gov.by/ru/org/5141/)",
+"[https://book.onewin.by/](https://book.onewin.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-sovetskiy-one-window-001",
+"short_name": "Одно окно Советского района",
+"full_name": "Служба «одно окно» администрации Советского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Советский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, ул. Дорошевича, 8",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Советский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5109/](https://minsk.gov.by/ru/org/5109/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-one-window-001",
+"short_name": "Одно окно Фрунзенского района",
+"full_name": "Служба «одно окно» администрации Фрунзенского района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220073, г. Минск, ул. Кальварийская, 39",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Фрунзенский район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/org/5088/](https://minsk.gov.by/ru/org/5088/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-one-window-001",
+"short_name": "Одно окно Центрального района",
+"full_name": "Служба «одно окно» администрации Центрального района города Минска",
+"institution_type": "one_window",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220004, г. Минск, ул. Мельникайте, 6",
+"phone": "+375 (17) 302-75-10",
+"email": "[cen.electron@minsk.gov.by](mailto:cen.electron@minsk.gov.by)",
+"website": "[https://centr.minsk.gov.by/](https://centr.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"административные процедуры",
+"приём заявлений",
+"выдача справок",
+"консультации по документам"
+],
+"tags": [
+"Центральный район",
+"одно окно",
+"административные процедуры"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"регистрация рождения ребёнка",
+"регистрация по месту жительства",
+"получение справки"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://centr.minsk.gov.by/odno-okno-ru/view/sluzhba-odno-okno-administratsii-tsentralnogo-rajona-gminska-2000000287](https://centr.minsk.gov.by/odno-okno-ru/view/sluzhba-odno-okno-administratsii-tsentralnogo-rajona-gminska-2000000287)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Контакты подтверждены официальным сайтом администрации Центрального района."
+},
+{
+"external_id": "by-minsk-city-executive-mingorispolkom-001",
+"short_name": "Мингорисполком",
+"full_name": "Минский городской исполнительный комитет",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, пр-т Независимости, 8",
+"phone": "142",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"местное управление",
+"административные процедуры",
+"обращения граждан",
+"городские услуги"
+],
+"tags": [
+"исполком",
+"Минск",
+"администрация",
+"обращения граждан"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"business",
+"family"
+],
+"related_scenarios": [
+"обращение в исполком",
+"получение административной справки",
+"жилищный вопрос",
+"городская административная процедура"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/](https://minsk.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-executive-001",
+"short_name": "Администрация Заводского района",
+"full_name": "Администрация Заводского района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220026, г. Минск, ул. Жилуновича, 17",
+"phone": "+375 (17) 389-26-08",
+"email": "[zav.glav.priem@minsk.gov.by](mailto:zav.glav.priem@minsk.gov.by)",
+"website": "[https://zav.minsk.gov.by/](https://zav.minsk.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Заводской район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос",
+"регистрация по месту жительства"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://zav.minsk.gov.by/kontakty/](https://zav.minsk.gov.by/kontakty/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-executive-001",
+"short_name": "Администрация Ленинского района",
+"full_name": "Администрация Ленинского района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220006, г. Минск, ул. Маяковского, 83",
+"phone": "+375 (17) 379-32-87",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Ленинский район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/cloudgo/183/](https://minsk.gov.by/ru/cloudgo/183/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-executive-001",
+"short_name": "Администрация Московского района",
+"full_name": "Администрация Московского района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220036, г. Минск, пр-т Дзержинского, 10",
+"phone": "+375 (17) 260-63-96; +375 (17) 368-14-07",
+"email": "[admmos@minsk.gov.by](mailto:admmos@minsk.gov.by)",
+"website": "[https://mosk.minsk.gov.by/](https://mosk.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Московский район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://mosk.minsk.gov.by/kontakty/](https://mosk.minsk.gov.by/kontakty/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-executive-001",
+"short_name": "Администрация Октябрьского района",
+"full_name": "Администрация Октябрьского района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220039, г. Минск, ул. Чкалова, 6",
+"phone": "+375 (17) 397-07-73",
+"email": "",
+"website": "[https://okt.minsk.gov.by/](https://okt.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Октябрьский район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://okt.minsk.gov.by/kontakty/](https://okt.minsk.gov.by/kontakty/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-executive-001",
+"short_name": "Администрация Первомайского района",
+"full_name": "Администрация Первомайского района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220012, г. Минск, пер. К. Чорного, 5",
+"phone": "",
+"email": "",
+"website": "[https://perv.minsk.gov.by/](https://perv.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Первомайский район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://perv.minsk.gov.by/](https://perv.minsk.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-executive-001",
+"short_name": "Администрация Центрального района",
+"full_name": "Администрация Центрального района города Минска",
+"institution_type": "executive_committee",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220004, г. Минск, ул. Мельникайте, 6",
+"phone": "+375 (17) 302-75-10; +375 (17) 363-24-26",
+"email": "[cen.electron@minsk.gov.by](mailto:cen.electron@minsk.gov.by)",
+"website": "[https://centr.minsk.gov.by/](https://centr.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"обращения граждан",
+"местное управление",
+"административные процедуры",
+"районные вопросы"
+],
+"tags": [
+"Центральный район",
+"администрация района",
+"исполком"
+],
+"related_scenario_categories": [
+"documents",
+"housing",
+"family",
+"work"
+],
+"related_scenarios": [
+"обращение в администрацию района",
+"получение справки",
+"жилищный вопрос"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://centr.minsk.gov.by/contacts](https://centr.minsk.gov.by/contacts)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zags-palace-001",
+"short_name": "Дворец гражданских обрядов",
+"full_name": "Дворец гражданских обрядов города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220035, г. Минск, пр-т Победителей, 59А",
+"phone": "8 (017) 342-10-00",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00, перерыв 14:00–15:00; ср, пт, сб 08:00–17:00, перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация заключения брака",
+"торжественные гражданские обряды",
+"консультации по актам гражданского состояния"
+],
+"tags": [
+"ЗАГС",
+"брак",
+"гражданские обряды",
+"семья"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация брака",
+"получение свидетельства",
+"семейные документы"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zags-main-001",
+"short_name": "Отдел ЗАГС главного управления юстиции",
+"full_name": "Отдел ЗАГС главного управления юстиции Минского городского исполнительного комитета",
+"institution_type": "zags",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220073, г. Минск, ул. Ольшевского, 12",
+"phone": "8 (017) 324-65-72; 8 (017) 373-11-15; 8 (017) 354-68-17",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Пн, вт, чт, пт 08:00–17:00; ср 08:00–20:00; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"акты гражданского состояния",
+"регистрация рождения",
+"регистрация брака",
+"выдача повторных свидетельств",
+"консультации по ЗАГС"
+],
+"tags": [
+"ЗАГС",
+"документы",
+"семья",
+"свидетельство"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение повторного свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-zags-001",
+"short_name": "ЗАГС Заводского района",
+"full_name": "Отдел ЗАГС администрации Заводского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220102, г. Минск, ул. Голодеда, 21/1",
+"phone": "8 (017) 374-98-56; 8 (017) 374-92-06; 8 (017) 374-92-54; 8 (017) 374-98-71",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Заводской район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-zags-001",
+"short_name": "ЗАГС Ленинского района",
+"full_name": "Отдел ЗАГС администрации Ленинского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220094, г. Минск, ул. Плеханова, 42",
+"phone": "8 (017) 338-15-61; 8 (017) 271-30-35; 8 (017) 263-48-04; 8 (017) 338-35-21",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Ленинский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-zags-001",
+"short_name": "ЗАГС Московского района",
+"full_name": "Отдел ЗАГС администрации Московского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220116, г. Минск, пр. газеты «Правда», 29",
+"phone": "8 (017) 375-39-43; 8 (017) 375-35-09; 8 (017) 397-45-37; 8 (017) 375-95-57; 8 (017) 375-84-70",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Московский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-zags-001",
+"short_name": "ЗАГС Октябрьского района",
+"full_name": "Отдел ЗАГС администрации Октябрьского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220039, г. Минск, ул. Воронянского, 10",
+"phone": "8 (017) 390-14-56; 8 (017) 390-14-57; 8 (017) 390-14-58; 8 (017) 390-14-59",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Октябрьский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-zags-001",
+"short_name": "ЗАГС Партизанского района",
+"full_name": "Отдел ЗАГС администрации Партизанского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220070, г. Минск, ул. О. Кошевого, 27а",
+"phone": "8 (017) 270-87-78; 8 (017) 270-93-41; 8 (017) 270-25-65",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Партизанский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-zags-001",
+"short_name": "ЗАГС Первомайского района",
+"full_name": "Отдел ЗАГС администрации Первомайского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220119, г. Минск, ул. Карбышева, 1, корп. 3",
+"phone": "8 (017) 270-06-14; 8 (017) 271-99-97; 8 (017) 358-06-12; 8 (017) 358-06-14",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Первомайский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-sovetskiy-zags-001",
+"short_name": "ЗАГС Советского района",
+"full_name": "Отдел ЗАГС администрации Советского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Советский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220090, г. Минск, ул. Гамарника, 2",
+"phone": "8 (017) 304-55-92; 8 (017) 261-60-63; 8 (017) 342-12-13; 8 (017) 316-06-61",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Советский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-zags-001",
+"short_name": "ЗАГС Фрунзенского района",
+"full_name": "Отдел ЗАГС администрации Фрунзенского района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220082, г. Минск, пр. Пушкина, 55",
+"phone": "8 (017) 357-85-94; 8 (017) 355-09-51; 8 (017) 356-08-79; 8 (017) 356-08-69; 8 (017) 358-09-40",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00, перерыв 13:00–14:00; ср–сб 08:00–17:00, перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Фрунзенский район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-zags-001",
+"short_name": "ЗАГС Центрального района",
+"full_name": "Отдел ЗАГС администрации Центрального района города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220029, г. Минск, ул. М. Богдановича, 17а",
+"phone": "8 (017) 286-04-48; 8 (017) 334-27-10",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Вт 11:00–20:00; ср–сб 08:00–17:00; перерыв 13:00–14:00; пн, вс выходной",
+"services": [
+"регистрация рождения",
+"регистрация брака",
+"регистрация смерти",
+"выдача свидетельств ЗАГС"
+],
+"tags": [
+"Центральный район",
+"ЗАГС",
+"рождение",
+"брак"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"регистрация рождения ребёнка",
+"регистрация брака",
+"получение свидетельства"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zags-archive-001",
+"short_name": "Архив ЗАГС Минска",
+"full_name": "Сектор архива органов ЗАГС города Минска",
+"institution_type": "zags",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220082, г. Минск, пр. Пушкина, 42",
+"phone": "8 (017) 308-23-94",
+"email": "",
+"website": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"working_hours": "Пн–ср, пт 08:00–17:00; чт 08:00–20:00; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"архивные сведения ЗАГС",
+"повторные документы",
+"справки по актам гражданского состояния"
+],
+"tags": [
+"архив ЗАГС",
+"повторное свидетельство",
+"семейные документы"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"получение повторного свидетельства",
+"восстановление документов ЗАГС",
+"архивная справка"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/](https://just-minsk.gov.by/ru/departments/zagsy/spisok-organov-zags-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-tax-main-001",
+"short_name": "ИМНС по г. Минску",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по городу Минску",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220030, г. Минск, ул. Мясникова, 29",
+"phone": "8 (017) 229-26-92",
+"email": "[imns101@nalog.gov.by](mailto:imns101@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"консультации по налогам",
+"налоговые административные процедуры"
+],
+"tags": [
+"налоги",
+"ИП",
+"декларация",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация",
+"получение налоговой консультации"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/](https://nalog.gov.by/inspectorates/imns-minsk/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-tax-001",
+"short_name": "ИМНС Заводского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Заводскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220102, г. Минск, ул. Мичурина, 7",
+"phone": "8 (017) 389-07-01",
+"email": "[imns102@nalog.gov.by](mailto:imns102@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Заводской район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-zav/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-zav/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-tax-001",
+"short_name": "ИМНС Ленинского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Ленинскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220067, г. Минск, Игуменский тракт, 14",
+"phone": "8 (017) 215-78-29",
+"email": "[imns103@nalog.gov.by](mailto:imns103@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Ленинский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-lenin/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-lenin/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-tax-001",
+"short_name": "ИМНС Московского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Московскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220036, г. Минск, ул. Р. Люксембург, 183",
+"phone": "8 (017) 227-89-98",
+"email": "[imns104@nalog.gov.by](mailto:imns104@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Московский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-moscow/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-moscow/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-tax-001",
+"short_name": "ИМНС Октябрьского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Октябрьскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220039, г. Минск, ул. Чкалова, 6",
+"phone": "8 (017) 374-80-44",
+"email": "[imns105@nalog.gov.by](mailto:imns105@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Октябрьский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-october/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-october/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-tax-001",
+"short_name": "ИМНС Партизанского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Партизанскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220037, г. Минск, ул. Фроликова, 9",
+"phone": "8 (017) 320-60-10",
+"email": "[imns106@nalog.gov.by](mailto:imns106@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Партизанский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-part/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-part/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-tax-001",
+"short_name": "ИМНС Первомайского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Первомайскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220090, г. Минск, ул. Седых, 12",
+"phone": "8 (017) 395-55-36",
+"email": "[imns107@nalog.gov.by](mailto:imns107@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Первомайский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-perv/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-perv/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-sovetskiy-tax-001",
+"short_name": "ИМНС Советского района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Советскому району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Советский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220013, г. Минск, ул. Я. Коласа, 19",
+"phone": "8 (017) 318-11-73; 8 (017) 351-50-03",
+"email": "[imns108@nalog.gov.by](mailto:imns108@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Советский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-sov/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-sov/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-tax-001",
+"short_name": "ИМНС Фрунзенского района № 1",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Фрунзенскому району № 1 города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220018, г. Минск, ул. Якубовского, 54А",
+"phone": "8 (017) 363-55-64",
+"email": "[imns112@nalog.gov.by](mailto:imns112@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Фрунзенский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-fr-1/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-fr-1/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-tax-002",
+"short_name": "ИМНС Фрунзенского района № 2",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Фрунзенскому району № 2 города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220015, г. Минск, пр. Пушкина, 11",
+"phone": "8 (017) 316-16-78",
+"email": "[imns109@nalog.gov.by](mailto:imns109@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Фрунзенский район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-fr-2/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-fr-2/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-tax-001",
+"short_name": "ИМНС Центрального района",
+"full_name": "Инспекция Министерства по налогам и сборам Республики Беларусь по Центральному району города Минска",
+"institution_type": "tax_office",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220005, г. Минск, пр. Машерова, 7",
+"phone": "8 (017) 378-67-70; 8 (017) 236-61-41",
+"email": "[imns111@nalog.gov.by](mailto:imns111@nalog.gov.by)",
+"website": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"working_hours": "Пн–чт 08:45–18:00; пт 08:45–16:45; перерыв 13:00–14:00; сб, вс выходной",
+"services": [
+"налоги физических лиц",
+"налоги ИП",
+"приём деклараций",
+"консультации по налогам"
+],
+"tags": [
+"Центральный район",
+"налоги",
+"ИП",
+"МНС"
+],
+"related_scenario_categories": [
+"taxes",
+"business",
+"work"
+],
+"related_scenarios": [
+"открытие ИП",
+"уплата налогов",
+"налоговая декларация"
+],
+"source_ids": [
+"source-nalog"
+],
+"source_urls": [
+"[https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-centr/](https://nalog.gov.by/inspectorates/imns-minsk/imns-minsk-centr/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-court-city-001",
+"short_name": "Минский городской суд",
+"full_name": "Минский городской суд",
+"institution_type": "court",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220092, г. Минск, ул. Дунина-Марцинкевича, 1",
+"phone": "+375 (17) 308-90-00; +375 (17) 371-05-41",
+"email": "[minsk@court.by](mailto:minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"суд",
+"Минск",
+"семейные споры",
+"алименты"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/gorodskoj/sud/](https://www.court.gov.by/ru/minskij/gorodskoj/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-court-001",
+"short_name": "Суд Заводского района",
+"full_name": "Суд Заводского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220107, г. Минск, Партизанский пр., 75А",
+"phone": "+375 (17) 330-51-02",
+"email": "[zavod-minsk@court.by](mailto:zavod-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Заводской район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/zavodskij/sud/](https://www.court.gov.by/ru/minskij/zavodskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-court-001",
+"short_name": "Суд Ленинского района",
+"full_name": "Суд Ленинского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220045, г. Минск, ул. Семашко, 33",
+"phone": "+375 (17) 250-63-67; +375 (17) 380-57-08",
+"email": "[lenin-minsk@court.by](mailto:lenin-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Ленинский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/leninskij/sud/](https://www.court.gov.by/ru/minskij/leninskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-court-001",
+"short_name": "Суд Московского района",
+"full_name": "Суд Московского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220083, г. Минск, пр. газеты «Правда», 27",
+"phone": "+375 (17) 351-02-15; +375 (17) 379-02-16",
+"email": "[msk-minsk@court.by](mailto:msk-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Московский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/moskovskij/sud/](https://www.court.gov.by/ru/minskij/moskovskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-court-001",
+"short_name": "Суд Октябрьского района",
+"full_name": "Суд Октябрьского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220045, г. Минск, ул. Семашко, 33",
+"phone": "+375 (17) 378-63-55; +375 (17) 377-63-50",
+"email": "[okt-minsk@court.by](mailto:okt-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Октябрьский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/oktyabrskij/sud/](https://www.court.gov.by/ru/minskij/oktyabrskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-court-001",
+"short_name": "Суд Партизанского района",
+"full_name": "Суд Партизанского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220045, г. Минск, ул. Семашко, 33",
+"phone": "+375 (17) 358-64-25",
+"email": "[partiz-minsk@court.by](mailto:partiz-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Партизанский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/partizanskij/sud/](https://www.court.gov.by/ru/minskij/partizanskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-court-001",
+"short_name": "Суд Первомайского района",
+"full_name": "Суд Первомайского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220076, г. Минск, ул. Ф. Скорины, 6Б",
+"phone": "+375 (17) 289-48-06; +375 (17) 289-48-95",
+"email": "[1may-minsk@court.by](mailto:1may-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Первомайский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/pervomajskij/sud/](https://www.court.gov.by/ru/minskij/pervomajskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-sovetskiy-court-001",
+"short_name": "Суд Советского района",
+"full_name": "Суд Советского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Советский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220076, г. Минск, ул. Ф. Скорины, 6Б",
+"phone": "+375 (17) 289-49-06; +375 (17) 289-49-92",
+"email": "[sovet-minsk@court.by](mailto:sovet-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Советский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/sovetskij/sud/](https://www.court.gov.by/ru/minskij/sovetskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-court-001",
+"short_name": "Суд Фрунзенского района",
+"full_name": "Суд Фрунзенского района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220092, г. Минск, ул. Дунина-Марцинкевича, 1, корп. 2",
+"phone": "+375 (17) 343-98-13; +375 (17) 308-91-24",
+"email": "[frunz-minsk@court.by](mailto:frunz-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Фрунзенский район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/frunzenskij/sud/](https://www.court.gov.by/ru/minskij/frunzenskij/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-court-001",
+"short_name": "Суд Центрального района",
+"full_name": "Суд Центрального района города Минска",
+"institution_type": "court",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220030, г. Минск, ул. Кирова, 21",
+"phone": "+375 (17) 351-89-67",
+"email": "[centr-minsk@court.by](mailto:centr-minsk@court.by)",
+"website": "[https://court.gov.by/](https://court.gov.by/)",
+"working_hours": "",
+"services": [
+"судебное производство",
+"гражданские дела",
+"семейные споры",
+"административные дела"
+],
+"tags": [
+"Центральный район",
+"суд",
+"алименты",
+"семейные споры"
+],
+"related_scenario_categories": [
+"family",
+"housing",
+"documents"
+],
+"related_scenarios": [
+"алименты",
+"семейный спор",
+"жилищный спор",
+"обращение в суд"
+],
+"source_ids": [
+"source-court"
+],
+"source_urls": [
+"[https://www.court.gov.by/ru/minskij/centralnyj/sud/](https://www.court.gov.by/ru/minskij/centralnyj/sud/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-social-committee-001",
+"short_name": "Комитет по труду и соцзащите Мингорисполкома",
+"full_name": "Комитет по труду, занятости и социальной защите Минского городского исполнительного комитета",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220013, г. Минск, пр-т Независимости, 79",
+"phone": "+375 (17) 373-70-95; +375 (17) 338-64-41",
+"email": "",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"пособия",
+"трудовые вопросы",
+"занятость населения"
+],
+"tags": [
+"соцзащита",
+"пособия",
+"труд",
+"занятость"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособия семьям с детьми",
+"трудоустройство",
+"социальная поддержка"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-social-001",
+"short_name": "Соцзащита Заводского района",
+"full_name": "Управление социальной защиты администрации Заводского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220026, г. Минск, пр. Партизанский, 83, пом. 1Н",
+"phone": "8 (017) 242-11-25",
+"email": "[zav.soc@minsk.gov.by](mailto:zav.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Заводской район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-social-001",
+"short_name": "Соцзащита Ленинского района",
+"full_name": "Управление социальной защиты администрации Ленинского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220006, г. Минск, ул. Маяковского, 83",
+"phone": "8 (017) 373-82-02",
+"email": "[len.soc@minsk.gov.by](mailto:len.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Ленинский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-social-001",
+"short_name": "Соцзащита Московского района",
+"full_name": "Управление социальной защиты администрации Московского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220036, г. Минск, пр-т Дзержинского, 10",
+"phone": "8 (017) 363-19-81",
+"email": "[pr-soc-mos@mintrud.by](mailto:pr-soc-mos@mintrud.by); [soc-mos@mintrud.by](mailto:soc-mos@mintrud.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Московский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-oktyabrskiy-social-001",
+"short_name": "Соцзащита Октябрьского района",
+"full_name": "Управление социальной защиты администрации Октябрьского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Октябрьский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220039, г. Минск, ул. Чкалова, 6",
+"phone": "8 (017) 373-32-36",
+"email": "[okt.soc@minsk.gov.by](mailto:okt.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Октябрьский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-social-001",
+"short_name": "Соцзащита Партизанского района",
+"full_name": "Управление социальной защиты администрации Партизанского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220088, г. Минск, ул. Захарова, 53",
+"phone": "8 (017) 374-65-21",
+"email": "[part.soc@minsk.gov.by](mailto:part.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Партизанский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-pervomayskiy-social-001",
+"short_name": "Соцзащита Первомайского района",
+"full_name": "Управление социальной защиты администрации Первомайского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220012, г. Минск, пер. К. Чорного, 5",
+"phone": "8 (017) 357-37-26",
+"email": "[perv.soc@minsk.gov.by](mailto:perv.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Первомайский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-sovetskiy-social-001",
+"short_name": "Соцзащита Советского района",
+"full_name": "Управление социальной защиты администрации Советского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Советский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220123, г. Минск, ул. В. Хоружей, 24/1",
+"phone": "8 (017) 356-09-96",
+"email": "[soc-sov@mintrud.by](mailto:soc-sov@mintrud.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Советский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-social-001",
+"short_name": "Соцзащита Фрунзенского района",
+"full_name": "Управление социальной защиты администрации Фрунзенского района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220073, г. Минск, ул. Кальварийская, 39",
+"phone": "8 (017) 323-23-34; 8 (017) 358-37-21",
+"email": "[frun.soc@minsk.gov.by](mailto:frun.soc@minsk.gov.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Фрунзенский район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-centralnyy-social-001",
+"short_name": "Соцзащита Центрального района",
+"full_name": "Управление социальной защиты администрации Центрального района города Минска",
+"institution_type": "social_protection",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220004, г. Минск, ул. Мельникайте, 6",
+"phone": "8 (017) 373-42-63",
+"email": "[soc-cen@mintrud.by](mailto:soc-cen@mintrud.by)",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"социальная защита",
+"назначение пособий",
+"социальная поддержка",
+"консультации по льготам"
+],
+"tags": [
+"Центральный район",
+"соцзащита",
+"пособия",
+"льготы"
+],
+"related_scenario_categories": [
+"family",
+"work",
+"documents"
+],
+"related_scenarios": [
+"оформление пособия",
+"пособие при рождении ребёнка",
+"социальная поддержка",
+"льготы"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/social_protection.php](https://komtrud.minsk.gov.by/about/committee/social_protection.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-employment-main-001",
+"short_name": "Управление занятости населения Минска",
+"full_name": "Управление занятости населения Комитета по труду, занятости и социальной защите Минского городского исполнительного комитета",
+"institution_type": "employment_center",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220005, г. Минск, ул. Берестянская, 20",
+"phone": "8 (017) 353-57-40",
+"email": "",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"содействие занятости",
+"регистрация безработных",
+"подбор вакансий",
+"консультации по трудоустройству"
+],
+"tags": [
+"занятость",
+"безработица",
+"вакансии",
+"трудоустройство"
+],
+"related_scenario_categories": [
+"work"
+],
+"related_scenarios": [
+"поиск работы",
+"регистрация безработного",
+"получение пособия по безработице",
+"трудоустройство"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/employment.php](https://komtrud.minsk.gov.by/about/committee/employment.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-employment-placement-001",
+"short_name": "Отдел трудоустройства Минска",
+"full_name": "Отдел трудоустройства управления занятости населения Комитета по труду, занятости и социальной защите Минского городского исполнительного комитета",
+"institution_type": "employment_center",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220005, г. Минск, ул. Берестянская, 20",
+"phone": "8 (017) 347-13-51; 8 (017) 300-28-43; 8 (017) 378-89-53; 8 (017) 352-13-58; 8 (017) 351-24-70; 8 (017) 379-89-48",
+"email": "",
+"website": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"working_hours": "Пн, ср, чт 08:00–18:00; вт 08:00–20:00; пт 08:00–16:45",
+"services": [
+"трудоустройство",
+"подбор вакансий",
+"консультации соискателей",
+"содействие занятости"
+],
+"tags": [
+"занятость",
+"вакансии",
+"трудоустройство",
+"безработица"
+],
+"related_scenario_categories": [
+"work"
+],
+"related_scenarios": [
+"поиск работы",
+"регистрация безработного",
+"получение пособия по безработице",
+"трудоустройство"
+],
+"source_ids": [
+"source-mintrud"
+],
+"source_urls": [
+"[https://komtrud.minsk.gov.by/about/committee/employment_department.php](https://komtrud.minsk.gov.by/about/committee/employment_department.php)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-mvd-migration-department-001",
+"short_name": "Департамент по гражданству и миграции МВД",
+"full_name": "Департамент по гражданству и миграции Министерства внутренних дел Республики Беларусь",
+"institution_type": "citizenship_migration",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, ул. Городской Вал, 4",
+"phone": "",
+"email": "",
+"website": "[https://mvd.gov.by/](https://mvd.gov.by/)",
+"working_hours": "",
+"services": [
+"гражданство",
+"миграция",
+"паспортные вопросы",
+"регистрация по месту жительства"
+],
+"tags": [
+"МВД",
+"гражданство",
+"миграция",
+"паспорт"
+],
+"related_scenario_categories": [
+"documents",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"получение паспорта",
+"регистрация по месту жительства",
+"гражданство"
+],
+"source_ids": [
+"source-mvd"
+],
+"source_urls": [
+"[https://mvd.gov.by/ru/structure/departament/departament-grazhdanstva-i-migratsii](https://mvd.gov.by/ru/structure/departament/departament-grazhdanstva-i-migratsii)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Центральный орган МВД расположен в Минске; районные ОГиМ включены отдельно только при наличии официально подтверждённых данных."
+},
+{
+"external_id": "by-minsk-city-zavodskoy-ogim-001",
+"short_name": "ОГиМ Заводского РУВД",
+"full_name": "Отдел по гражданству и миграции Заводского РУВД города Минска",
+"institution_type": "citizenship_migration",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, ул. Уборевича, 42",
+"phone": "8 (017) 370-22-66",
+"email": "",
+"website": "[https://minsk.mvd.gov.by/](https://minsk.mvd.gov.by/)",
+"working_hours": "",
+"services": [
+"паспортные процедуры",
+"регистрация по месту жительства",
+"гражданство",
+"миграционные процедуры"
+],
+"tags": [
+"Заводской район",
+"ОГиМ",
+"паспорт",
+"регистрация"
+],
+"related_scenario_categories": [
+"documents",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"получение паспорта",
+"регистрация по месту жительства",
+"регистрация по месту пребывания"
+],
+"source_ids": [
+"source-mvd"
+],
+"source_urls": [
+"[https://minsk.mvd.gov.by/ru/page/zavodskoe-ruvd/ogim](https://minsk.mvd.gov.by/ru/page/zavodskoe-ruvd/ogim)",
+"[https://minsk.mvd.gov.by/ru/page/upravlenie-po-grazhdanstvu-i-migracii/otvetstvennye-za-osushestvlenie-administrativnyh-procedur](https://minsk.mvd.gov.by/ru/page/upravlenie-po-grazhdanstvu-i-migracii/otvetstvennye-za-osushestvlenie-administrativnyh-procedur)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-partizanskiy-ogim-001",
+"short_name": "ОГиМ Партизанского РУВД",
+"full_name": "Отдел по гражданству и миграции Партизанского РУВД города Минска",
+"institution_type": "citizenship_migration",
+"region": "Минск",
+"district": "Партизанский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, ул. Ваупшасова, 26",
+"phone": "",
+"email": "",
+"website": "[https://part.gov.by/](https://part.gov.by/)",
+"working_hours": "Вт 08:00–13:00, 14:00–17:00; ср 11:00–15:00, 16:00–20:00; чт 08:00–13:00; пт 08:00–13:00, 14:00–17:00; сб 08:00–13:00; пн, вс выходной",
+"services": [
+"паспортные процедуры",
+"регистрация по месту жительства",
+"гражданство",
+"миграционные процедуры"
+],
+"tags": [
+"Партизанский район",
+"ОГиМ",
+"паспорт",
+"регистрация"
+],
+"related_scenario_categories": [
+"documents",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"получение паспорта",
+"регистрация по месту жительства",
+"регистрация по месту пребывания"
+],
+"source_ids": [
+"source-mvd"
+],
+"source_urls": [
+"[https://part.gov.by/](https://part.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Данные подтверждены официальным районным ресурсом; для полного импорта желательно дополнительно сверить телефоны на сайте ГУВД."
+},
+{
+"external_id": "by-minsk-city-centralnyy-ogim-001",
+"short_name": "ОГиМ Центрального РУВД",
+"full_name": "Отдел по гражданству и миграции Центрального РУВД города Минска",
+"institution_type": "citizenship_migration",
+"region": "Минск",
+"district": "Центральный район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, ул. Тимирязева, 114, 2 этаж",
+"phone": "8 (017) 377-00-94; 8 (017) 374-60-97; 8 (017) 320-61-45; 8 (017) 373-61-43",
+"email": "",
+"website": "[https://centr.minsk.gov.by/](https://centr.minsk.gov.by/)",
+"working_hours": "Вт 08:00–13:00, 14:00–17:00; ср 11:00–15:00, 16:00–20:00; чт 08:00–13:00; пт 08:00–13:00, 14:00–17:00; сб 08:00–13:00; пн, вс выходной",
+"services": [
+"паспортные процедуры",
+"биометрические документы",
+"регистрация по месту жительства",
+"гражданство",
+"миграционные процедуры"
+],
+"tags": [
+"Центральный район",
+"ОГиМ",
+"паспорт",
+"регистрация",
+"биометрические документы"
+],
+"related_scenario_categories": [
+"documents",
+"housing"
+],
+"related_scenarios": [
+"потеря паспорта",
+"получение паспорта",
+"регистрация по месту жительства",
+"регистрация по месту пребывания"
+],
+"source_ids": [
+"source-mvd"
+],
+"source_urls": [
+"[https://centr.minsk.gov.by/](https://centr.minsk.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-gai-main-001",
+"short_name": "ГАИ Минска",
+"full_name": "Управление Государственной автомобильной инспекции ГУВД Минского городского исполнительного комитета",
+"institution_type": "traffic_police",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220069, г. Минск, пр-т Дзержинского, 3",
+"phone": "8 (017) 270-19-19; 8 (017) 270-08-27; 8 (017) 270-08-20",
+"email": "",
+"website": "[https://minsk.mvd.gov.by/](https://minsk.mvd.gov.by/)",
+"working_hours": "",
+"services": [
+"безопасность дорожного движения",
+"административные процедуры ГАИ",
+"регистрация транспортных средств",
+"водительские удостоверения"
+],
+"tags": [
+"ГАИ",
+"авто",
+"водительское удостоверение",
+"транспорт"
+],
+"related_scenario_categories": [
+"auto",
+"documents"
+],
+"related_scenarios": [
+"регистрация автомобиля",
+"получение водительского удостоверения",
+"замена водительского удостоверения",
+"административная процедура ГАИ"
+],
+"source_ids": [
+"source-gibdd",
+"source-mvd"
+],
+"source_urls": [
+"[https://minsk.mvd.gov.by/ru/page/upravlenie-gosavtoinspekcii](https://minsk.mvd.gov.by/ru/page/upravlenie-gosavtoinspekcii)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-gai-exam-001",
+"short_name": "Экзаменационный отдел ГАИ Минска",
+"full_name": "Межрайонный экзаменационный отдел ГАИ ГУВД Минского городского исполнительного комитета",
+"institution_type": "traffic_police",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, пр-т Дзержинского, 3",
+"phone": "",
+"email": "",
+"website": "[https://minsk.mvd.gov.by/](https://minsk.mvd.gov.by/)",
+"working_hours": "",
+"services": [
+"экзамены на право управления транспортными средствами",
+"водительские удостоверения",
+"административные процедуры ГАИ"
+],
+"tags": [
+"ГАИ",
+"экзамен",
+"водительское удостоверение",
+"авто"
+],
+"related_scenario_categories": [
+"auto",
+"documents"
+],
+"related_scenarios": [
+"получение водительского удостоверения",
+"замена водительского удостоверения",
+"сдача экзамена в ГАИ"
+],
+"source_ids": [
+"source-gibdd",
+"source-mvd"
+],
+"source_urls": [
+"[https://minsk.mvd.gov.by/ru/page/administrativnye-procedury-gai/ekzamenacionnaya-deyatel-nost](https://minsk.mvd.gov.by/ru/page/administrativnye-procedury-gai/ekzamenacionnaya-deyatel-nost)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-notary-first-city-001",
+"short_name": "Первая Минская городская нотариальная контора",
+"full_name": "Первая Минская городская нотариальная контора",
+"institution_type": "notary",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220029, г. Минск, ул. Красная, 5",
+"phone": "+375 (17) 242-92-37; +375 (44) 554-40-82; +375 (17) 235-05-83",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "Пн 08:00–20:00; вт–пт 08:00–17:00; сб, вс выходной",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"нотариус",
+"доверенность",
+"наследство",
+"сделки"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/pervaya-minskaya-gorodskaya-notarialnaya-kontora/](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/pervaya-minskaya-gorodskaya-notarialnaya-kontora/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-notary-002",
+"short_name": "Нотариальная контора № 2 Заводского района",
+"full_name": "Нотариальная контора № 2 Заводского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220102, г. Минск, ул. Алтайская, 64, корп. 1",
+"phone": "+375 (44) 554-46-30; +375 (17) 258-65-83; +375 (17) 319-29-63",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Заводской район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-zavodskoy-notary-003",
+"short_name": "Нотариальная контора № 3 Заводского района",
+"full_name": "Нотариальная контора № 3 Заводского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Заводской район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220066, г. Минск, ул. Ташкентская, 20, корп. 1",
+"phone": "+375 (44) 554-46-36; +375 (17) 252-75-39",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Заводской район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-notary-001",
+"short_name": "Нотариальная контора № 1 Ленинского района",
+"full_name": "Нотариальная контора № 1 Ленинского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220067, г. Минск, Игуменский тракт, 20",
+"phone": "+375 (44) 554-46-63; +375 (17) 271-84-81",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Ленинский район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-leninskiy-notary-002",
+"short_name": "Нотариальная контора № 2 Ленинского района",
+"full_name": "Нотариальная контора № 2 Ленинского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220033, г. Минск, ул. Фабричная, 19",
+"phone": "+375 (44) 554-43-15; +375 (17) 282-12-54; +375 (17) 257-12-55",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Ленинский район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-notary-001",
+"short_name": "Нотариальная контора № 1 Московского района",
+"full_name": "Нотариальная контора № 1 Московского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220036, г. Минск, ул. Р. Люксембург, 100",
+"phone": "+375 (44) 554-43-88; +375 (17) 236-48-98",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Московский район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-moskovskiy-notary-002",
+"short_name": "Нотариальная контора № 2 Московского района",
+"full_name": "Нотариальная контора № 2 Московского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Московский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220025, г. Минск, ул. Есенина, 6, корп. 1",
+"phone": "+375 (44) 554-43-93; +375 (17) 337-26-97; +375 (17) 337-26-98; +375 (17) 317-31-92",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Московский район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/?ID_SECT=568)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-frunzenskiy-notary-001",
+"short_name": "Нотариальная контора № 1 Фрунзенского района",
+"full_name": "Нотариальная контора № 1 Фрунзенского района города Минска",
+"institution_type": "notary",
+"region": "Минск",
+"district": "Фрунзенский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220059, г. Минск, ул. Скрипникова, 1",
+"phone": "+375 (17) 337-39-89; +375 (17) 326-38-07; +375 (17) 320-04-92; +375 (44) 554-47-88",
+"email": "",
+"website": "[https://belnotary.by/](https://belnotary.by/)",
+"working_hours": "Вт, ср, пт 09:00–19:00; чт 09:00–20:00; сб 08:00–17:00; пн, вс выходной; первое воскресенье месяца 10:00–14:00",
+"services": [
+"нотариальные действия",
+"доверенности",
+"наследственные дела",
+"удостоверение сделок"
+],
+"tags": [
+"Фрунзенский район",
+"нотариус",
+"доверенность",
+"наследство"
+],
+"related_scenario_categories": [
+"documents",
+"family",
+"housing",
+"business"
+],
+"related_scenarios": [
+"оформление доверенности",
+"наследство",
+"сделка с недвижимостью",
+"нотариальное удостоверение документов"
+],
+"source_ids": [
+"source-minjust"
+],
+"source_urls": [
+"[https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/notarialnaya-kontora-1-frunzenskogo-rayona-g-minska/](https://belnotary.by/nayti-notariusa/notarialnye-kontory-i-notarialnye-byuro/notarialnaya-kontora-1-frunzenskogo-rayona-g-minska/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "high",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-real-estate-nca-001",
+"short_name": "Национальное кадастровое агентство",
+"full_name": "Республиканское унитарное предприятие «Национальное кадастровое агентство»",
+"institution_type": "registry_real_estate",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "г. Минск, пер. Краснозвёздный, 12",
+"phone": "+375 (17) 311-00-72; +375 (17) 311-00-71",
+"email": "[nca@nca.by](mailto:nca@nca.by)",
+"website": "[https://nca.by/](https://nca.by/)",
+"working_hours": "",
+"services": [
+"государственная регистрация недвижимости",
+"кадастровые сведения",
+"информация о недвижимом имуществе",
+"регистрация прав"
+],
+"tags": [
+"недвижимость",
+"кадастр",
+"регистрация прав",
+"земельный кадастр"
+],
+"related_scenario_categories": [
+"housing",
+"documents",
+"business"
+],
+"related_scenarios": [
+"регистрация права собственности",
+"сделка с недвижимостью",
+"получение сведений о недвижимости",
+"кадастровая информация"
+],
+"source_ids": [
+"source-nbki"
+],
+"source_urls": [
+"[https://nca.by/](https://nca.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Официальный источник не входит в исходный список проекта как отдельный source_id, поэтому добавлен в source_candidates."
+},
+{
+"external_id": "by-minsk-city-real-estate-minsk-agency-001",
+"short_name": "Минское городское агентство по госрегистрации",
+"full_name": "Минское городское агентство по государственной регистрации и земельному кадастру",
+"institution_type": "registry_real_estate",
+"region": "Минск",
+"district": "город Минск",
+"city": "Минск",
+"settlement": "Минск",
+"address": "",
+"phone": "+375 (17) 311-65-00; +375 (17) 379-96-85",
+"email": "[d500@nca.by](mailto:d500@nca.by)",
+"website": "[https://nca.by/](https://nca.by/)",
+"working_hours": "",
+"services": [
+"государственная регистрация недвижимости",
+"регистрация прав на недвижимость",
+"земельный кадастр",
+"кадастровые сведения"
+],
+"tags": [
+"недвижимость",
+"регистрация прав",
+"кадастр",
+"Минск"
+],
+"related_scenario_categories": [
+"housing",
+"documents",
+"business"
+],
+"related_scenarios": [
+"регистрация права собственности",
+"сделка с недвижимостью",
+"получение сведений о недвижимости"
+],
+"source_ids": [
+"source-nbki"
+],
+"source_urls": [
+"[https://nca.by/about/organization/](https://nca.by/about/organization/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": "Телефон, email и сайт подтверждены официальным источником; адрес не включён, так как в текущей проверке не был надёжно подтверждён официальной страницей."
+},
+{
+"external_id": "by-minsk-city-education-leninskiy-001",
+"short_name": "Управление по образованию Ленинского района",
+"full_name": "Управление по образованию администрации Ленинского района города Минска",
+"institution_type": "education_department",
+"region": "Минск",
+"district": "Ленинский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220006, г. Минск, ул. Маяковского, 83",
+"phone": "8 (017) 240-83-15",
+"email": "",
+"website": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"вопросы образования",
+"дошкольное образование",
+"школьное образование",
+"обращения граждан по образованию"
+],
+"tags": [
+"образование",
+"детский сад",
+"школа",
+"Ленинский район"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"устройство ребёнка в детский сад",
+"поступление в школу",
+"справки по образованию"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://minsk.gov.by/ru/cloudgo/186/](https://minsk.gov.by/ru/cloudgo/186/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+},
+{
+"external_id": "by-minsk-city-education-pervomayskiy-001",
+"short_name": "Управление образования Первомайского района",
+"full_name": "Управление образования администрации Первомайского района города Минска",
+"institution_type": "education_department",
+"region": "Минск",
+"district": "Первомайский район",
+"city": "Минск",
+"settlement": "Минск",
+"address": "220012, г. Минск, пер. К. Чорного, 7",
+"phone": "",
+"email": "",
+"website": "[https://perv.minsk.gov.by/](https://perv.minsk.gov.by/)",
+"working_hours": "",
+"services": [
+"вопросы образования",
+"дошкольное образование",
+"школьное образование",
+"обращения граждан по образованию"
+],
+"tags": [
+"образование",
+"детский сад",
+"школа",
+"Первомайский район"
+],
+"related_scenario_categories": [
+"family",
+"documents"
+],
+"related_scenarios": [
+"устройство ребёнка в детский сад",
+"поступление в школу",
+"справки по образованию"
+],
+"source_ids": [
+"source-portal-gov"
+],
+"source_urls": [
+"[https://perv.minsk.gov.by/](https://perv.minsk.gov.by/)"
+],
+"last_checked_at": "2026-06-13",
+"confidence": "medium",
+"notes": ""
+}
+],
+"source_candidates": [
+{
+"title": "Официальный сайт Минского городского исполнительного комитета",
+"url": "[https://minsk.gov.by/](https://minsk.gov.by/)",
+"source_type": "local_authority",
+"reason_to_add": "Нужен как официальный источник городских и районных административных служб Минска, включая службы «одно окно» и структурные подразделения администраций районов."
+},
+{
+"title": "Официальный сайт администрации Заводского района города Минска",
+"url": "[https://zav.minsk.gov.by/](https://zav.minsk.gov.by/)",
+"source_type": "local_authority",
+"reason_to_add": "Нужен как официальный источник контактов администрации Заводского района и районных служб."
+},
+{
+"title": "Официальный сайт администрации Московского района города Минска",
+"url": "[https://mosk.minsk.gov.by/](https://mosk.minsk.gov.by/)",
+"source_type": "local_authority",
+"reason_to_add": "Нужен как официальный источник контактов администрации Московского района и районных служб."
+},
+{
+"title": "Официальный сайт администрации Октябрьского района города Минска",
+"url": "[https://okt.minsk.gov.by/](https://okt.minsk.gov.by/)",
+"source_type": "local_authority",
+"reason_to_add": "Нужен как официальный источник контактов администрации Октябрьского района и районных служб."
+},
+{
+"title": "Официальный сайт администрации Центрального района города Минска",
+"url": "[https://centr.minsk.gov.by/](https://centr.minsk.gov.by/)",
+"source_type": "local_authority",
+"reason_to_add": "Нужен как официальный источник контактов администрации Центрального района, службы «одно окно» и ОГиМ Центрального РУВД."
+},
+{
+"title": "Главное управление юстиции Минского городского исполнительного комитета",
+"url": "[https://just-minsk.gov.by/](https://just-minsk.gov.by/)",
+"source_type": "local_justice_authority",
+"reason_to_add": "Нужен как официальный источник перечня органов ЗАГС города Минска."
+},
+{
+"title": "Комитет по труду, занятости и социальной защите Минского городского исполнительного комитета",
+"url": "[https://komtrud.minsk.gov.by/](https://komtrud.minsk.gov.by/)",
+"source_type": "local_social_protection_authority",
+"reason_to_add": "Нужен как официальный источник органов социальной защиты и службы занятости по городу Минску."
+},
+{
+"title": "ГУВД Минского городского исполнительного комитета",
+"url": "[https://minsk.mvd.gov.by/](https://minsk.mvd.gov.by/)",
+"source_type": "local_police_authority",
+"reason_to_add": "Нужен как официальный источник городских подразделений ОГиМ и ГАИ Минска."
+},
+{
+"title": "Белорусская нотариальная палата",
+"url": "[https://belnotary.by/](https://belnotary.by/)",
+"source_type": "official_notary_registry",
+"reason_to_add": "Нужен как официальный источник нотариальных контор и нотариальных бюро города Минска."
+},
+{
+"title": "Республиканское унитарное предприятие «Национальное кадастровое агентство»",
+"url": "[https://nca.by/](https://nca.by/)",
+"source_type": "real_estate_registry",
+"reason_to_add": "Нужен как официальный источник по государственному земельному кадастру, регистрации недвижимости и Минскому городскому агентству по государственной регистрации и земельному кадастру."
+},
+{
+"title": "КУП «Минское городское агентство обслуживания населения»",
+"url": "[https://mgaon.by/](https://mgaon.by/)",
+"source_type": "municipal_service",
+"reason_to_add": "Нужен как официальный городской источник по обслуживанию граждан и службам «одно окно»."
+},
+{
+"title": "Сервис предварительной записи в службу «одно окно»",
+"url": "[https://book.onewin.by/](https://book.onewin.by/)",
+"source_type": "government_service",
+"reason_to_add": "Нужен как официальный источник адресов служб «одно окно» и записи на приём."
+}
+],
+"rejected_items": [
+{
+"title": "Учреждения Минского района и Минской области",
+"reason": "Не включены, потому что пользователь явно ограничил регион городом Минском и отдельно указал не собирать Минскую область.",
+"candidate_urls": [
+"[https://minsk-region.gov.by/](https://minsk-region.gov.by/)",
+"[https://mrik.gov.by/](https://mrik.gov.by/)"
+]
+},
+{
+"title": "Отделы ЗАГС Минского районного исполнительного комитета",
+"reason": "Не включены в основной массив, потому что относятся к Минскому району или Минской области, а не к городу Минску.",
+"candidate_urls": [
+"[https://mrik.gov.by/](https://mrik.gov.by/)"
+]
+},
+{
+"title": "ОГиМ УВД Минского районного исполнительного комитета",
+"reason": "Не включено, потому что относится к Минскому району/Минской области, а не к городу Минску.",
+"candidate_urls": [
+"[https://mvd.gov.by/](https://mvd.gov.by/)"
+]
+},
+{
+"title": "Коммерческие каталоги организаций, карты, справочники и агрегаторы",
+"reason": "Не использованы как основной источник, потому что промпт требует официальные источники и запрещает коммерческие каталоги, случайные карты, форумы, соцсети и агрегаторы.",
+"candidate_urls": []
+},
+{
+"title": "Поликлиники и учреждения здравоохранения Минска",
+"reason": "Не включены в часть 1, потому что для качественного импорта требуется отдельная проверка официальных сайтов учреждений здравоохранения и/или Минздрава; неподтверждённые адреса и телефоны не добавлялись.",
+"candidate_urls": [
+"[https://minzdrav.gov.by/](https://minzdrav.gov.by/)"
+]
+},
+{
+"title": "ЖКХ, ЖЭУ, РСЦ и расчётно-справочные центры Минска",
+"reason": "Не включены в часть 1, потому что для полного списка требуется отдельная проверка официальных городских и ведомственных источников; неподтверждённые данные не добавлялись.",
+"candidate_urls": [
+"[https://115.xn--90ais/](https://115.xn--90ais/)",
+"[https://minsk.gov.by/](https://minsk.gov.by/)"
+]
+}
+],
+"official_sources_used": [
+{
+"source_id": "source-portal-gov",
+"title": "Единый портал электронных услуг",
+"url": "[https://portal.gov.by/](https://portal.gov.by/)",
+"source_type": "government_portal"
+},
+{
+"source_id": "source-minjust",
+"title": "Министерство юстиции",
+"url": "[https://minjust.gov.by/](https://minjust.gov.by/)",
+"source_type": "registry"
+},
+{
+"source_id": "source-nalog",
+"title": "Министерство по налогам и сборам",
+"url": "[https://nalog.gov.by/](https://nalog.gov.by/)",
+"source_type": "tax"
+},
+{
+"source_id": "source-mvd",
+"title": "Министерство внутренних дел — ОГиМ",
+"url": "[https://mvd.gov.by/ru/structure/departament/departament-grazhdanstva-i-migratsii](https://mvd.gov.by/ru/structure/departament/departament-grazhdanstva-i-migratsii)",
+"source_type": "government_portal"
+},
+{
+"source_id": "source-gibdd",
+"title": "ГАИ МВД Республики Беларусь",
+"url": "[https://mvd.gov.by/ru/structure/gai](https://mvd.gov.by/ru/structure/gai)",
+"source_type": "government_portal"
+},
+{
+"source_id": "source-court",
+"title": "Верховный Суд Республики Беларусь",
+"url": "[https://court.gov.by/](https://court.gov.by/)",
+"source_type": "registry"
+},
+{
+"source_id": "source-mintrud",
+"title": "Министерство труда и социальной защиты",
+"url": "[https://mintrud.gov.by/](https://mintrud.gov.by/)",
+"source_type": "ministry"
+},
+{
+"source_id": "source-nbki",
+"title": "Государственный реестр недвижимого имущества",
+"url": "[https://portal.gov.by/](https://portal.gov.by/)",
+"source_type": "registry"
+}
+]
+}

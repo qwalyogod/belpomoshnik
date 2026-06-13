@@ -751,8 +751,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (item.address !== undefined) out.address = item.address;
     if (item.city !== undefined) out.city = item.city;
     if (item.region !== undefined) out.region = item.region;
+    if (item.district !== undefined) out.district = item.district;
+    if (item.settlement !== undefined) out.settlement = item.settlement;
+    if (item.type !== undefined) out.type = item.type;
     if (item.phone !== undefined) out.phone = item.phone;
+    if (item.email !== undefined) out.email = item.email;
+    if (item.websiteUrl !== undefined) out.website_url = item.websiteUrl;
     if (item.hours !== undefined) out.working_hours = item.hours;
+    if (item.lastCheckedAt !== undefined) out.last_checked_at = item.lastCheckedAt;
+    if (item.confidence !== undefined) out.confidence = item.confidence;
+    if (item.notes !== undefined) out.notes = item.notes;
+    if (item.isActive !== undefined) out.is_active = item.isActive;
     return out;
   };
   const addAuthority = useCallback((item: Omit<Institution, "id">) => {

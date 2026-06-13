@@ -1,5 +1,80 @@
 # Журнал изменений
 
+## 2026-06-13 (импорт публикационного контента 2022-2026)
+
+### Что изменено
+
+- `data/import/content_news_calendar_2022_2026.json` — нормализован и импортирован пакет новостей: исправлен `batch_meta.category_id`, удалены дубли тегов.
+- `data/import/content_law_updates_2022_2026.json` — нормализован и импортирован пакет закон-апдейтов: `source.id` приведены к формату `src-*`.
+- `data/import/content_extremist_materials_2022_2026.json` — записи переведены в `published` после структурной проверки, чтобы раздел отображался на сайте.
+- `scripts/normalize_content_batch.py` — добавлены нормализация `batch_meta.category_id`, дедупликация тегов новостей и приведение `law_update.source.id` к `src-*`.
+- `scripts/import_content_batches.py` — идемпотентность новостей исправлена с `sourceUrl` на пару `title + sourceUrl`, чтобы разные статьи с одним официальным источником не склеивались.
+- `src/backend/migrations/0020_expand_publication_content_columns.sql` — расширены поля публикаций в MySQL: `articles.summary/body_html/gallery/tags`, `law_updates.description/body_html/source_url`, `extremist_entries.short_description/media_urls/attachment_urls/filters_json`.
+- `docs/PROJECT_STATUS.md`, `docs/TASKS.md` — зафиксирован результат публикационного импорта.
+
+### Результат проверки
+
+- `scripts/validate_content_batch.py` для трёх новых файлов — ✅ 0 ошибок, 0 предупреждений.
+- `backend.scripts.migrate` с локальным XAMPP MySQL URL `root` без пароля — ✅ применена миграция `0020`.
+- `scripts/import_content_batches.py --dry-run` — ✅ 88 новостей к созданию, 32 к обновлению, 80 закон-апдейтов к обновлению, 60 записей экстремистского раздела к обновлению.
+- `scripts/import_content_batches.py` — ✅ импорт выполнен.
+- Контроль БД: `articles` published — 120, `law_updates` — 80, `extremist_entries` published — 60, сумма seed-просмотров — 121620.
+- TestClient: `/api/articles?kind=news` — 200 и 120 записей; `/api/law-updates` — 200 и 80 записей; `/api/extremist-entries` — 200 и 60 записей.
+- `.venv/bin/python -m compileall src scripts/validate_content_batch.py scripts/normalize_content_batch.py scripts/import_content_batches.py` — ✅ без ошибок.
+
+## 2026-06-13 (публикационные промпты для новостей, закон-апдейтов и экстремистских материалов)
+
+### Что изменено
+
+- `docs/CONTENT_PUBLICATION_RESEARCH_PROMPTS.md` — добавлен отдельный пакет из трёх больших промптов для ChatGPT/Deep Research: новости, закон-апдейты и экстремистские материалы за 2022-2026 годы.
+- `docs/CONTENT_PUBLICATION_RESEARCH_PROMPTS.md` — промпты требуют официальный источник, полноценный `bodyHtml`, краткий `summary` для карточки, несколько официальных media URL, `status: "published"` и `views_seed` для новостей.
+- `scripts/import_content_batches.py` — новости, импортированные через content-batch, теперь получают автора `Тестовый редактор`.
+- `scripts/validate_content_batch.py` — валидатор допускает `registry`, `news`, `explanation` и статусы `draft`/`published` для записей раздела «Экстремистские материалы».
+- `data/import/README.md`, `docs/CONTENT_PROMPTS.md` — уточнены правила публикации юридически чувствительного раздела: `published` допускается только при прямом официальном `source_url` и нейтральном безопасном описании.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall scripts/validate_content_batch.py scripts/import_content_batches.py` — ✅ без ошибок.
+
+## 2026-06-13 (добавление проблем и сценариев в «Мои ситуации»)
+
+### Что изменено
+
+- `reactvitemaket/src/app/pages.tsx` — карточка проблемы теперь подбирает связанный жизненный сценарий по названию и категории; если план уже создан, кнопка открывает существующую ситуацию, если нет — добавляет её в «Мои ситуации». Если подходящий сценарий не найден, пользователь переводится в каталог сценариев с выбранной категорией.
+- `reactvitemaket/src/app/pages.tsx` — добавлен явный статус «уже добавлено в „Мои ситуации“» / «найден подходящий сценарий» на детальной странице проблемы.
+- `reactvitemaket/src/app/pages.tsx`, `reactvitemaket/src/app/components/extra-screens.tsx` — CTA-кнопки добавления плана и избранного на mobile приведены к единому стилю: нормальная высота, скругление, иконки, readable-текст без сплющивания.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — на детальной странице сценария кнопка «Создать мою ситуацию» открывает уже существующую ситуацию, если сценарий ранее добавлен.
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src scripts/import_institutions.py` — ✅ без ошибок.
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок; остался стандартный warning Vite о крупном JS-chunk.
+
+## 2026-06-13 (полный импорт учреждений и подбор по адресам)
+
+### Что изменено
+
+- `src/backend/models.py`, `src/backend/schemas.py` — расширена сущность `authorities`: внешний id, район, населённый пункт, email, услуги, теги, связи со сценариями/категориями, source URL, дата проверки, confidence и active-флаг.
+- `src/backend/migrations/0019_authority_import_fields.sql` — добавлена миграция для расширенного справочника учреждений.
+- `scripts/import_institutions.py` — добавлен идемпотентный импортёр JSON-файлов `data/import/*institutions*.json`; поддерживает `institutions[]` и старый `items[]`, `rejected_items` не импортирует.
+- `data/import/*institutions*.json` — подключены JSON-файлы с подтверждёнными учреждениями Минска и областей Беларуси.
+- `reactvitemaket/src/app/services/institutions.ts` — улучшен подбор учреждений: нормализация `г. Минск`/`Минск`, район/город/область, несколько адресов, подбор по категории сценария и типам учреждений.
+- `reactvitemaket/src/app/components/extra-screens.tsx` — в детальной странице сценария и пользовательской ситуации показываются учреждения из общего справочника по адресу пользователя.
+- `reactvitemaket/src/app/pages.tsx` — детальная карточка проблемы получила динамический блок учреждений по адресам профиля.
+- `reactvitemaket/src/app/components/authorities-editor.tsx` — редактор учреждений дополнен типом, районом, населённым пунктом, email и сайтом.
+- `scripts/check.sh`, `docs/TASKS.md`, `docs/PROJECT_STATUS.md` — обновлены под миграцию `0019` и новый статус этапа «Госучреждения».
+
+### Результат проверки
+
+- `.venv/bin/python -m compileall src scripts/import_institutions.py` — ✅ без ошибок.
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок; остался стандартный warning Vite о крупном JS-chunk.
+- `PYTHONPATH=src .venv/bin/python -m backend.scripts.migrate` с XAMPP MySQL URL `root` без пароля — ✅ применены миграции `0001`–`0019`.
+- `scripts/import_institutions.py --dry-run` — ✅ 1566 записей к созданию, 0 пропусков.
+- `scripts/import_institutions.py` — ✅ импортировано 1566 учреждений.
+- Повторный `--dry-run` — ✅ 0 новых, 1566 обновляемых, то есть импорт идемпотентный.
+- TestClient `GET /api/authorities` — ✅ 200, 1566 записей.
+- `cd reactvitemaket && pnpm exec tsc --noEmit` — не выполнено: в frontend-зависимостях не установлен `tsc`.
+
 ## 2026-06-13 (фиксация следующих задач по учреждениям и контенту)
 
 ### Что изменено

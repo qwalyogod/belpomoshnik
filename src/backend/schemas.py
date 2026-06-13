@@ -152,11 +152,19 @@ class AuthorityBase(BaseModel):
     description: str = ""
     website_url: str = ""
     phone: str = ""
+    email: str = ""
     address: str = ""
     working_hours: str = ""
     type: str = ""
     region: str = ""
+    district: str = ""
     city: str = ""
+    settlement: str = ""
+    external_id: str = ""
+    last_checked_at: str = ""
+    confidence: str = ""
+    notes: str = ""
+    is_active: bool = True
 
 
 class AuthorityCreate(AuthorityBase):
@@ -168,11 +176,19 @@ class AuthorityUpdate(BaseModel):
     description: str | None = None
     website_url: str | None = None
     phone: str | None = None
+    email: str | None = None
     address: str | None = None
     working_hours: str | None = None
     type: str | None = None
     region: str | None = None
+    district: str | None = None
     city: str | None = None
+    settlement: str | None = None
+    external_id: str | None = None
+    last_checked_at: str | None = None
+    confidence: str | None = None
+    notes: str | None = None
+    is_active: bool | None = None
 
 
 class DeadlineBase(BaseModel):
@@ -283,15 +299,29 @@ class DocumentOut(ORMModel):
 
 class AuthorityOut(ORMModel):
     id: int
+    external_id: str = ""
     title: str
     description: str
     website_url: str
     phone: str
+    email: str = ""
     address: str
     working_hours: str
     type: str
     region: str = ""
+    district: str = ""
     city: str = ""
+    settlement: str = ""
+    services: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    related_scenario_categories: list[str] = Field(default_factory=list)
+    related_scenarios: list[str] = Field(default_factory=list)
+    source_ids: list[str] = Field(default_factory=list)
+    source_urls: list[str] = Field(default_factory=list)
+    last_checked_at: str = ""
+    confidence: str = ""
+    notes: str = ""
+    is_active: bool = True
 
 
 class DeadlineOut(ORMModel):

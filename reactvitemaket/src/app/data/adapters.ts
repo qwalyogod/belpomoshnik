@@ -60,6 +60,16 @@ function numberValue(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function stringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => text(item)).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
 function category(value: unknown): CategoryId {
   const allowed: CategoryId[] = ["documents", "family", "work", "business", "housing", "taxes", "health", "auto"];
   if (allowed.includes(value as CategoryId)) return value as CategoryId;
@@ -154,8 +164,23 @@ export function adaptInstitution(input: unknown): Institution {
     address: text(data.address),
     hours: text(data.hours || data.working_hours, "") || undefined,
     phone: text(data.phone, "") || undefined,
+    email: text(data.email, "") || undefined,
+    websiteUrl: text(data.websiteUrl || data.website_url || data.website, "") || undefined,
+    type: text(data.type || data.institution_type, "") || undefined,
     region: text(data.region, "") || undefined,
+    district: text(data.district, "") || undefined,
     city: text(data.city, "") || undefined,
+    settlement: text(data.settlement, "") || undefined,
+    services: stringList(data.services),
+    tags: stringList(data.tags),
+    relatedScenarioCategories: stringList(data.relatedScenarioCategories || data.related_scenario_categories),
+    relatedScenarios: stringList(data.relatedScenarios || data.related_scenarios),
+    sourceIds: stringList(data.sourceIds || data.source_ids),
+    sourceUrls: stringList(data.sourceUrls || data.source_urls),
+    lastCheckedAt: text(data.lastCheckedAt || data.last_checked_at, "") || undefined,
+    confidence: text(data.confidence, "") || undefined,
+    notes: text(data.notes, "") || undefined,
+    isActive: bool(data.isActive ?? data.is_active, true),
   };
 }
 

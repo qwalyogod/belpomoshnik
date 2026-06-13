@@ -41,6 +41,13 @@ python -c "import secrets; print('BELPOMOSHNIK_SECRET_KEY=' + secrets.token_hex(
 PYTHONPATH=src .venv/bin/python -m backend.bootstrap
 PYTHONPATH=src .venv/bin/python -m backend.scripts.seed_db   # опционально, MVP-контент
 
+# Импорт полного справочника учреждений из data/import/*institutions*.json
+# Для XAMPP MySQL без пароля можно временно передать DATABASE_URL явно:
+BELPOMOSHNIK_DATABASE_URL='mysql+pymysql://root:@127.0.0.1:3306/belpomoshnik?charset=utf8mb4' \
+  PYTHONPATH=src .venv/bin/python -m backend.scripts.migrate
+BELPOMOSHNIK_DATABASE_URL='mysql+pymysql://root:@127.0.0.1:3306/belpomoshnik?charset=utf8mb4' \
+  PYTHONPATH=src .venv/bin/python scripts/import_institutions.py
+
 # Запуск
 PYTHONPATH=src .venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8060
 ```
