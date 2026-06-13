@@ -766,6 +766,15 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+  getAdminRegions: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/regions", { headers: authHeaders(accessToken), ...options }),
+  saveAdminRegions: <T>(accessToken: string, regions: unknown[], options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/regions", {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ regions }),
+      ...options,
+    }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/problems", { headers: authHeaders(accessToken), ...options }),
   createAdminProblem: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>

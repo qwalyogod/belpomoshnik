@@ -45,6 +45,10 @@ class ProblemUpdate(BaseModel):
     status: ContentStatus | None = None
 
 
+class GeoRegionsPayload(BaseModel):
+    regions: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ScenarioBase(BaseModel):
     problem_id: int
     title: str = Field(min_length=2, max_length=255)

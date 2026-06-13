@@ -11,6 +11,14 @@
 - Документация: добавлен `docs/CONTROL_CENTER.md`, обновлены API/security/status/tasks.
 - Проверка: `pnpm -C reactvitemaket run build` и `.venv/bin/python -m compileall -q src` — ✅. Backend-тесты по просьбе пользователя не запускались.
 
+## 2026-06-14 (backend sync регионов)
+
+- Добавлены admin endpoints `GET /api/admin/regions` и `PUT /api/admin/regions`.
+- Справочник «Регионы и города» сохраняется в `system_settings.geo_regions` как JSON, а frontend localStorage используется как fallback при недоступном API.
+- Изменение географии логируется в `audit_logs` как `geo_regions`.
+- React store при входе редактора/админа подтягивает регионы с backend и сохраняет изменения с debounce.
+- Проверка: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`, `git diff --check` — ✅. Backend-тесты по просьбе пользователя не запускались.
+
 ## 2026-06-14 (админ-панель: регионы и города)
 
 - Раздел «Регионы и города» переписан из мобильной модалки в полноценный редактор географического справочника.

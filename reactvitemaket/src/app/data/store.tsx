@@ -647,6 +647,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
   // Editable geography (regions → districts → city). Admin edits persist globally.
   const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED).map((r, i) => normalizeGeoRegion(r, i)));
+  const geoRemoteReadyRef = useRef(false);
+  const geoSaveTimerRef = useRef<number | null>(null);
   const [viewsDaily, setViewsDaily] = useState<{ date: string; count: number }[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
@@ -736,6 +738,44 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { safeWrite(CATEGORIES_KEY, mutableCategories); }, [mutableCategories]);
   useEffect(() => { safeWrite(CONTENT_TAGS_KEY, contentTags); }, [contentTags]);
   useEffect(() => { safeWrite(AUTHORITIES_KEY, authorities); }, [authorities]);
+
+  useEffect(() => {
+    const token = authSession?.access_token;
+    if (!token || !isStaffRole(role)) {
+      geoRemoteReadyRef.current = false;
+      return;
+    }
+    const ctrl = new AbortController();
+    apiClient.getAdminRegions<{ regions?: unknown[] }>(token, { signal: ctrl.signal })
+      .then((payload) => {
+        if (ctrl.signal.aborted) return;
+        const regions = Array.isArray(payload.regions) ? payload.regions : [];
+        if (regions.length) {
+          setGeo(regions.map((item, index) => normalizeGeoRegion(item as GeoRegion, index)));
+        }
+        geoRemoteReadyRef.current = true;
+      })
+      .catch((error) => {
+        if (!ctrl.signal.aborted) {
+          console.warn("Admin regions API unavailable; geography stays local.", error);
+          geoRemoteReadyRef.current = true;
+        }
+      });
+    return () => ctrl.abort();
+  }, [authSession?.access_token, role]);
+
+  useEffect(() => {
+    const token = authSession?.access_token;
+    if (!token || !isStaffRole(role) || !geoRemoteReadyRef.current) return;
+    if (geoSaveTimerRef.current) window.clearTimeout(geoSaveTimerRef.current);
+    geoSaveTimerRef.current = window.setTimeout(() => {
+      apiClient.saveAdminRegions<{ regions: unknown[] }>(token, geo)
+        .catch((error) => console.warn("Admin regions save failed; local cache preserved.", error));
+    }, 900);
+    return () => {
+      if (geoSaveTimerRef.current) window.clearTimeout(geoSaveTimerRef.current);
+    };
+  }, [authSession?.access_token, geo, role]);
 
   // --- Geography CRUD (admin "Регионы и города") ---
   const addRegion = useCallback((name: string) => {

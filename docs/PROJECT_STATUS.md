@@ -25,7 +25,7 @@
 - WebView-оболочка — `src/mobile_webview.py`, без собственного продуктового UI.
 - Завершён rework-промпт 6: in-app центр, дедупликация, backend-правила сроков, Capacitor Local Notifications, native push token endpoints, desktop Notification API и честный режим без FCM/APNs.
 - Завершён основной блок rework-промпта 7: админ-панель получила реальные stats, раздел «Проблемы», расширенное управление пользователями/ролями, soft-delete, отзыв сессий, системные уведомления пользователю, фильтры, сценарную integrity-проверку и расширенный audit log.
-- Завершён frontend/store-блок rework-промпта 8: раздел «Регионы и города» получил desktop split layout, инспектор, список регионов, стабильные координаты карточек, drag-position и архивирование вместо физического удаления. Backend-таблица регионов и API `/api/admin/regions/*` остаются отдельным инфраструктурным шагом.
+- Завершён rework-промпт 8: раздел «Регионы и города» получил desktop split layout, инспектор, список регионов, стабильные координаты карточек, drag-position и архивирование вместо физического удаления. Справочник синхронизируется через `/api/admin/regions` и хранится как JSON в `system_settings.geo_regions`, localStorage остаётся offline fallback.
 - Завершён rework-промпт 10: добавлен скрытый Control Center владельца платформы. Открытие только через `belpomoshnikControl()`, пароль проверяется backend’ом, raw-token не хранится, опасные действия требуют `X-Control-Center-Token`, действия пишутся в отдельный audit log.
 - Аудит промптов 1–5 исправил несовместимый с MySQL внешний ключ роли (`RESTRICT`) и тестовую конфигурацию Fernet.
 - Для iPhone/WebView исправлена dev-схема подключения: frontend, открытый по LAN

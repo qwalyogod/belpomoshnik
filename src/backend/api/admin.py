@@ -30,6 +30,7 @@ from backend.models import (
     ScenarioStage,
     ScenarioStep,
     SourceReference,
+    SystemSetting,
     User,
     UserDocument,
     UserNotification,
@@ -57,6 +58,8 @@ router = APIRouter(
     dependencies=[Depends(require_role("content_editor"))],
 )
 
+GEO_REGIONS_SETTING_KEY = "geo_regions"
+
 
 def _must_get(db: Session, model, obj_id: int, message: str):
     obj = get_by_id(db, model, obj_id)
@@ -70,6 +73,28 @@ def _count(db: Session, model, *conditions) -> int:
     if conditions:
         stmt = stmt.where(*conditions)
     return int(db.scalar(stmt) or 0)
+
+
+def _system_json_setting(db: Session, key: str, default):
+    row = db.scalars(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if row is None:
+        return default
+    try:
+        value = json.loads(row.value_json or "")
+        return value if value is not None else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _set_system_json_setting(db: Session, key: str, value) -> None:
+    row = db.scalars(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if row is None:
+        row = SystemSetting(key=key, value_json=json.dumps(value, ensure_ascii=False))
+        db.add(row)
+    else:
+        row.value_json = json.dumps(value, ensure_ascii=False)
+        row.updated_by = "admin-panel"
+    db.flush()
 
 
 def _user_admin_out(db: Session, user: User) -> schemas.UserAdminOut:
@@ -161,6 +186,38 @@ def admin_dashboard_stats(
         ),
         notifications_total=_count(db, UserNotification),
     )
+
+
+@router.get("/regions", response_model=schemas.GeoRegionsPayload)
+def admin_get_regions(db: Session = Depends(get_db)):
+    """Справочник регионов/районов для редактора карты.
+
+    Хранится в `system_settings.geo_regions` как JSON, чтобы не вводить новую
+    таблицу до финального backend-распила географии.
+    """
+    return {"regions": _system_json_setting(db, GEO_REGIONS_SETTING_KEY, [])}
+
+
+@router.put("/regions", response_model=schemas.GeoRegionsPayload)
+def admin_put_regions(
+    payload: schemas.GeoRegionsPayload,
+    email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db),
+):
+    before = _system_json_setting(db, GEO_REGIONS_SETTING_KEY, [])
+    _set_system_json_setting(db, GEO_REGIONS_SETTING_KEY, payload.regions)
+    _admin_audit(
+        db,
+        actor_email=email,
+        action="Обновлён справочник регионов и городов",
+        event_type="update",
+        entity_type="geo_regions",
+        entity_id=GEO_REGIONS_SETTING_KEY,
+        before_json=json.dumps(before, ensure_ascii=False),
+        after_json=json.dumps(payload.regions, ensure_ascii=False),
+    )
+    db.commit()
+    return {"regions": payload.regions}
 
 
 def _tag_slug(value: str) -> str:
