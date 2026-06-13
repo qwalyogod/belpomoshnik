@@ -18,6 +18,7 @@ import { ControlCenter, MaintenanceScreen, SystemBanner } from "./components/con
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { ConnectionBanner } from "./components/ConnectionBanner";
 import { CATEGORIES } from "./data/mock";
+import type { SystemState } from "./data/types";
 
 const catLabelApp = (id: string) => CATEGORIES.find(c => c.id === id)?.name ?? id;
 import {
@@ -360,7 +361,7 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
 
 function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
   const { openAssistant } = React.useContext(ShellContext);
-  const { role } = useStore();
+  const { role, systemState } = useStore();
   const isGuest = role === "guest";
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const holdTimer = useRef<number | undefined>(undefined);
@@ -385,13 +386,13 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
       </button>
     );
   };
-  const left: { id: Page; i: React.ReactNode; n: string }[] = [
+  const leftBase: { id: Page; i: React.ReactNode; n: string }[] = [
     { id: "home", i: <Home size={20} />, n: "Главная" },
     { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
   ];
   // Гость не ведёт «Мои ситуации» (нужен аккаунт) — ему показываем «Новости»;
   // залогиненному — быстрый доступ к ситуациям.
-  const right: { id: Page; i: React.ReactNode; n: string }[] = isGuest
+  const rightBase: { id: Page; i: React.ReactNode; n: string }[] = isGuest
     ? [
         { id: "news", i: <Newspaper size={20} />, n: "Новости" },
         { id: "profile", i: <User size={20} />, n: "Профиль" },
@@ -400,6 +401,15 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
         { id: "situations", i: <FileText size={20} />, n: "Ситуации" },
         { id: "profile", i: <User size={20} />, n: "Профиль" },
       ];
+  const left = orderNavigationItems(
+    leftBase.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.mobile,
+  );
+  const right = orderNavigationItems(
+    rightBase.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.mobile,
+  );
+  const assistantEnabled = systemState.featureFlags.assistant !== false;
   return (
     <>
       {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
@@ -416,15 +426,17 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
       >
         <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
           {left.map((t) => renderTab(t))}
-          <div className="w-16 shrink-0" />
+          {assistantEnabled && <div className="w-16 shrink-0" />}
           {right.map((t) => renderTab(t, t.id === "profile"))}
-          <button
-            onClick={openAssistant}
-            aria-label="ИИ-помощник"
-            className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
-          >
-            <Sparkles size={24} />
-          </button>
+          {assistantEnabled && (
+            <button
+              onClick={openAssistant}
+              aria-label="ИИ-помощник"
+              className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
+            >
+              <Sparkles size={24} />
+            </button>
+          )}
         </div>
       </div>
       <MobileUserSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
@@ -1001,6 +1013,31 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
   { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
 ];
 
+const FEATURE_BY_PAGE: Partial<Record<Page, string>> = {
+  situations: "situations",
+  documents: "documents",
+  finance: "finance",
+  news: "news",
+  profile: "profile",
+};
+
+function isPageEnabledBySystemState(page: Page, systemState: SystemState): boolean {
+  const key = FEATURE_BY_PAGE[page];
+  if (!key) return true;
+  return systemState.featureFlags[key] !== false;
+}
+
+function orderNavigationItems<T extends { id: Page }>(items: T[], order: string[] | undefined): T[] {
+  if (!order?.length) return items;
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => {
+    const ar = rank.get(a.id) ?? 999;
+    const br = rank.get(b.id) ?? 999;
+    if (ar !== br) return ar - br;
+    return items.indexOf(a) - items.indexOf(b);
+  });
+}
+
 function HeaderUserMenu() {
   const navigate = useNavigate();
   const { currentUser, profile, quickAccounts, signInAs, signOut, resetSession } = useStore();
@@ -1054,8 +1091,14 @@ function DesktopHeaderShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [docModal, setDocModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [guardOpen, setGuardOpen] = useState(false);
-  const { role } = useStore();
+  const { role, systemState } = useStore();
   const { openAdmin } = React.useContext(ShellContext);
+  const topNav = orderNavigationItems(
+    TOP_NAV.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.desktop,
+  );
+  const staffPanelEnabled = isStaffRole(role)
+    && (isAdminRole(role) ? systemState.featureFlags.adminPanel !== false : systemState.featureFlags.editorPanel !== false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1076,7 +1119,7 @@ function DesktopHeaderShell() {
       <header className="relative z-50 flex items-center gap-4 border-b border-black/[0.06] bg-white/80 px-8 py-3 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/80">
         <button onClick={() => go("home")} className="shrink-0"><Logo size={26} /></button>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-          {TOP_NAV.map(t => {
+          {topNav.map(t => {
             const isActive = page === t.id;
             return (
               <button key={t.id} onClick={() => go(t.id)} className={`relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
@@ -1085,7 +1128,7 @@ function DesktopHeaderShell() {
               </button>
             );
           })}
-          {isStaffRole(role) && (
+          {staffPanelEnabled && (
             <button onClick={openAdmin} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"><Users size={16} />{isAdminRole(role) ? "Админ" : "Редактор"}</button>
           )}
         </nav>
@@ -1118,7 +1161,7 @@ function DesktopHeaderShell() {
 }
 
 function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
-  const { currentUser, profile, role, quickAccounts, signInAs, signOut, resetSession } = useStore();
+  const { currentUser, profile, role, quickAccounts, signInAs, signOut, resetSession, systemState } = useStore();
   const { openAdmin } = React.useContext(ShellContext);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1133,6 +1176,25 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </button>
     );
   };
+  const personalNav = orderNavigationItems(
+    [
+      { id: "home" as Page, icon: <Home size={16} />, label: "Главная" },
+      { id: "catalog" as Page, icon: <LayoutGrid size={16} />, label: "Каталог" },
+      { id: "situations" as Page, icon: <FileText size={16} />, label: "Мои ситуации", badge: "3" },
+      { id: "documents" as Page, icon: <Shield size={16} />, label: "Документы" },
+      { id: "news" as Page, icon: <Newspaper size={16} />, label: "Новости" },
+    ].filter((entry) => isPageEnabledBySystemState(entry.id, systemState)),
+    systemState.navigationLayout.tablet,
+  );
+  const toolsNav = orderNavigationItems(
+    [
+      { id: "finance" as Page, icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
+      { id: "profile" as Page, icon: <User size={16} />, label: "Профиль" },
+    ].filter((entry) => isPageEnabledBySystemState(entry.id, systemState)),
+    systemState.navigationLayout.tablet,
+  );
+  const staffPanelEnabled = isStaffRole(role)
+    && (isAdminRole(role) ? systemState.featureFlags.adminPanel !== false : systemState.featureFlags.editorPanel !== false);
   const switchTo = (id: string) => { signInAs(id); setMenuOpen(false); navigate("/"); };
   return (
     <aside className="flex h-full flex-col border-r border-black/[0.06] bg-white p-5 dark:border-white/[0.06] dark:bg-[#0B0D13]">
@@ -1179,17 +1241,12 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </div>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Личный кабинет</div>
-        {item("home", <Home size={16} />, "Главная")}
-        {item("catalog", <LayoutGrid size={16} />, "Каталог")}
-        {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
-        {item("documents", <Shield size={16} />, "Документы")}
-        {item("news", <Newspaper size={16} />, "Новости")}
+        {personalNav.map((entry) => item(entry.id, entry.icon, entry.label, entry.badge))}
       </nav>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>
-        {item("finance", <Wallet size={16} />, "ЖКХ и налоги")}
-        {item("profile", <User size={16} />, "Профиль")}
-        {isStaffRole(role) && (
+        {toolsNav.map((entry) => item(entry.id, entry.icon, entry.label))}
+        {staffPanelEnabled && (
           <button onClick={openAdmin} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]">
             <span className="grid h-5 w-5 place-items-center"><Users size={16} /></span>
             <span className="flex-1 text-[14px]">{role === "editor" ? "Редактор контента" : "Админ-панель"}</span>

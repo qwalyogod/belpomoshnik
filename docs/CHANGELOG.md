@@ -19,6 +19,15 @@
 - React store при входе редактора/админа подтягивает регионы с backend и сохраняет изменения с debounce.
 - Проверка: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`, `git diff --check` — ✅. Backend-тесты по просьбе пользователя не запускались.
 
+## 2026-06-14 (runtime применение system-state)
+
+- Desktop header, tablet/sidebar и mobile bottom nav теперь учитывают `systemState.navigationLayout` для порядка пунктов.
+- `featureFlags` скрывают пункты отключённых разделов из навигации: ситуации, документы, ЖКХ/налоги, новости, профиль.
+- Флаг `assistant=false` скрывает центральную кнопку помощника в mobile nav.
+- Флаги `adminPanel` и `editorPanel` скрывают вход в системные панели из desktop/tablet navigation.
+- Прямые маршруты пока не блокируются feature flags полностью: это оставлено отдельным hardening-шагом, чтобы не ломать пользовательские ссылки.
+- Проверка: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`, `git diff --check` — ✅.
+
 ## 2026-06-14 (админ-панель: регионы и города)
 
 - Раздел «Регионы и города» переписан из мобильной модалки в полноценный редактор географического справочника.

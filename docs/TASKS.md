@@ -9,7 +9,8 @@
 - DONE: Промпт 8.1 — добавить backend sync для «Регионы и города» через `/api/admin/regions` и `system_settings.geo_regions`.
 - DONE: Промпт 9 — стабилизировать создание/смену статуса проблем в админке через реальные backend endpoints.
 - DONE: Промпт 10 — добавить скрытый Control Center владельца платформы с backend-паролем, временным token, системными настройками, баннером, режимом обслуживания и audit log.
-- TODO: Подключить сохранённые `featureFlags` и `navigationLayout` к фактическому runtime-отключению/переупорядочиванию всех экранов.
+- DONE: Промпт 10.1 — подключить `featureFlags` и `navigationLayout` к desktop/tablet/mobile навигации и скрытию admin/editor входа.
+- TODO: Расширить `featureFlags` до полной блокировки прямых маршрутов и protected actions, а не только пунктов меню.
 
 ## Актуальный React/WebView этап. Публикации и новости
 
