@@ -682,6 +682,8 @@ function notificationKind(value: unknown): AppNotification["kind"] {
 }
 
 export function adaptNotification(input: LooseRecord): AppNotification {
+  const route = text(input.route);
+  const routeParts = route.replace(/^\//, "").split("/").filter(Boolean);
   return {
     id: identifier(input.id, "notification"),
     kind: notificationKind(input.notification_type || input.kind),
@@ -689,6 +691,7 @@ export function adaptNotification(input: LooseRecord): AppNotification {
     body: text(input.description || input.body, "") || undefined,
     createdAt: text(input.due_date || input.createdAt || input.created_at, ""),
     read: bool(input.is_read ?? input.read, false),
+    link: routeParts.length > 0 ? { page: routeParts[0], id: routeParts[1] } : undefined,
   };
 }
 

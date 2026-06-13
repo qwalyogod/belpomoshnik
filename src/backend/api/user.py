@@ -7,10 +7,11 @@ JWT-зависимость get_current_user_email уже работает (Эт�
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -22,7 +23,11 @@ from sqlalchemy.orm import Session
 from backend.api.auth import get_current_user_email
 from backend.auth import hash_password, verify_password
 from backend.database import get_db
-from backend.models import User, UserDocument, UserNote
+from backend.models import User, UserDocument, UserNote, UserPushToken
+from backend.notifications.delivery import deliver_notification
+from backend.notifications.native_push import is_native_push_ready
+from backend.notifications.preferences import get_notification_preferences
+from backend.notifications.service import create_in_app_notification
 from backend.schemas import (
     USER_NOTE_CATEGORIES,
     UserNoteCreate,
@@ -105,6 +110,16 @@ class UserProfileOut(BaseModel):
     addresses: list[dict] = Field(default_factory=list)
     # v1.2: публичный путь к аватару (/uploads/avatars/...) или "".
     avatar_url: str = ""
+
+
+class NativePushTokenIn(BaseModel):
+    token: str = Field(min_length=16, max_length=4096)
+    platform: str = Field(pattern="^(ios|android)$")
+    device_label: str = Field(default="", max_length=120)
+
+
+class NativePushTokenDelete(BaseModel):
+    token: str | None = Field(default=None, min_length=16, max_length=4096)
 
 
 class UserProfileUpdate(BaseModel):
@@ -453,6 +468,129 @@ def update_settings(
     user.settings = json.dumps(current, ensure_ascii=False)
     db.commit()
     return current
+
+
+# ---------------------------------------------------------------------------
+# Промпт 6 — native push token и тестовая доставка
+# ---------------------------------------------------------------------------
+
+@router.post("/push/native-token", status_code=status.HTTP_201_CREATED)
+def register_native_push_token(
+    payload: NativePushTokenIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+    existing = db.scalars(
+        select(UserPushToken).where(
+            UserPushToken.user_id == user.id,
+            UserPushToken.token_hash == token_hash,
+        ).limit(1)
+    ).first()
+    try:
+        encrypted = encrypt_field(payload.token)
+    except DocumentCryptoError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Шифрование push-токенов не настроено на сервере.",
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+    if existing is None:
+        existing = UserPushToken(
+            user_id=user.id,
+            platform=payload.platform,
+            token_hash=token_hash,
+            token_encrypted=encrypted,
+            device_label=payload.device_label.strip(),
+            is_active=True,
+            last_seen_at=now,
+        )
+        db.add(existing)
+    else:
+        existing.platform = payload.platform
+        existing.token_encrypted = encrypted
+        existing.device_label = payload.device_label.strip()
+        existing.is_active = True
+        existing.last_seen_at = now
+    db.commit()
+    db.refresh(existing)
+    return {
+        "id": existing.id,
+        "platform": existing.platform,
+        "device_label": existing.device_label,
+        "is_active": existing.is_active,
+        "last_seen_at": existing.last_seen_at,
+        "token_masked": f"••••{token_hash[-8:]}",
+    }
+
+
+@router.delete("/push/native-token")
+def unregister_native_push_token(
+    payload: NativePushTokenDelete | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = select(UserPushToken).where(UserPushToken.user_id == user.id)
+    if payload is not None and payload.token:
+        token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+        query = query.where(UserPushToken.token_hash == token_hash)
+    tokens = db.scalars(query).all()
+    for token in tokens:
+        token.is_active = False
+    db.commit()
+    return {"deactivated": len(tokens)}
+
+
+@router.get("/push/status")
+def native_push_status(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    tokens = db.scalars(
+        select(UserPushToken).where(UserPushToken.user_id == user.id).order_by(UserPushToken.updated_at.desc())
+    ).all()
+    return {
+        "native_push_ready": is_native_push_ready(),
+        "preferences": get_notification_preferences(user),
+        "registered": any(token.is_active for token in tokens),
+        "tokens": [
+            {
+                "id": token.id,
+                "platform": token.platform,
+                "device_label": token.device_label,
+                "is_active": token.is_active,
+                "last_seen_at": token.last_seen_at,
+                "token_masked": f"••••{token.token_hash[-8:]}",
+            }
+            for token in tokens
+        ],
+    }
+
+
+@router.post("/push/test")
+def test_push_notification(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    notification, _ = create_in_app_notification(
+        db,
+        user_id=user.id,
+        title="Тестовое уведомление",
+        description="Каналы уведомлений настроены. Это сообщение сохранено внутри приложения.",
+        notification_type="security",
+        source="notification-settings",
+        route="/notifications",
+    )
+    db.commit()
+    db.refresh(notification)
+    delivery = deliver_notification(db, notification)
+    return {
+        "in_app_created": True,
+        "notification_id": notification.id,
+        **delivery,
+        "native_push_ready": is_native_push_ready(),
+    }
 
 
 # ---------------------------------------------------------------------------

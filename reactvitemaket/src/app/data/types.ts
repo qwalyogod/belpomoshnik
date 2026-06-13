@@ -386,6 +386,19 @@ export interface Settings {
     documents: boolean;
     legal: boolean;
     push: boolean;
+    system_notifications_enabled: boolean;
+    local_notifications_enabled: boolean;
+    native_push_enabled: boolean;
+    browser_notifications_enabled: boolean;
+    doc_expiry_enabled: boolean;
+    task_deadline_enabled: boolean;
+    utility_enabled: boolean;
+    tax_enabled: boolean;
+    law_updates_enabled: boolean;
+    security_enabled: boolean;
+    quiet_hours_enabled: boolean;
+    quiet_hours_from: string;
+    quiet_hours_to: string;
   };
   privacy: {
     maskDocuments: boolean;

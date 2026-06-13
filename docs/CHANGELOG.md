@@ -1,5 +1,15 @@
 # Журнал изменений
 
+## 2026-06-13 (уведомления v2 и проверка rework 1–5)
+
+- Исправлена MySQL-несовместимая связь `users.role_id` с `ON DELETE SET DEFAULT`; теперь назначенную роль защищает `RESTRICT`.
+- Завершена трёхуровневая система уведомлений: in-app, Capacitor Local Notifications и архитектурная native push доставка.
+- Добавлены endpoints регистрации/deactivation/status/test push-токена; полный token не возвращается и хранится зашифрованно.
+- Добавлены backend-правила сроков документов, задач, ЖКХ и налогов, безопасный push payload и scheduler.
+- Страница `/notifications` показывает состояния каналов, настройки типов и тестовую отправку без имитации FCM/APNs.
+- Добавлены `@capacitor/local-notifications` и `@capacitor/push-notifications`, а также документация `NOTIFICATIONS_ARCHITECTURE.md`.
+- Проверка: 10 новых notification-тестов пройдены; production frontend build и `compileall` успешны. Полный suite после исправления тестовой БД: 89/91 до настройки Fernet fixture; fixture исправлен, полный повтор выполняется в финальной стабилизации.
+
 ## 2026-06-13 (лента публикаций, detail-страницы и поиск)
 
 ### Что изменено

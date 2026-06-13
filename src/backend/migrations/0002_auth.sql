@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     hashed_password VARCHAR(255) NOT NULL,            -- bcrypt (H4)
     name VARCHAR(255) NOT NULL DEFAULT '',
     role_id VARCHAR(255) NOT NULL DEFAULT 'citizen'
-        REFERENCES roles(id) ON DELETE SET DEFAULT,
+        REFERENCES roles(id) ON DELETE RESTRICT,
     city VARCHAR(255) NOT NULL DEFAULT '',
     region VARCHAR(255) NOT NULL DEFAULT '',
     district VARCHAR(255) NOT NULL DEFAULT '',

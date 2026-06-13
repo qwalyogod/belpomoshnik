@@ -22,13 +22,9 @@ def is_native_push_ready() -> bool:
 
 def send_native_push(
     *,
-    user_id: int,
+    token: str,
     platform: str,
-    title: str,
-    body: str,
-    route: str = "",
-    notification_id: str = "",
-    notification_type: str = "",
+    payload: dict[str, str],
 ) -> dict:
     """Отправить native push. В заглушечном режиме возвращает skipped."""
     if not is_native_push_ready():
@@ -36,5 +32,6 @@ def send_native_push(
 
     # В реальной production-сборке здесь httpx-запросы к FCM/APNs.
     # Не пишем имитацию — это вводит в заблуждение на демо.
-    logger.info("send_native_push (stub): user=%s platform=%s type=%s", user_id, platform, notification_type)
+    # Не логируем device token и персональные поля. Payload уже очищен сервисом.
+    logger.info("send_native_push (stub): platform=%s type=%s", platform, payload.get("type", ""))
     return {"status": "skipped", "reason": "implementation_pending"}

@@ -1,6 +1,6 @@
 # API_CONTRACTS.md — Контракты API «Белпомощник»
 
-Обновлено: 2026-05-24. Соответствует Этапу G плана работ.
+Обновлено: 2026-06-13.
 
 ---
 
@@ -135,6 +135,11 @@
 | GET | `/api/user/notifications` | Список уведомлений |
 | PATCH | `/api/user/notifications/{id}/read` | Отметить прочитанным |
 | POST | `/api/user/notifications/read-all` | Прочитать все |
+| DELETE | `/api/user/notifications/{id}` | Удалить своё уведомление |
+| POST | `/api/user/push/native-token` | Зарегистрировать зашифрованный iOS/Android token |
+| DELETE | `/api/user/push/native-token` | Деактивировать token текущего пользователя |
+| GET | `/api/user/push/status` | Разрешения, readiness и маски зарегистрированных устройств |
+| POST | `/api/user/push/test` | Создать in-app тест и попытаться доставить системно |
 
 ### Трекеры (ЖКХ + налоги)
 

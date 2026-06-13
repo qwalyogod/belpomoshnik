@@ -23,6 +23,24 @@ import { apiClient } from "./services/api";
 import { institutionsForScenario, matchInstitutionsForAddresses, profileAddresses } from "./services/institutions";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
 import { AvatarCropper, validateAvatarFile } from "./components/avatar-cropper";
+import {
+  checkNativeNotificationPermission,
+  isNativeApp as isNativeNotificationApp,
+  requestNativeNotificationPermission,
+  scheduleLocalNotification,
+  syncNativeNotificationSchedule,
+} from "./services/nativeNotifications";
+import {
+  checkPushPermission,
+  registerNativePush,
+  requestPushPermission as requestNativePushPermission,
+} from "./services/nativePush";
+import {
+  checkWebNotificationPermission,
+  isDesktopBrowserNotificationAvailable,
+  requestWebNotificationPermission,
+  showWebNotification,
+} from "./services/webNotifications";
 
 function PageSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -1963,8 +1981,138 @@ export function LawDetailPage() {
 
 export function NotificationsPage() {
   const { isMobile } = useContext(ShellContext);
-  const { notifications, markAllRead, markRead } = useStore();
+  const {
+    notifications, markAllRead, markRead, refreshNotifications,
+    settings, updateSettings, authSession,
+  } = useStore();
   const navigate = useNavigate();
+  const [channelStatus, setChannelStatus] = useState({
+    local: "unavailable" as string,
+    push: "unavailable" as string,
+    browser: "unavailable" as string,
+    tokenRegistered: false,
+    nativeReady: false,
+  });
+  const [channelBusy, setChannelBusy] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+
+  const loadChannelStatus = useCallback(async () => {
+    const token = authSession?.access_token;
+    const native = isNativeNotificationApp();
+    const [localPermission, pushPermission] = native
+      ? await Promise.all([checkNativeNotificationPermission(), checkPushPermission()])
+      : ["unavailable", "unavailable"];
+    const browserPermission = isDesktopBrowserNotificationAvailable()
+      ? checkWebNotificationPermission()
+      : "unavailable";
+    let tokenRegistered = false;
+    let nativeReady = false;
+    if (token) {
+      try {
+        const status = await apiClient.getNativePushStatus<{ registered: boolean; native_push_ready: boolean }>(token);
+        tokenRegistered = status.registered;
+        nativeReady = status.native_push_ready;
+      } catch {
+        // In-app центр остаётся рабочим, даже если push status временно недоступен.
+      }
+    }
+    setChannelStatus({
+      local: String(localPermission),
+      push: String(pushPermission),
+      browser: String(browserPermission),
+      tokenRegistered,
+      nativeReady,
+    });
+  }, [authSession?.access_token]);
+
+  useEffect(() => { void loadChannelStatus(); }, [loadChannelStatus]);
+
+  const patchNotificationSettings = (patch: Partial<typeof settings.notifications>) => {
+    updateSettings({ notifications: { ...settings.notifications, ...patch } });
+  };
+
+  const enableSystemNotifications = async () => {
+    setChannelBusy(true);
+    setTestMessage("");
+    try {
+      if (isNativeNotificationApp()) {
+        const local = await requestNativeNotificationPermission();
+        const push = await requestNativePushPermission();
+        const localGranted = local === "granted";
+        const pushGranted = push === "granted";
+        if (pushGranted && authSession?.access_token) await registerNativePush(authSession.access_token);
+        if (localGranted) await syncNativeNotificationSchedule(notifications);
+        patchNotificationSettings({
+          push: localGranted || pushGranted,
+          system_notifications_enabled: localGranted || pushGranted,
+          local_notifications_enabled: localGranted,
+          native_push_enabled: pushGranted,
+          browser_notifications_enabled: false,
+        });
+        setTestMessage(localGranted || pushGranted
+          ? "Системные уведомления включены на этом устройстве."
+          : "Разрешение не выдано. Уведомления продолжат сохраняться внутри приложения.");
+      } else if (isDesktopBrowserNotificationAvailable()) {
+        const permission = await requestWebNotificationPermission();
+        const granted = permission === "granted";
+        patchNotificationSettings({
+          push: granted,
+          system_notifications_enabled: granted,
+          browser_notifications_enabled: granted,
+          local_notifications_enabled: false,
+          native_push_enabled: false,
+        });
+        setTestMessage(granted
+          ? "Уведомления браузера включены."
+          : "Разрешение не выдано. Уведомления останутся во внутреннем центре.");
+      } else {
+        setTestMessage("Системные уведомления недоступны в этом браузере. Внутренний центр работает всегда.");
+      }
+      await loadChannelStatus();
+    } finally {
+      setChannelBusy(false);
+    }
+  };
+
+  const sendTest = async () => {
+    if (!authSession?.access_token) {
+      setTestMessage("Войдите в аккаунт, чтобы создать тестовое уведомление.");
+      return;
+    }
+    setChannelBusy(true);
+    try {
+      const result = await apiClient.sendTestPushNotification<{
+        in_app_created: boolean;
+        system_delivered: boolean;
+        reason: string;
+      }>(authSession.access_token);
+      let delivered = result.system_delivered;
+      if (!isNativeNotificationApp() && settings.notifications.browser_notifications_enabled) {
+        delivered = showWebNotification("Белпомощник", "Тестовое уведомление", "/notifications") || delivered;
+      }
+      if (isNativeNotificationApp() && settings.notifications.local_notifications_enabled) {
+        const localId = await scheduleLocalNotification({
+          id: `test-${Date.now()}`,
+          kind: "step_done",
+          title: "Белпомощник",
+          body: "Тестовое уведомление",
+          createdAt: new Date(Date.now() + 3000).toISOString(),
+          read: false,
+          link: { page: "notifications" },
+        });
+        delivered = localId !== null || delivered;
+      }
+      await refreshNotifications();
+      setTestMessage(delivered
+        ? "Тестовое системное уведомление отправлено и сохранено внутри приложения."
+        : "Тестовое уведомление сохранено внутри приложения. Системная доставка сейчас недоступна или не разрешена.");
+    } catch {
+      setTestMessage("Не удалось создать тестовое уведомление. Проверьте соединение с сервером.");
+    } finally {
+      setChannelBusy(false);
+      await loadChannelStatus();
+    }
+  };
 
   const targetFor = (it: { kind: string; link?: { page: string; id?: string | number } }): string => {
     if (it.link?.page) {
@@ -1985,6 +2133,77 @@ export function NotificationsPage() {
     navigate(targetFor(it));
   };
 
+  const statusLabel = (value: string) => value === "granted" ? "Включены" : value === "denied" ? "Запрещены" : value === "prompt" ? "Не настроены" : "Недоступны";
+  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={onChange}
+      className={`relative h-7 w-12 rounded-full transition-colors ${value ? "bg-[#0056FF]" : "bg-black/10 dark:bg-white/15"}`}
+    >
+      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+
+  const settingsPanel = (
+    <div className="space-y-3">
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[15px] font-medium tracking-tight text-black dark:text-white">Способы уведомлений</div>
+            <p className="mt-1 text-[12px] leading-relaxed text-black/50 dark:text-white/50">
+              Если системные уведомления выключены, сообщения всё равно сохраняются внутри приложения.
+            </p>
+          </div>
+          <Bell size={18} className="shrink-0 text-[#0056FF]" />
+        </div>
+        <div className="mt-4 divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+          <div className="flex items-center justify-between py-3 text-[13px]"><span>В приложении</span><Pill tone="green">Всегда включено</Pill></div>
+          {isNativeNotificationApp() ? (
+            <>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Локальные уведомления</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.local)}</span></div>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Native push</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.push)}</span></div>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Push-токен приложения</span><span className="text-black/50 dark:text-white/50">{channelStatus.tokenRegistered ? "Зарегистрирован" : "Не зарегистрирован"}</span></div>
+              {!channelStatus.nativeReady && <div className="py-3 text-[12px] text-amber-700 dark:text-amber-300">Серверная доставка потребует настройки FCM/APNs. Напоминания по срокам работают локально.</div>}
+            </>
+          ) : (
+            <div className="flex items-center justify-between py-3 text-[13px]"><span>Desktop browser</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.browser)}</span></div>
+          )}
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <PrimaryButton onClick={enableSystemNotifications} disabled={channelBusy}>
+            {channelBusy ? "Проверяем…" : isNativeNotificationApp() ? "Включить на устройстве" : "Включить в браузере"}
+          </PrimaryButton>
+          <GhostButton onClick={sendTest} disabled={channelBusy}>Отправить тестовое</GhostButton>
+        </div>
+        {testMessage && <div className="mt-3 rounded-xl bg-black/[0.035] px-3 py-2 text-[12px] leading-relaxed text-black/65 dark:bg-white/[0.06] dark:text-white/65">{testMessage}</div>}
+      </Card>
+
+      <Card className="p-5">
+        <div className="text-[15px] font-medium tracking-tight text-black dark:text-white">Типы уведомлений</div>
+        <div className="mt-3 divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+          {[
+            ["Документы", "doc_expiry_enabled"],
+            ["Задачи", "task_deadline_enabled"],
+            ["ЖКХ", "utility_enabled"],
+            ["Налоги", "tax_enabled"],
+            ["Новости и закон-апдейты", "law_updates_enabled"],
+            ["Безопасность", "security_enabled"],
+          ].map(([label, key]) => (
+            <div key={key} className="flex min-h-12 items-center justify-between gap-3 py-2 text-[13px] text-black dark:text-white">
+              <span>{label}</span>
+              <Toggle
+                value={Boolean(settings.notifications[key as keyof typeof settings.notifications])}
+                onChange={() => patchNotificationSettings({ [key]: !settings.notifications[key as keyof typeof settings.notifications] })}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
@@ -1992,6 +2211,7 @@ export function NotificationsPage() {
           <button onClick={markAllRead} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"><Check size={15} className="text-black dark:text-white" /></button>
         } />
         <div className="px-5 space-y-3">
+          {settingsPanel}
           {notifications.map((it) => (
             <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
               <Card className={`flex items-start gap-3 p-4 ${it.read ? 'opacity-60' : ''}`}>
@@ -2023,7 +2243,8 @@ export function NotificationsPage() {
         <GhostButton onClick={markAllRead}>Прочитать все</GhostButton>
       </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-3">
         {notifications.map((it) => (
           <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
             <Card className={`flex items-start gap-4 p-5 ${it.read ? 'opacity-60' : ''}`}>
@@ -2040,6 +2261,9 @@ export function NotificationsPage() {
             </Card>
           </button>
         ))}
+        {notifications.length === 0 && <Card className="p-8 text-center text-[13px] text-black/55 dark:text-white/55">Уведомлений пока нет.</Card>}
+        </div>
+        {settingsPanel}
       </div>
     </div>
   );

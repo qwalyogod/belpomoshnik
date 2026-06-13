@@ -31,15 +31,20 @@
 - **MVP-ограничение:** в `auth.py` стоит дефолтный ключ `"change-me-in-production-use-256-bit-key"` — в production обязательно заменить.
 
 ### Персональные данные в БД
-- MVP: SQLite-файл `data/belpomoshnik.db` — хранится локально, не реплицируется.  
-- Production: PostgreSQL с шифрованием на уровне диска (pgcrypto / LUKS / managed DB).  
-- Поля `number`, `issued_by` в таблице `user_documents` в production рекомендуется шифровать симметричным ключом (pgcrypto `pgp_sym_encrypt`).
+- Текущая dev/MVP БД — MySQL; production-переход на PostgreSQL остаётся отдельным инфраструктурным этапом.
+- Чувствительные поля личных документов и сканы уже шифруются Fernet-ключом `BELPOMOSHNIK_DOCUMENT_MASTER_KEY`.
+- Device push token хранится только в зашифрованном виде; API возвращает маску, но не полный token.
 
 ### Файлы документов (H7)
-- Загружаемые файлы хранятся в `data/user_docs/<user_id>/<doc_id>`.  
-- Доступ — только через аутентифицированный endpoint `GET /api/user/documents/{doc_id}/file`.  
-- **Не** раздаются через статику nginx/Apache.  
-- В production: вынести за webroot или использовать S3 с pre-signed URLs.
+- Зашифрованные blob хранятся в `data/secure/documents/<user_id>/<doc_id>` вне public static.
+- Доступ — только через owner-isolated endpoint `GET /api/user/documents/{doc_id}/scan` с JWT.
+- Формат проверяется по magic bytes, а не только по расширению файла.
+
+### Уведомления
+- Системные каналы включаются только после явного разрешения пользователя.
+- Push payload намеренно обезличен: нет номеров документов, адресов и сканов.
+- In-app уведомление создаётся даже при запрете внешней доставки.
+- FCM/APNs credentials задаются только через защищённое окружение и не коммитятся.
 
 ---
 

@@ -30,13 +30,19 @@
 
 ---
 
-## Промпт 2 — ЖКХ и налоги
-(пойдём после промпта 1)
+## Промпт 2 — ЖКХ и налоги — ✅ завершён
+## Промпт 3 — Backend AI — ✅ завершён
+## Промпт 4 — Frontend AI помощника citizen — ✅ завершён
+## Промпт 5 — Редакторский AI — ✅ завершён
+## Промпт 6 — Уведомления — ✅ завершён
 
-## Промпт 3 — Backend AI
-## Промпт 4 — Frontend AI помощника citizen
-## Промпт 5 — Редакторский AI
-## Промпт 6 — Уведомления
+- [x] in-app центр, `route`, `dedupe_key`
+- [x] backend rules/service/delivery и scheduler
+- [x] native push token endpoints и безопасное хранение
+- [x] Capacitor Local Notifications + Push Notifications
+- [x] desktop browser Notification API
+- [x] UI способов доставки, типов и тестового уведомления
+- [x] тесты и архитектурная документация
 ## Промпт 7 — Админ-панель
 ## Промпт 8 — Регионы и города
 ## Промпт 9 — Финальная стабилизация

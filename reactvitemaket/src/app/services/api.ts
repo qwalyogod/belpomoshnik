@@ -394,7 +394,7 @@ export const apiClient = {
     requestJson<T>("/api/user/notifications", { headers: authHeaders(accessToken), ...options }),
   createUserNotification: <T>(
     accessToken: string,
-    payload: { title: string; description?: string; notification_type?: string; due_date?: string | null; send_email?: boolean },
+    payload: { title: string; description?: string; notification_type?: string; due_date?: string | null; send_email?: boolean; route?: string; dedupe_key?: string },
     options?: ApiRequestOptions,
   ) =>
     requestJson<T>("/api/user/notifications", {
@@ -418,6 +418,31 @@ export const apiClient = {
   deleteUserNotification: (accessToken: string, id: string, options?: ApiRequestOptions) =>
     requestJson<void>(`/api/user/notifications/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  getNativePushStatus: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/status", { headers: authHeaders(accessToken), ...options }),
+  registerNativePushToken: <T = unknown>(
+    accessToken: string,
+    payload: { token: string; platform: "ios" | "android"; device_label?: string },
+    options?: ApiRequestOptions,
+  ) => requestJson<T>("/api/user/push/native-token", {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(payload),
+    ...options,
+  }),
+  unregisterNativePushToken: <T = unknown>(accessToken: string, token?: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/native-token", {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(token ? { token } : {}),
+      ...options,
+    }),
+  sendTestPushNotification: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/test", {
+      method: "POST",
       headers: authHeaders(accessToken),
       ...options,
     }),

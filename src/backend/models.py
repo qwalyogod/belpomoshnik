@@ -470,7 +470,7 @@ class User(Base, TimestampMixin):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     role_id: Mapped[str] = mapped_column(
-        ForeignKey("roles.id", ondelete="SET DEFAULT"),
+        ForeignKey("roles.id", ondelete="RESTRICT"),
         default="citizen",
         nullable=False,
         index=True,

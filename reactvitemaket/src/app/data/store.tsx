@@ -15,6 +15,8 @@ import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef,
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
+import { checkNativeNotificationPermission, clearNativeNotificationSchedule, syncNativeNotificationSchedule } from "../services/nativeNotifications";
+import { checkPushPermission, registerNativePush, unregisterNativePushToken } from "../services/nativePush";
 import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
@@ -107,6 +109,7 @@ type Store = {
   notifications: AppNotification[];
   markRead: (id: string) => void;
   markAllRead: () => void;
+  refreshNotifications: () => Promise<void>;
   unreadCount: number;
 
   profile: UserProfile;
@@ -1171,11 +1174,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     // Дёргаем backend, чтобы refresh_token был revoke. Не блокируем UI
     // на ошибке сети: локально мы уже стираем сессию.
+    if (authSession?.access_token) {
+      void unregisterNativePushToken(authSession.access_token).catch(() => undefined);
+    }
+    void clearNativeNotificationSchedule().catch(() => undefined);
     void apiClient.logout().catch(() => undefined);
     setAuthSession(null);
     apiClient.saveTokens(null);
     applyUser(GUEST_USER);
-  }, [applyUser]);
+  }, [applyUser, authSession?.access_token]);
 
   const resetSession = useCallback(() => {
     setQuickAccounts(TEST_ACCOUNTS);
@@ -1816,12 +1823,34 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         .catch(error => console.warn("Notifications marked read locally; backend update failed.", error));
     }
   }, [authSession?.access_token]);
+  const refreshNotifications = useCallback(async () => {
+    if (!authSession?.access_token) return;
+    const rows = await apiClient.getUserNotifications<Record<string, unknown>[]>(authSession.access_token);
+    if (Array.isArray(rows)) setNotifications(rows.map(adaptNotification));
+  }, [authSession?.access_token]);
   const reminders = useMemo(
     () => buildReminders(documents, utilityAccounts, taxes, settings),
     [documents, utilityAccounts, taxes, settings],
   );
   const allNotifications = useMemo(() => [...reminders, ...notifications], [reminders, notifications]);
   const unreadCount = useMemo(() => allNotifications.filter(n => !n.read).length, [allNotifications]);
+
+  // Не запрашиваем разрешения автоматически. Если пользователь уже выдал их,
+  // восстанавливаем расписание и регистрацию после входа/перезапуска.
+  useEffect(() => {
+    if (!authSession?.access_token || role === "guest") return;
+    let cancelled = false;
+    const sync = async () => {
+      if (await checkNativeNotificationPermission() === "granted" && !cancelled) {
+        await syncNativeNotificationSchedule(reminders);
+      }
+      if (await checkPushPermission() === "granted" && !cancelled) {
+        await registerNativePush(authSession.access_token);
+      }
+    };
+    void sync().catch(error => console.warn("Native notification sync failed.", error));
+    return () => { cancelled = true; };
+  }, [authSession?.access_token, role, reminders]);
 
   const updateProfile: Store["updateProfile"] = useCallback((patch) => {
     if (!requireAccount()) return;
@@ -2094,7 +2123,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     articles, addArticle, updateArticle, removeArticle,
     blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     favorites, toggleFavorite,
-    notifications: allNotifications, markRead, markAllRead, unreadCount,
+    notifications: allNotifications, markRead, markAllRead, refreshNotifications, unreadCount,
     profile, updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress,
@@ -2122,7 +2151,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addTax, updateTax, deleteTax,
     utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest,
     reminders, allNotifications,
-    markRead, markAllRead, unreadCount,
+    markRead, markAllRead, refreshNotifications, unreadCount,
     updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
