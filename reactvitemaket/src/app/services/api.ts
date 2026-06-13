@@ -207,6 +207,10 @@ function authHeaders(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
+function controlHeaders(controlToken: string) {
+  return { "X-Control-Center-Token": controlToken };
+}
+
 export const apiClient = {
   login: <T = AuthTokens>(email: string, password: string, options?: ApiRequestOptions) => {
     const body = new URLSearchParams();
@@ -783,6 +787,86 @@ export const apiClient = {
       method: "PUT",
       headers: authHeaders(accessToken),
       body: JSON.stringify(payload),
+      ...options,
+    }),
+
+  getSystemState: <T>(options?: ApiRequestOptions) =>
+    requestJson<T>("/api/public/system-state", { ...options }),
+  unlockControlCenter: <T>(password: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/unlock", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+      ...options,
+    }),
+  lockControlCenter: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/lock", {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  getControlCenterStatus: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/status", {
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  updateControlMaintenance: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/maintenance", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlReadonly: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/readonly", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlBanner: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/banner", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlFeatureFlags: <T>(controlToken: string, flags: Record<string, boolean>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/feature-flags", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify({ flags }),
+      ...options,
+    }),
+  updateControlBranding: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/branding", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlNavigationLayout: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/navigation-layout", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  sendControlBroadcast: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/broadcast-notification", {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  runControlAction: <T>(controlToken: string, action: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/control-center/service-actions/${encodeURIComponent(action)}`, {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  getControlAuditLog: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/audit-log", {
+      headers: controlHeaders(controlToken),
       ...options,
     }),
 

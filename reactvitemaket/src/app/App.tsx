@@ -14,6 +14,7 @@ import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
 import { scrollContentToTop } from "./services/scroll";
 import { AdminWindowMount } from "./components/admin-window";
+import { ControlCenter, MaintenanceScreen, SystemBanner } from "./components/control-center/ControlCenter";
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { ConnectionBanner } from "./components/ConnectionBanner";
 import { CATEGORIES } from "./data/mock";
@@ -2123,6 +2124,8 @@ export function RootLayout() {
         <ScrollResetBridge />
         <GuestGuardBridge />
         <OnboardingGate />
+        <SystemBanner />
+        <MaintenanceScreen />
         <div className={dark ? "dark" : ""}>
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
             {layout === "mobile" ? <MobileShell dark={dark} setDark={setDark} />
@@ -2135,6 +2138,7 @@ export function RootLayout() {
             <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
             {!isMobile && <AssistantFab />}
             <AdminWindowMount />
+            <ControlCenter />
           </div>
         </div>
       </ShellContext.Provider>

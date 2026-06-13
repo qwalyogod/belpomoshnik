@@ -434,6 +434,79 @@ export interface Settings {
   };
 }
 
+export interface SystemState {
+  maintenance: {
+    enabled: boolean;
+    level: string;
+    title: string;
+    message: string;
+    until: string;
+    allowAdminAccess: boolean;
+  };
+  readonly: {
+    enabled: boolean;
+    message: string;
+  };
+  banner: {
+    enabled: boolean;
+    type: string;
+    text: string;
+    linkLabel: string;
+    linkUrl: string;
+    dismissible: boolean;
+    audience: string;
+    version: number;
+  };
+  featureFlags: Record<string, boolean>;
+  branding: {
+    appName: string;
+    shortName: string;
+    logoText: string;
+    logoUrl: string;
+    accentColor: string;
+    homeTitle: string;
+    homeSubtitle: string;
+  };
+  navigationLayout: {
+    desktop: string[];
+    tablet: string[];
+    mobile: string[];
+  };
+}
+
+export interface ControlCenterStatus {
+  backend_online: boolean;
+  database_connected: boolean;
+  total_users: number;
+  active_users: number;
+  blocked_users: number;
+  notifications_today: number;
+  publications_count: number;
+  problems_count: number;
+  scenarios_count: number;
+  authorities_count: number;
+  regions_count: number;
+  maintenance_mode: boolean;
+  readonly_mode: boolean;
+  banner_enabled: boolean;
+  ai_status: string;
+  push_status: string;
+  scheduler_status: string;
+  frontend_version: string;
+  backend_version: string;
+}
+
+export interface ControlCenterAuditLog {
+  id: number | string;
+  session_id?: number | string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  status: string;
+  ip_address: string;
+  created_at: string;
+}
+
 export interface Problem {
   id: string;
   title: string;

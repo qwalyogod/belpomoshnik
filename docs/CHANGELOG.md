@@ -1,5 +1,16 @@
 # Журнал изменений
 
+## 2026-06-14 (скрытый Control Center)
+
+- Добавлен скрытый Control Center владельца платформы: окно открывается только через консольную команду `belpomoshnikControl()` и не отображается в меню, ролях или обычной админ-панели.
+- Backend: добавлен router `/api/control-center/*`, публичный `/api/public/system-state`, rate limit попыток входа, временный control-token в заголовке `X-Control-Center-Token`, хранение только hash token.
+- Backend: добавлены таблицы `control_center_sessions`, `system_settings`, `control_center_audit_logs` и миграция `0026_control_center.sql`.
+- Control Center умеет показывать live status, включать обслуживание, readonly, системный баннер, feature flags, брендинг, отправлять системные in-app уведомления и запускать сервисные сценарии.
+- Frontend: добавлены `ControlCenter`, `SystemBanner`, `MaintenanceScreen`, API-клиент и store-поддержка public system-state с периодическим обновлением.
+- Prompt 9 security-финиш: деактивированный пользователь больше не проходит `/api/auth/me` и не может выполнять публикационные действия со старым access token.
+- Документация: добавлен `docs/CONTROL_CENTER.md`, обновлены API/security/status/tasks.
+- Проверка: `pnpm -C reactvitemaket run build` и `.venv/bin/python -m compileall -q src` — ✅. Backend-тесты по просьбе пользователя не запускались.
+
 ## 2026-06-14 (админ-панель: регионы и города)
 
 - Раздел «Регионы и города» переписан из мобильной модалки в полноценный редактор географического справочника.

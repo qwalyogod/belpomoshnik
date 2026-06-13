@@ -4,7 +4,7 @@ import {
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
   AdminScenarioRow, AdminProblemRow, AdminDashboardStats, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
   ContentTag, UserAddress, UserNote, NoteCategory,
-  UtilityRequest,
+  UtilityRequest, SystemState,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
@@ -194,6 +194,12 @@ type Store = {
   requireAccount: () => boolean;
   guestGuardSignal: number;
   dismissGuestGuard: () => void;
+
+  systemState: SystemState;
+  refreshSystemState: () => Promise<void>;
+  controlCenterOpen: boolean;
+  openControlCenter: () => void;
+  closeControlCenter: () => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -237,6 +243,53 @@ const TEST_ACCOUNTS: AppUser[] = [
     isTestAccount: true,
   },
 ];
+
+const DEFAULT_SYSTEM_STATE: SystemState = {
+  maintenance: {
+    enabled: false,
+    level: "notice",
+    title: "Платформа работает в штатном режиме",
+    message: "",
+    until: "",
+    allowAdminAccess: true,
+  },
+  readonly: { enabled: false, message: "" },
+  banner: {
+    enabled: false,
+    type: "info",
+    text: "",
+    linkLabel: "",
+    linkUrl: "",
+    dismissible: true,
+    audience: "all",
+    version: 1,
+  },
+  featureFlags: {
+    documents: true,
+    situations: true,
+    assistant: true,
+    news: true,
+    finance: true,
+    profile: true,
+    editorPanel: true,
+    adminPanel: true,
+    notifications: true,
+  },
+  branding: {
+    appName: "Белпомощник",
+    shortName: "Белпомощник",
+    logoText: "Б",
+    logoUrl: "",
+    accentColor: "#2563EB",
+    homeTitle: "Какая у вас ситуация?",
+    homeSubtitle: "Помогаем собрать документы, шаги и сроки в одном месте.",
+  },
+  navigationLayout: {
+    desktop: ["home", "catalog", "situations", "documents", "finance", "news", "profile"],
+    tablet: ["home", "catalog", "situations", "documents", "news", "profile"],
+    mobile: ["home", "catalog", "assistant", "news", "profile"],
+  },
+};
 
 // Публичный demo-пароль для тест-аккаунтов (citizen/editor/admin).
 // Пароль одинаковый во всех bootstrap-аккаунтах (см. backend/bootstrap.py).
@@ -613,6 +666,26 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
   const [guestGuardSignal, setGuestGuardSignal] = useState(0);
+  const [systemState, setSystemState] = useState<SystemState>(DEFAULT_SYSTEM_STATE);
+  const [controlCenterOpen, setControlCenterOpen] = useState(false);
+
+  const refreshSystemState = useCallback(async () => {
+    try {
+      const next = await apiClient.getSystemState<SystemState>();
+      setSystemState({ ...DEFAULT_SYSTEM_STATE, ...next });
+    } catch (error) {
+      console.warn("System state unavailable; local defaults remain active.", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSystemState();
+    const id = window.setInterval(() => { refreshSystemState(); }, 60_000);
+    return () => window.clearInterval(id);
+  }, [refreshSystemState]);
+
+  const openControlCenter = useCallback(() => setControlCenterOpen(true), []);
+  const closeControlCenter = useCallback(() => setControlCenterOpen(false), []);
 
   useEffect(() => {
     safeWrite(CURRENT_USER_KEY, currentUser.id);
@@ -2226,6 +2299,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
+    systemState, refreshSystemState, controlCenterOpen, openControlCenter, closeControlCenter,
   }), [
     role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, contentTags, publicContentStatus, publicContentError,
     adminScenarios, adminProblems, adminStats, adminStatus, adminUsers, auditLogs,
@@ -2250,6 +2324,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
     requireAccount, guestGuardSignal, dismissGuestGuard,
+    systemState, refreshSystemState, controlCenterOpen, openControlCenter, closeControlCenter,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

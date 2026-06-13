@@ -96,7 +96,30 @@
 
 ---
 
-## H8.7 Генерация безопасного ключа
+## H8.7 Control Center
+
+Control Center — скрытый системный слой владельца платформы. Он не отображается в меню, не является ролью пользователя и не назначается через админ-панель.
+
+Механизм доступа:
+
+- frontend открывает окно только по консольной команде `belpomoshnikControl()`;
+- пароль проверяется только backend endpoint’ом `POST /api/control-center/unlock`;
+- пароль задаётся через `CONTROL_CENTER_PASSWORD` или `CONTROL_CENTER_PASSWORD_HASH`;
+- при успешном входе backend выдаёт временный raw-token;
+- raw-token показывается frontend только один раз, а в БД хранится только SHA-256 hash;
+- опасные действия требуют заголовок `X-Control-Center-Token`;
+- истёкшие и отозванные token не принимаются;
+- неудачные попытки входа ограничиваются rate-limit;
+- все действия пишутся в `control_center_audit_logs`;
+- пароль и raw-token не логируются.
+
+Таблицы: `control_center_sessions`, `system_settings`, `control_center_audit_logs`.
+
+MVP-ограничение: `CONTROL_CENTER_PASSWORD=x20b01` допустим только для локальной разработки. Для production нужно использовать длинный случайный пароль или `CONTROL_CENTER_PASSWORD_HASH`, HTTPS и внешний secret-management.
+
+---
+
+## H8.8 Генерация безопасного ключа
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"

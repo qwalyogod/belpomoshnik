@@ -67,7 +67,26 @@
 - [x] Удаление заменено архивированием на frontend/store-уровне.
 - [x] Проверка без тестов: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`.
 - [ ] Backend API `/api/admin/regions/*` и отдельная таблица регионов остаются будущим инфраструктурным шагом.
-## Промпт 9 — Финальная стабилизация
-## Промпт 10 — Control Center
+## Промпт 9 — Финальная стабилизация — ✅ частично завершён
 
-Подпункты заполняются перед стартом каждого промпта, чтобы не забивать файл преждевременно.
+- [x] Кнопка «Новая проблема» в админке создаёт реальную backend-проблему, а не публикацию.
+- [x] Статус проблемы в админке меняется через `/api/admin/problems/{id}`.
+- [x] Soft-delete пользователя в UI больше не удаляет строку из таблицы, а показывает деактивацию.
+- [ ] Полный распил монолитной админ-панели на отдельные маленькие компоненты оставить на отдельный UI-стабилизационный проход.
+
+## Промпт 10 — Control Center — ✅ основной блок завершён
+
+- [x] Backend-router `src/backend/api/control_center.py`.
+- [x] Публичный endpoint `/api/public/system-state`.
+- [x] Скрытый unlock по backend-паролю, без хранения пароля во frontend bundle.
+- [x] Временные control-token сессии; в БД хранится только hash.
+- [x] Rate limit неверных попыток.
+- [x] Таблицы `control_center_sessions`, `system_settings`, `control_center_audit_logs`.
+- [x] Миграция `0026_control_center.sql`.
+- [x] Endpoints: status, maintenance, readonly, banner, feature flags, branding, navigation layout, broadcast notification, service actions, audit-log.
+- [x] Frontend command `belpomoshnikControl()`.
+- [x] Frontend overlay Control Center, SystemBanner и MaintenanceScreen.
+- [x] Store/API поддержка public system-state и Control Center endpoints.
+- [x] Документация `docs/CONTROL_CENTER.md`, API/security/status/changelog/tasks.
+- [x] Проверка без тестов: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`.
+- [ ] Подключить `featureFlags` и `navigationLayout` к фактическому runtime-отключению/переупорядочиванию всех разделов.

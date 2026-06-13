@@ -46,7 +46,27 @@
 | Метод | Путь | Описание |
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok"}` |
+| GET | `/api/public/system-state` | Публичное состояние платформы: баннер, обслуживание, feature flags, branding |
 | GET | `/api/admin/bootstrap/problems` | Временный: список проблем для Flet-админки |
+
+### Control Center (скрытый системный слой)
+
+> Не является обычной админ-панелью и не привязан к пользовательским ролям. Окно открывается во frontend только командой `belpomoshnikControl()`, но пароль проверяется backend’ом.
+
+| Метод | Путь | Защита | Описание |
+|---|---|---|---|
+| POST | `/api/control-center/unlock` | Пароль backend | Выдаёт временный `control_token` |
+| POST | `/api/control-center/lock` | `X-Control-Center-Token` | Отзывает текущую control-сессию |
+| GET | `/api/control-center/status` | `X-Control-Center-Token` | Live status платформы |
+| PUT | `/api/control-center/maintenance` | `X-Control-Center-Token` | Обслуживание |
+| PUT | `/api/control-center/readonly` | `X-Control-Center-Token` | Режим только чтения |
+| PUT | `/api/control-center/banner` | `X-Control-Center-Token` | Системный баннер |
+| PUT | `/api/control-center/feature-flags` | `X-Control-Center-Token` | Feature flags разделов |
+| PUT | `/api/control-center/branding` | `X-Control-Center-Token` | Брендинг |
+| PUT | `/api/control-center/navigation-layout` | `X-Control-Center-Token` | Сохранение порядка меню |
+| POST | `/api/control-center/broadcast-notification` | `X-Control-Center-Token` | Системная in-app рассылка |
+| POST | `/api/control-center/service-actions/{action}` | `X-Control-Center-Token` | Сервисные сценарии |
+| GET | `/api/control-center/audit-log` | `X-Control-Center-Token` | Журнал действий Control Center |
 
 ---
 

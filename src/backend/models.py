@@ -668,6 +668,65 @@ class UserPushToken(Base, TimestampMixin):
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class ControlCenterSession(Base):
+    """Скрытая сессия владельца платформы для Control Center.
+
+    Raw token никогда не хранится: в БД попадает только SHA-256 hash.
+    """
+    __tablename__ = "control_center_sessions"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_control_center_sessions_token_hash"),
+        Index("ix_control_center_sessions_expires", "expires_at", "revoked_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    user_agent: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+
+
+class SystemSetting(Base, TimestampMixin):
+    """Платформенные настройки, управляемые только через Control Center."""
+    __tablename__ = "system_settings"
+    __table_args__ = (
+        UniqueConstraint("key", name="uq_system_settings_key"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    value_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    updated_by: Mapped[str] = mapped_column(String(255), default="control-center", nullable=False)
+
+
+class ControlCenterAuditLog(Base):
+    """Журнал действий скрытого Control Center без пользовательских ролей."""
+    __tablename__ = "control_center_audit_logs"
+    __table_args__ = (
+        Index("ix_control_center_audit_logs_created", "created_at"),
+        Index("ix_control_center_audit_logs_action", "action"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("control_center_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(120), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    before_json: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    after_json: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    ip_address: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    user_agent: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ok", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
 class UtilityAccount(Base, TimestampMixin):
     """G8 — Лицевой счёт ЖКХ пользователя."""
     __tablename__ = "utility_accounts"

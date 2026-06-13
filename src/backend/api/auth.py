@@ -194,7 +194,7 @@ def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
 def get_me(email: str = Depends(get_current_user_email), db: Session = Depends(get_db)):
     """H3 — Текущий пользователь."""
     user = db.scalars(select(User).where(User.email == email)).first()
-    if not user:
+    if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден.")
     return {"id": user.id, "email": user.email, "name": user.name, "role": user.role_id}
 
