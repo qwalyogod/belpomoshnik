@@ -1,4 +1,5 @@
 import json
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ from sqlalchemy import select
 
 from backend.models import (
     Authority,
+    ContentTag,
     Deadline,
     Document,
     ExtremistEntry,
@@ -56,6 +58,101 @@ def _must_get(db: Session, model, obj_id: int, message: str):
     return obj
 
 
+def _tag_slug(value: str) -> str:
+    slug = re.sub(r"[^0-9a-zа-яё]+", "-", value.strip().lower()).strip("-")
+    return slug or "tag"
+
+
+def _unique_tag_slug(db: Session, name: str, current_id: int | None = None) -> str:
+    base = _tag_slug(name)
+    slug = base
+    counter = 2
+    while True:
+        stmt = select(ContentTag).where(ContentTag.slug == slug)
+        if current_id is not None:
+            stmt = stmt.where(ContentTag.id != current_id)
+        existing = db.scalars(stmt).first()
+        if not existing:
+            return slug
+        slug = f"{base}-{counter}"
+        counter += 1
+
+
+def _ensure_unique_tag_name(db: Session, name: str, current_id: int | None = None) -> None:
+    normalized = name.strip()
+    stmt = select(ContentTag).where(ContentTag.name == normalized)
+    if current_id is not None:
+        stmt = stmt.where(ContentTag.id != current_id)
+    if db.scalars(stmt).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Такой тег уже существует")
+
+
+@router.get("/content-tags", response_model=list[schemas.ContentTagOut])
+def admin_list_content_tags(db: Session = Depends(get_db)):
+    stmt = select(ContentTag).order_by(ContentTag.is_active.desc(), ContentTag.name.asc())
+    return [schemas.ContentTagOut.model_validate(item) for item in db.scalars(stmt).all()]
+
+
+@router.post("/content-tags", response_model=schemas.ContentTagOut, status_code=status.HTTP_201_CREATED)
+def admin_create_content_tag(
+    payload: schemas.ContentTagCreate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    name = payload.name.strip()
+    _ensure_unique_tag_name(db, name)
+    obj = ContentTag(
+        name=name,
+        slug=_unique_tag_slug(db, name),
+        description=payload.description.strip(),
+        color=payload.color.strip(),
+        is_active=payload.is_active,
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    log_audit_event(db, actor=actor, action=f"Создан тег контента: «{obj.name}»", event_type="create")
+    return schemas.ContentTagOut.model_validate(obj)
+
+
+@router.patch("/content-tags/{tag_id}", response_model=schemas.ContentTagOut)
+def admin_update_content_tag(
+    tag_id: int,
+    payload: schemas.ContentTagUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    obj = _must_get(db, ContentTag, tag_id, "Тег не найден")
+    data = payload.model_dump(exclude_unset=True)
+    if "name" in data and data["name"] is not None:
+        name = str(data.pop("name")).strip()
+        _ensure_unique_tag_name(db, name, current_id=obj.id)
+        obj.name = name
+        obj.slug = _unique_tag_slug(db, name, current_id=obj.id)
+    if "description" in data and data["description"] is not None:
+        obj.description = str(data.pop("description")).strip()
+    if "color" in data and data["color"] is not None:
+        obj.color = str(data.pop("color")).strip()
+    if "is_active" in data:
+        obj.is_active = bool(data.pop("is_active"))
+    db.commit()
+    db.refresh(obj)
+    log_audit_event(db, actor=actor, action=f"Изменён тег контента: «{obj.name}»", event_type="update")
+    return schemas.ContentTagOut.model_validate(obj)
+
+
+@router.delete("/content-tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_content_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    obj = _must_get(db, ContentTag, tag_id, "Тег не найден")
+    log_audit_event(db, actor=actor, action=f"Удалён тег контента: «{obj.name}»", event_type="delete")
+    db.delete(obj)
+    db.commit()
+
+
 @router.get("/problems", response_model=list[schemas.ProblemPublicOut])
 def admin_list_problems(db: Session = Depends(get_db)):
     return [schemas.ProblemPublicOut.model_validate(item) for item in list_problems_admin(db)]
@@ -73,9 +170,15 @@ def admin_create_problem(
 
 
 @router.put("/problems/{problem_id}", response_model=schemas.ProblemPublicOut)
-def admin_update_problem(problem_id: int, payload: schemas.ProblemUpdate, db: Session = Depends(get_db)):
+def admin_update_problem(
+    problem_id: int,
+    payload: schemas.ProblemUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
     problem = _must_get(db, Problem, problem_id, "Проблема не найдена")
     obj = update_entity(db, problem, payload)
+    log_audit_event(db, actor=actor, action=f"Изменена проблема: «{obj.title}»", event_type="update")
     return schemas.ProblemPublicOut.model_validate(obj)
 
 
@@ -114,11 +217,17 @@ def admin_create_scenario(
 
 
 @router.put("/scenarios/{scenario_id}", response_model=schemas.ScenarioPublicSummary)
-def admin_update_scenario(scenario_id: int, payload: schemas.ScenarioUpdate, db: Session = Depends(get_db)):
+def admin_update_scenario(
+    scenario_id: int,
+    payload: schemas.ScenarioUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
     scenario = _must_get(db, Scenario, scenario_id, "Сценарий не найден")
     if payload.problem_id is not None:
         _must_get(db, Problem, payload.problem_id, "Новая проблема для сценария не найдена")
     obj = update_entity(db, scenario, payload)
+    log_audit_event(db, actor=actor, action=f"Изменён сценарий: «{obj.title}»", event_type="update")
     return schemas.ScenarioPublicSummary.model_validate(obj)
 
 
@@ -332,23 +441,40 @@ def admin_list_authorities(db: Session = Depends(get_db)):
 
 
 @router.post("/authorities", response_model=schemas.AuthorityOut, status_code=status.HTTP_201_CREATED)
-def admin_create_authority(payload: schemas.AuthorityCreate, db: Session = Depends(get_db)):
+def admin_create_authority(
+    payload: schemas.AuthorityCreate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
     obj = create_entity(db, Authority, payload)
+    log_audit_event(db, actor=actor, action=f"Создано учреждение: «{obj.title}»", event_type="create")
     return schemas.AuthorityOut.model_validate(obj)
 
 
 @router.put("/authorities/{authority_id}", response_model=schemas.AuthorityOut)
-def admin_update_authority(authority_id: int, payload: schemas.AuthorityUpdate, db: Session = Depends(get_db)):
+def admin_update_authority(
+    authority_id: int,
+    payload: schemas.AuthorityUpdate,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
     authority = _must_get(db, Authority, authority_id, "Организация не найдена")
     obj = update_entity(db, authority, payload)
+    log_audit_event(db, actor=actor, action=f"Изменено учреждение: «{obj.title}»", event_type="update")
     return schemas.AuthorityOut.model_validate(obj)
 
 
 @router.delete("/authorities/{authority_id}", status_code=status.HTTP_204_NO_CONTENT)
-def admin_delete_authority(authority_id: int, db: Session = Depends(get_db)):
+def admin_delete_authority(
+    authority_id: int,
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
     authority = _must_get(db, Authority, authority_id, "Организация не найдена")
+    title = authority.title
     db.delete(authority)
     db.commit()
+    log_audit_event(db, actor=actor, action=f"Удалено учреждение: «{title}»", event_type="delete")
 
 
 @router.get("/deadlines", response_model=list[schemas.DeadlineOut])

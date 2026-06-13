@@ -578,6 +578,39 @@ class ArticleModerate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# K-этап — управляемые теги редакционного контента
+# ---------------------------------------------------------------------------
+
+class ContentTagBase(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    description: str = Field(default="", max_length=255)
+    color: str = Field(default="", max_length=32)
+    is_active: bool = True
+
+
+class ContentTagCreate(ContentTagBase):
+    pass
+
+
+class ContentTagUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    description: str | None = Field(default=None, max_length=255)
+    color: str | None = Field(default=None, max_length=32)
+    is_active: bool | None = None
+
+
+class ContentTagOut(ORMModel):
+    id: int
+    name: str
+    slug: str
+    description: str
+    color: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # P7 — Каркас раздела «Экстремистский контент» (только структура, без данных)
 # ---------------------------------------------------------------------------
 

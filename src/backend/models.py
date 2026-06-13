@@ -728,6 +728,29 @@ class Article(Base, TimestampMixin):
     views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
+class ContentTag(Base, TimestampMixin):
+    """Редакторский справочник тегов для публикаций.
+
+    Статьи хранят выбранные теги как JSON-список строк для совместимости с
+    уже созданным контентом, а этот справочник задаёт разрешённый набор тегов,
+    который редактор видит и поддерживает в админке.
+    """
+
+    __tablename__ = "content_tags"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_content_tags_name"),
+        UniqueConstraint("slug", name="uq_content_tags_slug"),
+        Index("ix_content_tags_active", "is_active"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    slug: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    color: Mapped[str] = mapped_column(String(32), default="", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
 class BlockedSubmitter(Base):
     """Пользователь, которому администрация запретила предлагать контент."""
 

@@ -68,6 +68,8 @@ const roleLabel = (id: string) => {
     citizen: "Гражданин",
     editor: "Редактор",
     admin: "Администратор",
+    content_editor: "Редактор",
+    platform_admin: "Администратор",
   } as Record<string,string>)[id] ?? id;
 }
 
@@ -1933,11 +1935,151 @@ function ProfileSourcePreferences() {
   );
 }
 
+function ProfileNameModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { profile, updateAccountName } = useStore();
+  const [name, setName] = useState(profile?.name ?? "");
+
+  useEffect(() => {
+    if (open) setName(profile?.name ?? "");
+  }, [open, profile?.name]);
+
+  if (!open) return null;
+
+  const save = () => {
+    const next = name.trim();
+    if (!next) return;
+    updateAccountName(next);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[130] grid place-items-center bg-black/25 px-4 backdrop-blur-sm" onMouseDown={onClose}>
+      <div
+        className="w-full max-w-md rounded-[28px] border border-black/[0.08] bg-white p-5 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#0F1117]"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[18px] tracking-tight text-black dark:text-white">Имя в профиле</div>
+            <div className="mt-1 text-[13px] tracking-tight text-black/55 dark:text-white/55">Это имя отображается в личном кабинете и редакторских действиях.</div>
+          </div>
+          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-black/45 hover:bg-black/[0.04] dark:text-white/45 dark:hover:bg-white/[0.05]">
+            <X size={16} />
+          </button>
+        </div>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onClose(); }}
+          placeholder="Имя и фамилия"
+          className="mt-5 h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-[15px] tracking-tight text-black outline-none transition-colors focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+        />
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-xl px-4 py-2 text-[14px] tracking-tight text-black/55 hover:bg-black/[0.04] dark:text-white/55 dark:hover:bg-white/[0.05]">Отмена</button>
+          <button onClick={save} disabled={!name.trim()} className="rounded-xl bg-[#0056FF] px-4 py-2 text-[14px] tracking-tight text-white disabled:opacity-50">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileSecurity() {
+  const { profile, changeAccountEmail, changeAccountPassword } = useStore();
+  const [email, setEmail] = useState(profile?.email ?? "");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
+  const [busy, setBusy] = useState<"email" | "password" | null>(null);
+  const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+
+  useEffect(() => setEmail(profile?.email ?? ""), [profile?.email]);
+
+  const submitEmail = async () => {
+    setBusy("email");
+    setMessage(null);
+    const result = await changeAccountEmail({ email, password: emailPassword });
+    setMessage({ type: result.ok ? "ok" : "error", text: result.message ?? (result.ok ? "Email обновлён." : "Не удалось изменить email.") });
+    if (result.ok) setEmailPassword("");
+    setBusy(null);
+  };
+
+  const submitPassword = async () => {
+    setBusy("password");
+    setMessage(null);
+    const result = await changeAccountPassword({ oldPassword, newPassword, repeatPassword });
+    setMessage({ type: result.ok ? "ok" : "error", text: result.message ?? (result.ok ? "Пароль обновлён." : "Не удалось изменить пароль.") });
+    if (result.ok) {
+      setOldPassword("");
+      setNewPassword("");
+      setRepeatPassword("");
+    }
+    setBusy(null);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Lock size={15} className="text-[#0056FF]" />
+        <div className="font-medium text-[15px] text-black dark:text-white">Безопасность</div>
+      </div>
+
+      {message && (
+        <div className={`mb-4 rounded-2xl px-3 py-2 text-[13px] tracking-tight ${message.type === "ok" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"}`}>
+          {message.text}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-black/[0.06] p-3 dark:border-white/[0.06]">
+          <div className="text-[13px] font-medium tracking-tight text-black dark:text-white">Смена email</div>
+          <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">Для подтверждения введите текущий пароль.</div>
+          <div className="mt-3 grid gap-2">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Новый email"
+              className="h-11 rounded-xl border border-black/10 bg-white px-3 text-[14px] tracking-tight text-black outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+            <PasswordInput placeholder="Текущий пароль" value={emailPassword} onChange={setEmailPassword} />
+            <button
+              onClick={submitEmail}
+              disabled={busy !== null || !email.trim() || !emailPassword}
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white disabled:opacity-50"
+            >
+              {busy === "email" ? "Сохраняем…" : "Изменить email"}
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-black/[0.06] p-3 dark:border-white/[0.06]">
+          <div className="text-[13px] font-medium tracking-tight text-black dark:text-white">Смена пароля</div>
+          <div className="mt-1 text-[12px] tracking-tight text-black/50 dark:text-white/50">Новый пароль должен быть не короче 8 символов.</div>
+          <div className="mt-3 grid gap-2">
+            <PasswordInput placeholder="Старый пароль" value={oldPassword} onChange={setOldPassword} />
+            <PasswordInput placeholder="Новый пароль" value={newPassword} onChange={setNewPassword} />
+            <PasswordInput placeholder="Повторите новый пароль" value={repeatPassword} onChange={setRepeatPassword} />
+            <button
+              onClick={submitPassword}
+              disabled={busy !== null || !oldPassword || !newPassword || !repeatPassword}
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white disabled:opacity-50"
+            >
+              {busy === "password" ? "Сохраняем…" : "Изменить пароль"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function ProfilePage() {
   const { isMobile, openAdmin } = useContext(ShellContext);
   const { profile, currentUser } = useStore();
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
+  const [nameEditOpen, setNameEditOpen] = useState(false);
   const canEdit = currentUser.role !== "guest";
   const isStaff = currentUser.role === "platform_admin" || currentUser.role === "content_editor" || currentUser.role === "admin" || currentUser.role === "editor";
 
@@ -1945,6 +2087,7 @@ export function ProfilePage() {
     return (
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
         <ProfileEditModal open={editOpen} onClose={() => setEditOpen(false)} />
+        <ProfileNameModal open={nameEditOpen} onClose={() => setNameEditOpen(false)} />
         <MobileTopBar title="Профиль" onBack={() => navigate(-1)} right={
           canEdit ? <button onClick={() => setEditOpen(true)} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"><Edit3 size={15} className="text-black dark:text-white" /></button> : undefined
         } />
@@ -1952,7 +2095,14 @@ export function ProfilePage() {
           <Card className="flex items-center gap-4 p-4">
             <ProfileAvatar size="md" />
             <div className="flex-1 min-w-0">
-              <div className="tracking-tight text-black dark:text-white truncate" style={{ fontSize: 17 }}>{profile?.name}</div>
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 truncate tracking-tight text-black dark:text-white" style={{ fontSize: 17 }}>{profile?.name}</div>
+                {canEdit && (
+                  <button onClick={() => setNameEditOpen(true)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-black/40 hover:bg-black/[0.04] hover:text-[#0056FF] dark:text-white/40 dark:hover:bg-white/[0.05]">
+                    <Edit3 size={14} />
+                  </button>
+                )}
+              </div>
               <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55 truncate">{profile?.city} · {profile?.region}</div>
             </div>
           </Card>
@@ -1973,6 +2123,9 @@ export function ProfilePage() {
 
               <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Источники</div>
               <ProfileSourcePreferences />
+
+              <div className="text-[12px] tracking-tight text-black/45 dark:text-white/45 pl-1">Безопасность</div>
+              <ProfileSecurity />
             </>
           )}
 
@@ -2002,6 +2155,7 @@ export function ProfilePage() {
   return (
     <div className="p-8 max-w-[920px]">
       <ProfileEditModal open={editOpen} onClose={() => setEditOpen(false)} />
+      <ProfileNameModal open={nameEditOpen} onClose={() => setNameEditOpen(false)} />
       <div className="flex items-start justify-between">
         <div>
           <div className="text-[13px] tracking-tight text-black/50 dark:text-white/50">Аккаунт</div>
@@ -2012,8 +2166,15 @@ export function ProfilePage() {
 
       <div className="mt-8 flex items-center gap-6">
         <ProfileAvatar size="lg" />
-        <div>
-          <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>{currentUser.role === "guest" ? "Гость" : profile?.name}</div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>{currentUser.role === "guest" ? "Гость" : profile?.name}</div>
+            {canEdit && (
+              <button onClick={() => setNameEditOpen(true)} className="grid h-9 w-9 place-items-center rounded-full text-black/35 hover:bg-black/[0.04] hover:text-[#0056FF] dark:text-white/35 dark:hover:bg-white/[0.05]" title="Изменить имя">
+                <Edit3 size={15} />
+              </button>
+            )}
+          </div>
           <div className="mt-1 text-[14px] text-black/60 dark:text-white/60">{currentUser.role === "guest" ? "Войдите, чтобы сохранять личные данные" : profile?.email}</div>
           <div className="mt-2 text-[13px] text-[#0056FF]">{profile?.city}, {profile?.region}</div>
         </div>
@@ -2066,6 +2227,12 @@ export function ProfilePage() {
       {canEdit && (
         <div className="mt-6">
           <ProfileSourcePreferences />
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="mt-6">
+          <ProfileSecurity />
         </div>
       )}
 

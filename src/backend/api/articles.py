@@ -23,7 +23,7 @@ from backend import schemas
 from backend.api.auth import get_current_user_email, require_role
 from backend.config import get_upload_dir
 from backend.database import get_db
-from backend.models import Article, ArticleViewDaily, BlockedSubmitter, User
+from backend.models import Article, ArticleViewDaily, BlockedSubmitter, ContentTag, User
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +80,31 @@ def _json_list(raw: str) -> list[str]:
         return [str(x) for x in value] if isinstance(value, list) else []
     except (ValueError, TypeError):
         return []
+
+
+def _normalize_article_tags(db: Session, tags: list[str]) -> list[str]:
+    requested = []
+    seen = set()
+    for item in tags:
+        tag = str(item).strip()
+        key = tag.lower()
+        if tag and key not in seen:
+            requested.append(tag)
+            seen.add(key)
+    if not requested:
+        return []
+
+    allowed = {
+        row.name.lower(): row.name
+        for row in db.scalars(select(ContentTag).where(ContentTag.is_active.is_(True))).all()
+    }
+    unknown = [tag for tag in requested if tag.lower() not in allowed]
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Недоступные теги: {', '.join(unknown)}",
+        )
+    return [allowed[tag.lower()] for tag in requested]
 
 
 def _to_out(a: Article) -> schemas.ArticleOut:
@@ -217,6 +242,8 @@ def create_article(payload: schemas.ArticleCreate, email: str = Depends(get_curr
     else:
         status_value = requested
 
+    normalized_tags = _normalize_article_tags(db, payload.tags)
+
     article = Article(
         kind=kind,
         title=payload.title.strip(),
@@ -225,7 +252,7 @@ def create_article(payload: schemas.ArticleCreate, email: str = Depends(get_curr
         cover=payload.cover,
         video=payload.video,
         gallery=json.dumps(payload.gallery, ensure_ascii=False),
-        tags=json.dumps(payload.tags, ensure_ascii=False),
+        tags=json.dumps(normalized_tags, ensure_ascii=False),
         category=payload.category,
         specialization=payload.specialization,
         audience=payload.audience,
@@ -267,7 +294,7 @@ def update_article(article_id: int, payload: schemas.ArticleUpdate, email: str =
     if "gallery" in data and data["gallery"] is not None:
         article.gallery = json.dumps(data.pop("gallery"), ensure_ascii=False)
     if "tags" in data and data["tags"] is not None:
-        article.tags = json.dumps(data.pop("tags"), ensure_ascii=False)
+        article.tags = json.dumps(_normalize_article_tags(db, data.pop("tags")), ensure_ascii=False)
     if "status" in data:
         new_status = data.pop("status")
         if new_status in _VALID_STATUS:

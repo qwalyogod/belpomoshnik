@@ -235,6 +235,23 @@ export const apiClient = {
       ...options,
     }),
 
+  /** P14: RAG-ассистент с поиском по БД. Только для авторизованных (citizen+). */
+  askAssistantChat: <T>(
+    accessToken: string,
+    payload: { message: string; role?: string; is_guest?: boolean },
+    options?: ApiRequestOptions,
+  ) =>
+    requestJson<T>("/api/assistant/chat", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({
+        message: payload.message,
+        role: payload.role ?? "citizen",
+        is_guest: payload.is_guest ?? false,
+      }),
+      ...options,
+    }),
+
   getProblems: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/problems", options),
   getProblem: <T>(slug: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/problems/${encodeURIComponent(slug)}`, options),
@@ -245,6 +262,7 @@ export const apiClient = {
     requestJson<T>(`/api/scenarios/${encodeURIComponent(slug)}/steps`, options),
   getDocuments: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/documents", options),
   getAuthorities: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/authorities", options),
+  getContentTags: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/content-tags", options),
   getLawUpdates: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/law-updates", options),
 
   // Admin: учреждения (authorities)
@@ -274,6 +292,20 @@ export const apiClient = {
   updateUserProfile: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
     requestJson<T>("/api/user/profile", {
       method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  changeUserEmail: <T>(accessToken: string, payload: { email: string; password: string }, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/account/email", {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  changeUserPassword: <T>(accessToken: string, payload: { old_password: string; new_password: string }, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/account/password", {
+      method: "PATCH",
       headers: authHeaders(accessToken),
       body: JSON.stringify(payload),
       ...options,
@@ -564,6 +596,28 @@ export const apiClient = {
     }),
   getAuditLogs: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/audit-logs", { headers: authHeaders(accessToken), ...options }),
+  getAdminContentTags: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/content-tags", { headers: authHeaders(accessToken), ...options }),
+  createAdminContentTag: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/content-tags", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateAdminContentTag: <T>(accessToken: string, id: string | number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/content-tags/${encodeURIComponent(String(id))}`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteAdminContentTag: (accessToken: string, id: string | number, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/admin/content-tags/${encodeURIComponent(String(id))}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/problems", { headers: authHeaders(accessToken), ...options }),
   updateAdminScenario: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
@@ -647,8 +701,47 @@ export const apiClient = {
       body: JSON.stringify(payload),
       ...options,
     }),
+  updateExtremistEntry: <T>(accessToken: string, id: string | number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/extremist-entries/${encodeURIComponent(String(id))}`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteExtremistEntry: (accessToken: string, id: string | number, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/admin/extremist-entries/${encodeURIComponent(String(id))}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
 
   // --- Auth helpers (хранилище токенов и выход) ---
+
+  aiAssistContent: <T>(
+    accessToken: string,
+    payload: {
+      mode: "generate" | "rewrite" | "expand" | "summarize";
+      kind?: "news" | "scenario" | "problem" | "law";
+      current_title?: string;
+      current_summary?: string;
+      current_body_html?: string;
+      hint?: string;
+    },
+    options?: ApiRequestOptions,
+  ) =>
+    requestJson<T>("/api/admin/assistant/content", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({
+        mode: payload.mode,
+        kind: payload.kind ?? "news",
+        current_title: payload.current_title ?? "",
+        current_summary: payload.current_summary ?? "",
+        current_body_html: payload.current_body_html ?? "",
+        hint: payload.hint ?? "",
+      }),
+      ...options,
+    }),
 
   saveTokens: (tokens: AuthTokens | null) => saveStoredTokens(tokens),
   loadTokens: () => loadStoredTokens(),

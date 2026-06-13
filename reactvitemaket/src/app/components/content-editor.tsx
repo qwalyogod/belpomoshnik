@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Bold, Italic, Underline, Link2, Eye, EyeOff, Image as ImageIcon, Video,
   Plus, X, Check, ChevronLeft, Newspaper, FileText, AlertCircle, Calendar,
+  Sparkles, MessageCircle, Languages,
 } from "lucide-react";
+import { useStore } from "../data/store";
+import { apiClient } from "../services/api";
+import { ShellContext } from "../App";
 
 export type ContentKind = "news" | "scenario" | "problem";
 
@@ -98,6 +102,50 @@ export function ContentEditor({
   const [tagInput, setTagInput] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  // AI-помощник для контента.
+  const { authSession, contentTags } = useStore();
+  const { openAssistant } = React.useContext(ShellContext);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiHint, setAiHint] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const askAi = async (mode: "generate" | "rewrite" | "expand" | "summarize" | "translate") => {
+    if (!authSession?.access_token) {
+      setAiError("Нужно войти как редактор или админ");
+      return;
+    }
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const resp = await apiClient.aiAssistContent<{ title: string; summary: string; body_html: string; source: string }>(
+        authSession.access_token,
+        {
+          mode,
+          kind,
+          current_title: d.title,
+          current_summary: d.summary,
+          current_body_html: d.bodyHtml,
+          hint: aiHint,
+        },
+      );
+      if (mode === "summarize" && resp.summary) set("summary", resp.summary);
+      if (mode === "generate" || mode === "rewrite" || mode === "expand") {
+        if (resp.title) set("title", resp.title);
+        if (resp.summary) set("summary", resp.summary);
+        if (resp.body_html) {
+          set("bodyHtml", resp.body_html);
+          const el = editorRef.current;
+          if (el) el.innerHTML = resp.body_html;
+        }
+      }
+      setAiOpen(false);
+      setAiHint("");
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Не удалось получить ответ от ИИ");
+    } finally {
+      setAiBusy(false);
+    }
+  };
 
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
@@ -151,9 +199,16 @@ export function ContentEditor({
     setLinkUrl("");
   };
 
-  const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !d.tags.includes(t)) set("tags", [...d.tags, t]);
+  const activeTags = contentTags.filter(tag => tag.isActive);
+  const filteredTags = activeTags
+    .filter(tag => !d.tags.includes(tag.name))
+    .filter(tag => {
+      const q = tagInput.trim().toLowerCase();
+      return !q || tag.name.toLowerCase().includes(q) || tag.description.toLowerCase().includes(q);
+    })
+    .slice(0, 12);
+  const selectTag = (name: string) => {
+    if (!d.tags.includes(name)) set("tags", [...d.tags, name]);
     setTagInput("");
   };
   const pickFiles = (ref: React.RefObject<HTMLInputElement>) => ref.current?.click();
@@ -182,12 +237,69 @@ export function ContentEditor({
   /* ---------- tab bodies ---------- */
   const contentTab = (
     <div className="space-y-5">
-      <input
-        value={d.title}
-        onChange={(e) => set("title", e.target.value)}
-        placeholder={meta.titlePh}
-        className="w-full border-0 border-b border-black/10 bg-transparent pb-2 text-[26px] font-medium tracking-tight text-black outline-none placeholder:text-black/25 focus:border-[#0056FF] dark:border-white/15 dark:text-white dark:placeholder:text-white/20"
-      />
+      <div className="relative">
+        <input
+          value={d.title}
+          onChange={(e) => set("title", e.target.value)}
+          placeholder={meta.titlePh}
+          className="w-full border-0 border-b border-black/10 bg-transparent pb-2 pr-12 text-[26px] font-medium tracking-tight text-black outline-none placeholder:text-black/25 focus:border-[#0056FF] dark:border-white/15 dark:text-white dark:placeholder:text-white/20"
+        />
+        {/* P12: AI-помощник для контента (только для staff). */}
+        <button
+          type="button"
+          onClick={() => setAiOpen((v) => !v)}
+          disabled={aiBusy}
+          title="ИИ-помощник для текста"
+          className="absolute right-0 top-0 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0056FF] to-[#2277FF] text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+        >
+          <Sparkles size={15} />
+        </button>
+        {aiOpen && (
+          <div className="absolute right-0 top-12 z-30 w-[300px] rounded-2xl border border-black/[0.06] bg-white p-3 shadow-2xl dark:border-white/[0.08] dark:bg-[#0F1117]">
+            <div className="mb-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
+              ИИ-помощник
+            </div>
+            <input
+              value={aiHint}
+              onChange={(e) => setAiHint(e.target.value)}
+              placeholder="Подсказка для ИИ (необязательно)"
+              className="mb-2 w-full rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+            />
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={() => askAi("generate")} disabled={aiBusy} className="rounded-lg bg-[#0056FF] px-2.5 py-1.5 text-[12px] text-white hover:bg-[#0049DB] disabled:opacity-50">Создать</button>
+              <button onClick={() => askAi("rewrite")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Переписать</button>
+              <button onClick={() => askAi("expand")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Расширить</button>
+              <button onClick={() => askAi("summarize")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Сократить</button>
+              {/* Перевод на белорусский */}
+              <button
+                onClick={() => askAi("translate")}
+                disabled={aiBusy}
+                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50"
+              >
+                <Languages size={12} /> Перевести на белорусский
+              </button>
+              {/* Открыть полный ассистент (RAG-чат) */}
+              <button
+                onClick={() => { setAiOpen(false); openAssistant(); }}
+                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0056FF]/20 bg-[#E3E7FC] px-2.5 py-1.5 text-[12px] text-[#0056FF] hover:bg-[#0056FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+              >
+                <MessageCircle size={12} /> Спросить ИИ-ассистента
+              </button>
+            </div>
+            {aiBusy && (
+              <div className="mt-2 text-center text-[11px] text-black/55 dark:text-white/55">Готовлю ответ…</div>
+            )}
+            {aiError && (
+              <div className="mt-2 rounded-lg border border-red-200/60 bg-red-50 px-2 py-1.5 text-[11px] text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+                {aiError}
+              </div>
+            )}
+            <div className="mt-2 text-[10px] leading-snug text-black/45 dark:text-white/45">
+              Без GROQ_API_KEY работает локальный fallback с предупреждением «отредактируйте перед публикацией».
+            </div>
+          </div>
+        )}
+      </div>
       <textarea
         value={d.summary}
         onChange={(e) => set("summary", e.target.value)}
@@ -260,22 +372,43 @@ export function ContentEditor({
       {/* tags */}
       <div>
         <FieldLabel>Теги</FieldLabel>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5">
           {d.tags.map((t) => (
             <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#E3E7FC] px-2.5 py-1 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
               {t}
               <button onClick={() => set("tags", d.tags.filter((x) => x !== t))} className="opacity-60 hover:opacity-100"><X size={12} /></button>
             </span>
           ))}
-          <div className="flex items-center gap-1.5">
+            {d.tags.length === 0 && (
+              <span className="text-[12px] tracking-tight text-black/45 dark:text-white/45">Теги не выбраны</span>
+            )}
+          </div>
+          <div className="rounded-2xl border border-black/10 bg-white p-2 dark:border-white/12 dark:bg-white/[0.04]">
             <input
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-              placeholder="Добавить тег…"
-              className="h-8 w-40 rounded-lg border border-black/10 bg-white px-2.5 text-[13px] outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+              placeholder="Найти тег из справочника…"
+              className="h-8 w-full rounded-lg bg-transparent px-2 text-[13px] tracking-tight text-black outline-none placeholder:text-black/35 dark:text-white dark:placeholder:text-white/30"
             />
-            <button onClick={addTag} className="grid h-8 w-8 place-items-center rounded-lg border border-black/10 text-black/55 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/55"><Plus size={15} /></button>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {filteredTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => selectTag(tag.name)}
+                  className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] px-2.5 py-1 text-[12px] tracking-tight text-black/65 transition-colors hover:border-[#0056FF]/40 hover:bg-[#E3E7FC] hover:text-[#0056FF] dark:border-white/10 dark:text-white/65 dark:hover:bg-[#0E1A3A] dark:hover:text-[#7FA8FF]"
+                >
+                  {tag.color && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />}
+                  {tag.name}
+                </button>
+              ))}
+              {filteredTags.length === 0 && (
+                <span className="px-2 py-1 text-[12px] tracking-tight text-black/45 dark:text-white/45">
+                  Подходящих тегов нет. Создайте тег в админке в разделе «Теги».
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

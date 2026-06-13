@@ -149,7 +149,8 @@
       "Bash(curl -sf http://127.0.0.1:8060/api/health)",
       "Bash(break)",
       "Bash(awk '{print $2, $11, $12}')",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

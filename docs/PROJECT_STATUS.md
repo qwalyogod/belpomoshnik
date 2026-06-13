@@ -1,7 +1,7 @@
 # Текущее состояние проекта
 
 Дата создания: 2026-05-13.
-Дата последнего обновления: 2026-06-09 (JSON-контент 2022-2026 нормализован и импортирован).
+Дата последнего обновления: 2026-06-12 (редакторский справочник тегов и безопасность профиля).
 
 Версия: First Beta / первая бета.
 
@@ -42,6 +42,16 @@
   12. DONE: P8 — реальный CSS-scale для большого шрифта, high-contrast через инжекцию стиля, Notification API для push, Face/Touch ID скрыт в web.
   13. DONE: P9 — summary-карточки на «ЖКХ и налоги» (ближайший / просрочки / сумма месяца).
   14. TODO: P12 — финальная проверка на устройстве, обновление diploma-документации и скриншотов.
+
+## Обновление от 2026-06-12: теги контента и безопасность профиля
+
+- Добавлен управляемый справочник тегов публикаций: `content_tags`, миграция `0018_content_tags.sql`, публичный endpoint `/api/content-tags` и редакторский CRUD `/api/admin/content-tags`.
+- В редакторе публикаций теги больше не вводятся произвольно: материал может получить только тег из справочника. Backend дополнительно отклоняет неизвестные теги при сохранении.
+- В админ-панели появился раздел «Теги» для редактора/администратора: создание, редактирование, отключение и удаление тегов.
+- В профиле добавлен быстрый карандаш для изменения имени пользователя.
+- В профиле добавлен блок «Безопасность»: смена email с подтверждением текущим паролем и смена пароля через старый пароль + повтор нового пароля.
+- React store учитывает актуальные роли `content_editor` и `platform_admin` при загрузке редакторских/админских данных, сохраняя совместимость со старыми `editor` и `admin`.
+- Проверка: `.venv/bin/python -m compileall src` и `cd reactvitemaket && pnpm build` проходят без ошибок.
 
 ## Обновление от 2026-06-08: источники, медиа и контентные промпты
 
@@ -484,3 +494,119 @@ PYTHONPATH=src uvicorn backend.app:app --host 127.0.0.1 --port 8060
 - Все пользовательские тексты интерфейса писать на русском языке.
 - После крупных изменений обновлять этот файл.
 - При задачах по миграции UI читать `docs/REACT_MIGRATION_AUDIT.md` и `docs/REACT_MIGRATION_PLAN.md`.
+
+---
+
+## MVP-финализация к защите (2026-06-11)
+
+Эта секция — **честный** статус после прохода по этапам 1–14 финализации. Если на защите спросят «что не реализовано» — это официальный ответ.
+
+### Что реализовано (готовность к защите)
+
+**Backend (`src/backend/`):**
+- JWT-аутентификация: `register` / `login` / `refresh` / `logout` / `me`. Access=30 мин, refresh=7 дней, refresh rotation.
+- Bcrypt-хэши (без passlib — намеренно).
+- 60+ admin endpoints: problems, scenarios (stages/steps CRUD + reorder), documents, authorities, regions, law-updates, articles (с модерацией), users, audit-logs, email-log, extremist-entries.
+- ~60 пользовательских endpoints: profile, avatar, settings, documents (с PDF-сканами), notes, situations/tasks, notifications, utility-accounts/payments, taxes.
+- Динамические reminders: документы (90д), ЖКХ-платежи (45д)/показания (30д), налоги (60д).
+- Сценарии: «Рождение ребёнка» (seeduтый), 5 других в mock (`passport-loss`, `ip-open`, `moving`, `divorce`, `id-card`). 3 problem-карточки (потерял паспорт, медкнижка, не пришла квитанция ЖКХ).
+- AI-ассистент: GROQ-backed с canned-fallback (без ключа работает в локальном режиме).
+- Scheduler: email-sender 60с, token-cleanup 1ч.
+- Audit log: create/delete админ-операций.
+
+**Frontend (`reactvitemaket/src/app/`):**
+- Mobile + desktop shell (responsive через `ShellContext.isMobile`).
+- 18+ страниц: catalog, situations, documents, news/law, profile, login/register, admin/editor.
+- React Router 7 (`createBrowserRouter`), `Outlet context` для guard/assist.
+- Zustand-подобный стор с reconcile `api → mock` fallback.
+- Premium Apple-grade UI: motion spring 320/32, radius 16, Tailwind 4 + shadcn-токены, dark/light/system.
+- A11y-фичи: крупный шрифт, высокий контраст (через `services/a11y.ts`).
+- Индикатор «Backend / Mock-данные» (`DataModeBadge`) — на защите сразу видно, идёт ли запрос в API.
+
+**Mobile / native:**
+- Flet 0.85 — **только** WebView-обёртка (`src/mobile_webview.py`). Своего UI нет.
+- Capacitor 8 → APK/IPA. CI: `build-apk.yml`, `build-ipa.yml`.
+- ServerPicker: ввод dev-адресов фронта/бэка в нативной обёртке.
+
+**Документация:**
+- `README.md` — обновлён (стек, запуск, тесты, demo).
+- `docs/PROJECT_STATUS.md` — этот файл.
+- `docs/DEMO_SCRIPT.md` — 5-минутный сценарий демонстрации.
+- `docs/ARCHITECTURE.md` — краткая архитектура.
+- `docs/API_CONTRACTS.md`, `docs/SCENARIO_BACKEND.md` — контракты.
+- `docs/CHANGELOG.md` — история изменений.
+- `docs/diploma/K1..K12` — дипломная документация (структура работы, скриншоты, инструкции).
+- `docs/REACT_MIGRATION_PLAN.md`, `REACT_MIGRATION_AUDIT.md` — история миграции Flet → React.
+- `docs/REACT_WEBVIEW_FINALIZATION_PLAN.md` — активный план (P0–P12).
+
+**Тесты:**
+- 82 backend теста: `test_auth`, `test_admin`, `test_bootstrap`, `test_situations`, `test_trackers`, `test_user`, `test_security_fixes`.
+- `scripts/check.sh` — единая точка проверки.
+- `scripts/smoke_backend.py` — end-to-end smoke.
+- `scripts/smoke_demo.sh` — 5-минутный защитный сценарий (curl).
+
+### Что было закрыто в рамках MVP-финализации (эта сессия)
+
+| # | Дыра | Файл | Действие |
+|---|---|---|---|
+| F-SECRET-1 | `SECRET_KEY` fallback `"change-me-in-..."` | `src/backend/auth.py` | `RuntimeError` если env не задан или < 32 символов |
+| F-REFRESH-1 | refresh шёл form-urlencoded, бэк ждал JSON | `reactvitemaket/src/app/services/api.ts` | Переключён на `application/json` + `JSON.stringify` |
+| F-LOGOUT-1 | logout шёл form-urlencoded | `services/api.ts` | То же |
+| F-AUDIT-1 | `/api/admin/audit-logs` зарегистрирован дважды | `src/backend/api/admin.py` | Удалён дубль, оставленная версия получила `require_role("content_editor")` |
+| F-BOOTSTRAP-1 | `/api/admin/bootstrap/problems` без auth | `src/backend/api/public.py` | Добавлен `require_role("content_editor")` |
+| F-MIGR-0007 | пропуск в нумерации | `migrations/0007_noop.sql` | Заглушка |
+| F-ENV-1 | `.env` в репо | `.gitignore` | Усилен `**/.env`, `.env.example` в корне |
+| F-TESTACCT-1 | `/api/auth/test-accounts` без auth по дефолту | `src/backend/api/auth.py` | Дефолт → `false` |
+| F-SETTINGS-1 | `PATCH /settings` принимал любой dict | `src/backend/api/user.py` | Allow-list: `role`/`is_admin`/`password`/`is_test_account` отбрасываются |
+| F-ARTICLE-1 | `body_html` без санитизации | `src/backend/api/articles.py` | `sanitize_html()` — режет `<script>`/`<iframe>`/on*-attrs/`javascript:` href |
+| F-SCAN-1 | `/uploads/documents/*` static mount | `src/backend/api/user.py` | Добавлен `GET /api/user/documents/{id}/scan` с owner-check (FileResponse) |
+| F-LSPWD-1 | пароли в localStorage | `reactvitemaket/src/app/data/store.tsx` | `stripSensitiveFields()` + `safeWriteQuickAccounts()` |
+| F-HOOK-1 | условные хуки в `ServerPicker.tsx` | `ServerPicker.tsx` | Хуки вызываются всегда, проверки — внутри `useEffect` |
+| F-DASHBTN-1 | мёртвые кнопки на ProblemDetail | `pages.tsx` | `onClick` → навигация / `toggleFavorite` |
+| F-NOTIF-1 | клик по уведомлению не навигирует | `pages.tsx` | `onClickNotif` + `targetFor` |
+| F-DOCS-1 | нет demo-предупреждения | `pages.tsx` | Амбер-блок про сканы |
+| F-MODE-1 | непонятно, откуда данные | `components/belp-ui.tsx` | `DataModeBadge` |
+| F-SOURCE-1 | нет источника/verified-бэйджа | `pages.tsx` | `<Pill tone="warn">Черновик</Pill>` + ссылка на источник |
+
+Все 22 регрессионных теста — в `tests/test_security_fixes.py`.
+
+### Сознательно отложено в «Перспективы» (production TODO)
+
+> Эти пункты **не блокируют защиту**. Они описаны здесь, чтобы на вопрос «а почему не…» был честный ответ.
+
+- **Refresh-токены в БД** — хранятся как есть (в `refresh_tokens.token` поле). Для production — SHA-256 + индекс; refresh-rotation уже работает.
+- **Login rate-limit** — in-memory (`collections.deque`). Для production — Redis (`slowapi` или свой backend).
+- **CORS** — `allow_origin_regex` открывает любой LAN IP (намеренно для iPhone WebView). В production — strict allow-list.
+- **Document scan ACL** — `GET /api/user/documents/{id}/scan` (новый) требует auth, но `app.mount("/uploads/documents", …)` оставлен для обратной совместимости. TODO: переключить UI на новый endpoint, удалить mount.
+- **Article body_html** — регулярная санитизация от `<script>`/on*-attrs. Полноценный sanitize — `bleach`/`DOMPurify`.
+- **Settings allow-list** — покрывает известные ключи; новые — добавлять явно.
+- **Frontend: пароли в LS** — теперь санитизируются перед записью. Для production — отдельный sessionStorage + ввод пароля в UI.
+- **Audit log** — пишет create/delete, **не пишет update** для проблем/сценариев/документов/закон-апдейтов. Дополнить.
+- **Push-уведомления** — backend endpoint есть, фронт использует Web Notifications API. Для нативной APK/iOS-сборки — FCM/APNs.
+- **AI-ассистент** — Groq API. Без ключа — canned-ответы. Не критично для демо.
+- **Email-доставка** — SMTP-очередь. Без SMTP_* env-ов — email'ы зависают в `email_notifications` со статусом `pending`.
+- **Мобильный адаптив** — есть, но часть legacy-компонентов в `App.tsx` (`MobileHome`/`DesktopHome` и т.п.) не используется роутингом — это каркас, оставлен для рефакторинга.
+
+### Граница «MVP-готово» vs «production»
+
+**Готовность к защите** (✅ = выполнено):
+- ✅ Backend стартует с новой БД за <30 сек
+- ✅ `pytest -q` → 82/82
+- ✅ Frontend `pnpm build` проходит
+- ✅ Refresh/logout работают (JSON-контракт)
+- ✅ Admin-эндпоинты защищены
+- ✅ Документы — owner-check на scan
+- ✅ Body_html санитизируется
+- ✅ SECRET_KEY fail-fast
+- ✅ Демо-предупреждения в UI
+- ✅ Индикатор Backend/Mock
+- ✅ Smoke-сценарий `scripts/smoke_demo.sh`
+- ✅ `docs/DEMO_SCRIPT.md` — 5 мин
+
+**Команды проверки:**
+```bash
+bash scripts/check.sh         # всё зелёное
+bash scripts/smoke_demo.sh    # требует запущенного backend
+PYTHONPATH=src .venv/bin/python -m pytest -q   # 82 теста
+cd reactvitemaket && pnpm build                # production-сборка
+```

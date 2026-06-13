@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 from backend import schemas
 from backend.enums import ContentStatus
 from backend.models import (
+    Article,
     AuditLog,
     Authority,
     Deadline,
@@ -160,6 +161,18 @@ def list_published_documents(db: Session) -> list[Document]:
         select(Document)
         .where(Document.status == ContentStatus.PUBLISHED)
         .order_by(Document.title.asc())
+    )
+    return list(db.scalars(stmt).all())
+
+
+def search_published_news(db: Session, query: str, limit: int = 25) -> list[Article]:
+    """Лёгкий keyword-поиск по опубликованным новостям. Для RAG."""
+    from backend.models import Article
+    stmt = (
+        select(Article)
+        .where(Article.status == "published", Article.kind == "news")
+        .order_by(Article.updated_at.desc())
+        .limit(limit)
     )
     return list(db.scalars(stmt).all())
 

@@ -2,6 +2,7 @@ import type {
   AdminScenarioRow,
   AppNotification,
   CategoryId,
+  ContentTag,
   Difficulty,
   DocumentRef,
   Institution,
@@ -130,6 +131,18 @@ export function adaptDocumentRef(input: unknown): DocumentRef {
     name: text(data.name || data.title, "Документ"),
     required: bool(data.required ?? data.is_required, true),
     note: text(data.note || data.description, "") || undefined,
+  };
+}
+
+export function adaptContentTag(input: unknown): ContentTag {
+  const data = (input && typeof input === "object" ? input : {}) as LooseRecord;
+  return {
+    id: identifier(data.id, text(data.slug || data.name, "tag")),
+    name: text(data.name, "Тег"),
+    slug: text(data.slug, identifier(data.id, "tag")),
+    description: text(data.description, ""),
+    color: text(data.color, ""),
+    isActive: bool(data.is_active ?? data.isActive, true),
   };
 }
 

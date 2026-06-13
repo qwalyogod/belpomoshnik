@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.auth import get_current_user_email
+from backend.auth import hash_password, verify_password
 from backend.database import get_db
 from backend.models import User, UserDocument, UserNote
 from backend.schemas import (
@@ -138,6 +139,16 @@ class UserDocumentOut(BaseModel):
     custom_fields_json: str = ""
 
 
+class UserEmailChangeIn(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=1, max_length=255)
+
+
+class UserPasswordChangeIn(BaseModel):
+    old_password: str = Field(min_length=1, max_length=255)
+    new_password: str = Field(min_length=8, max_length=255)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -221,6 +232,41 @@ def update_profile(
     db.commit()
     db.refresh(user)
     return _profile_out(user)
+
+
+@router.patch("/account/email", response_model=UserProfileOut)
+def change_email(
+    payload: UserEmailChangeIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    next_email = payload.email.strip().lower()
+    if "@" not in next_email or "." not in next_email.split("@")[-1]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Укажите корректный email.")
+    if not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Пароль указан неверно.")
+    existing = db.scalars(select(User).where(User.email == next_email, User.id != user.id)).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Пользователь с таким email уже существует.")
+    user.email = next_email
+    db.commit()
+    db.refresh(user)
+    return _profile_out(user)
+
+
+@router.patch("/account/password")
+def change_password(
+    payload: UserPasswordChangeIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(payload.old_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Старый пароль указан неверно.")
+    if verify_password(payload.new_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Новый пароль должен отличаться от старого.")
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    return {"ok": True}
 
 
 def _detect_avatar_ext(body: bytes) -> str | None:

@@ -23,6 +23,15 @@ export interface Category {
   name: string;
 }
 
+export interface ContentTag {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  isActive: boolean;
+}
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export interface OfficialSource {

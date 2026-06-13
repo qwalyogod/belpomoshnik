@@ -5,7 +5,7 @@ import {
   ArrowUpRight, AlertCircle, CalendarClock, MapPin, ChevronRight, Settings,
   Building2, Users, BookOpen, LayoutGrid, Sparkles, Clock, Check,
   Eye, BarChart3, TrendingUp, Plus, Newspaper, Pencil, Trash2,
-  ShieldAlert, Flag, Ban, X,
+  ShieldAlert, Flag, Ban, X, Tags,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
@@ -14,6 +14,8 @@ import type { Article } from "../data/types";
 import { RegionsEditor } from "./regions-editor";
 import { LawEditor } from "./law-editor";
 import { AuthoritiesEditor } from "./authorities-editor";
+import { ExtremistEditor } from "./extremist-editor";
+import { apiClient } from "../services/api";
 
 function NavItem({ icon, label, active, badge, onClick }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; onClick?: () => void }) {
   return (
@@ -250,7 +252,7 @@ const WEEK_BASE = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, addCategory, updateCategory, deleteCategory, setAdminUserRole, setAdminUserActive, deleteAdminUser, currentUser } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, contentTags, addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, setAdminUserRole, setAdminUserActive, deleteAdminUser, currentUser, authSession, loadArticles } = useStore();
   const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -267,31 +269,84 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       sourceUrl: a.sourceUrl, date: a.date, author: a.author.name,
     },
   });
-  const handleSubmit = (draft: ContentDraft, action: "publish" | "draft" | "submit") => {
-    // Local-first: persist the publication; backend sync comes later.
-    const fields = {
-      kind: draft.kind, title: draft.title.trim(), summary: draft.summary, bodyHtml: draft.bodyHtml,
-      cover: draft.cover, video: draft.video, gallery: draft.gallery, tags: draft.tags,
-      category: draft.category, specialization: draft.specialization, audience: draft.audience,
-      source: draft.source, sourceUrl: draft.sourceUrl, date: draft.date,
-      status: (action === "draft" ? "draft" : action === "submit" ? "review" : "published") as Article["status"],
+  const handleSubmit = async (draft: ContentDraft, action: "publish" | "draft" | "submit") => {
+    const status = (action === "draft" ? "draft" : action === "submit" ? "review" : "published") as Article["status"];
+    // Backend ожидает snake_case (body_html, source_url, as_proposal).
+    const payload = {
+      kind: draft.kind,
+      title: draft.title.trim(),
+      summary: draft.summary,
+      body_html: draft.bodyHtml,
+      cover: draft.cover,
+      video: draft.video,
+      gallery: draft.gallery,
+      tags: draft.tags,
+      category: draft.category,
+      specialization: draft.specialization,
+      audience: draft.audience,
+      source: draft.source,
+      source_url: draft.sourceUrl,
+      date: draft.date,
+      status,
     };
-    if (editing?.mode === "edit" && editing.id) {
-      // Editor reworked a citizen submission → record "при поддержке {редактор}".
-      const patch: Partial<Article> = { ...fields };
-      if (editing.authorMeta?.proposedBy) patch.author = { ...editing.authorMeta, name: profile.name };
-      updateArticle(editing.id, patch);
-      setEditing(null);
-      setSection("publications");
-      return;
+    const token = authSession?.access_token;
+    try {
+      if (editing?.mode === "edit" && editing.id) {
+        // Editor reworked a citizen submission → backend сохранит "при поддержке {редактор}".
+        if (token) {
+          await apiClient.updateArticleApi<Record<string, unknown>>(token, editing.id, payload);
+        } else {
+          const patch: Partial<Article> = {
+            ...payload, bodyHtml: payload.body_html, sourceUrl: payload.source_url,
+            status: payload.status as Article["status"],
+          };
+          if (editing.authorMeta?.proposedBy) patch.author = { ...editing.authorMeta, name: profile.name };
+          updateArticle(editing.id, patch);
+        }
+      } else {
+        if (token) {
+          await apiClient.createArticle<Record<string, unknown>>(token, payload);
+        } else {
+          addArticle({
+            ...payload, bodyHtml: payload.body_html, sourceUrl: payload.source_url,
+            status: payload.status as Article["status"],
+            author: { name: draft.author || profile.name, role: role === "admin" || role === "platform_admin" ? "admin" : "editor" },
+          });
+        }
+      }
+      if (token) await loadArticles();
+    } catch (err) {
+      console.error("[AdminPanel] handleSubmit failed:", err);
     }
-    addArticle({ ...fields, author: { name: draft.author || profile.name, role: role === "admin" ? "admin" : "editor" } });
     setEditing(null);
     setSection("publications");
   };
   const onNavScroll = () => {
     const el = navScrollRef.current;
     if (el && el.clientWidth) setNavPage(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const handleDeleteArticle = async (id: string) => {
+    const token = authSession?.access_token;
+    try {
+      if (token) {
+        await apiClient.deleteArticleApi(token, id);
+        await loadArticles();
+      } else {
+        removeArticle(id);
+      }
+    } catch (err) {
+      console.error("[AdminPanel] delete article failed:", err);
+    }
+  };
+  const handleModerate = async (id: string, action: "publish" | "reject" | "report" | "unreport") => {
+    const token = authSession?.access_token;
+    if (!token) return;
+    try {
+      await apiClient.moderateArticle<Record<string, unknown>>(token, id, action);
+      await loadArticles();
+    } catch (err) {
+      console.error("[AdminPanel] moderate article failed:", err);
+    }
   };
   const catLabel = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
   const statusLabel = (s: string) => (s === "published" ? "Опубликовано" : s === "review" ? "На проверке" : s === "rejected" ? "Отклонено" : "Черновик");
@@ -327,6 +382,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     { id: "publications", icon: <Newspaper size={15} />, label: "Публикации", short: "Публик.", badge: articles.length ? String(articles.length) : undefined },
     { id: "moderation", icon: <ShieldAlert size={15} />, label: "Модерация", short: "Модер.", badge: moderationCount ? String(moderationCount) : undefined },
     { id: "categories", icon: <LayoutGrid size={15} />, label: "Категории", short: "Категории" },
+    { id: "tags", icon: <Tags size={15} />, label: "Теги", short: "Теги" },
     { id: "scenarios", icon: <FileText size={15} />, label: "Сценарии", short: "Сценарии", badge: total ? String(total) : undefined },
     { id: "law", icon: <BookOpen size={15} />, label: "Правовые обновления", short: "Право" },
     { id: "authorities", icon: <Building2 size={15} />, label: "Учреждения", short: "Учрежд." },
@@ -535,27 +591,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
 
   // P7: каркас раздела «Экстремистский контент» — отдельная страница.
   // В админ-окне показываем короткое описание + кнопку перехода на /extremist.
-  const extremistLinkBody = (
-    <div className="grid h-full place-items-center p-8 text-center">
-      <div className="max-w-[480px]">
-        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/15 dark:text-red-300">
-          <ShieldAlert size={20} />
-        </div>
-        <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Экстремистский реестр</div>
-        <div className="mt-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
-          Юридически чувствительный раздел. Содержит только записи с проверенным
-          официальным источником и датой проверки. Каркас открывается на отдельной странице.
-        </div>
-        <a
-          href="/extremist"
-          onClick={(e) => { e.preventDefault(); window.history.pushState({}, "", "/extremist"); window.dispatchEvent(new PopStateEvent("popstate")); }}
-          className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#0056FF] px-4 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)]"
-        >
-          Открыть раздел →
-        </a>
-      </div>
-    </div>
-  );
+  const extremistBody = <ExtremistEditor mobile={mobile} />;
 
   // ---- Publications (editor / UGC output) ----
   const kindLabel = (k: ContentKind) => (k === "news" ? "Новости" : k === "scenario" ? "Жизненный сценарий" : "Проблема");
@@ -607,7 +643,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                     <td className="py-3.5 text-black/50 dark:text-white/50">{a.date}</td>
                     <td className="whitespace-nowrap py-3.5 pr-5 text-right">
                       <button onClick={() => editArticle(a)} className="mr-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] tracking-tight text-[#0056FF] transition-colors hover:bg-[#0056FF]/[0.08] dark:text-[#7FA8FF]"><Pencil size={13} /> Изменить</button>
-                      <button onClick={() => removeArticle(a.id)} title="Удалить" className="inline-flex items-center rounded-lg px-2 py-1 text-red-500 transition-colors hover:bg-red-500/[0.08]"><Trash2 size={13} /></button>
+                      <button onClick={() => handleDeleteArticle(a.id)} title="Удалить" className="inline-flex items-center rounded-lg px-2 py-1 text-red-500 transition-colors hover:bg-red-500/[0.08]"><Trash2 size={13} /></button>
                     </td>
                   </tr>
                 ))}
@@ -650,13 +686,13 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button onClick={() => updateArticle(a.id, { status: "published", reported: false })} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#0056FF] px-2.5 text-[12px] tracking-tight text-white hover:bg-[#0049DB]"><Check size={13} /> Опубликовать</button>
+                  <button onClick={() => handleModerate(a.id, "publish")} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#0056FF] px-2.5 text-[12px] tracking-tight text-white hover:bg-[#0049DB]"><Check size={13} /> Опубликовать</button>
                   <button onClick={() => editArticle(a)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] tracking-tight text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/70"><Pencil size={13} /> Изменить</button>
-                  <button onClick={() => updateArticle(a.id, { status: "rejected" })} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] tracking-tight text-black/60 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/60"><X size={13} /> Отклонить</button>
-                  {role === "admin" && a.author.proposerId ? (
+                  <button onClick={() => handleModerate(a.id, "reject")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] tracking-tight text-black/60 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/60"><X size={13} /> Отклонить</button>
+                  {(role === "admin" || role === "platform_admin") && a.author.proposerId ? (
                     <button onClick={() => toggleBlockedSubmitter(a.author.proposerId!)} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors ${blocked ? "border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/[0.08] dark:text-emerald-400" : "border-red-500/40 text-red-500 hover:bg-red-500/[0.08]"}`}><Ban size={13} /> {blocked ? "Разблокировать" : "Заблокировать"}</button>
                   ) : (
-                    <button onClick={() => updateArticle(a.id, { reported: !a.reported })} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors ${a.reported ? "border-amber-500/40 text-amber-600 dark:text-amber-400" : "border-black/10 text-black/60 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/60"}`}><Flag size={13} /> {a.reported ? "Жалоба отправлена" : "Пожаловаться"}</button>
+                    <button onClick={() => handleModerate(a.id, a.reported ? "unreport" : "report")} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] tracking-tight transition-colors ${a.reported ? "border-amber-500/40 text-amber-600 dark:text-amber-400" : "border-black/10 text-black/60 hover:bg-black/[0.04] dark:border-white/12 dark:text-white/60"}`}><Flag size={13} /> {a.reported ? "Жалоба отправлена" : "Пожаловаться"}</button>
                   )}
                 </div>
               </div>
@@ -732,6 +768,127 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                 </div>
               )}
               <div className="mt-0.5 text-[12px] tracking-tight text-black/45 dark:text-white/45">{cnt} материалов</div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const [tagEditing, setTagEditing] = useState<string | null>(null);
+  const [tagDraft, setTagDraft] = useState({ name: "", description: "", color: "" });
+  const startTagEdit = (id: string) => {
+    const tag = contentTags.find(t => t.id === id);
+    if (!tag) return;
+    setTagEditing(id);
+    setTagDraft({ name: tag.name, description: tag.description, color: tag.color });
+  };
+  const saveTag = (id: string) => {
+    const name = tagDraft.name.trim();
+    if (!name) return;
+    updateContentTag(id, { name, description: tagDraft.description.trim(), color: tagDraft.color.trim() });
+    setTagEditing(null);
+  };
+  const tagsBody = (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[13px] tracking-tight text-black/55 dark:text-white/55">
+            {contentTags.length} тегов · {contentTags.filter(t => t.isActive).length} активных
+          </div>
+          <div className="mt-1 text-[12px] tracking-tight text-black/45 dark:text-white/45">
+            Эти теги доступны в редакторе публикаций. Произвольные теги в материал не добавляются.
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const n = window.prompt("Название нового тега");
+            if (n?.trim()) addContentTag({ name: n.trim(), description: "", color: "" });
+          }}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"
+        >
+          <Plus size={14} /> Тег
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {contentTags.map((tag) => {
+          const isEditing = tagEditing === tag.id;
+          const used = articles.filter(a => a.tags.includes(tag.name)).length;
+          return (
+            <Card key={tag.id} className={`p-4 ${!tag.isActive ? "opacity-60" : ""}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span
+                    className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+                    style={tag.color ? { color: tag.color } : undefined}
+                  >
+                    <Tags size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <input
+                          autoFocus
+                          value={tagDraft.name}
+                          onChange={(e) => setTagDraft(d => ({ ...d, name: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveTag(tag.id); if (e.key === "Escape") setTagEditing(null); }}
+                          className="w-full rounded-lg border border-[#0056FF] bg-white px-2 py-1.5 text-[13px] tracking-tight text-black outline-none dark:bg-white/[0.04] dark:text-white"
+                        />
+                        <input
+                          value={tagDraft.description}
+                          onChange={(e) => setTagDraft(d => ({ ...d, description: e.target.value }))}
+                          placeholder="Описание"
+                          className="w-full rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[12px] tracking-tight text-black outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={tagDraft.color}
+                            onChange={(e) => setTagDraft(d => ({ ...d, color: e.target.value }))}
+                            placeholder="#2563EB"
+                            className="min-w-0 flex-1 rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[12px] tracking-tight text-black outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
+                          />
+                          <button onClick={() => saveTag(tag.id)} className="rounded-lg bg-[#0056FF] px-2.5 py-1.5 text-[12px] tracking-tight text-white">Сохранить</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startTagEdit(tag.id)}
+                          className="block max-w-full truncate text-left text-[15px] tracking-tight text-black hover:text-[#0056FF] dark:text-white dark:hover:text-[#7FA8FF]"
+                          title="Нажмите, чтобы изменить"
+                        >
+                          {tag.name}
+                        </button>
+                        <div className="mt-1 line-clamp-2 text-[12px] tracking-tight text-black/50 dark:text-white/50">
+                          {tag.description || "Описание не указано"}
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <Pill tone={tag.isActive ? "ok" : "ghost"}>{tag.isActive ? "Активен" : "Отключён"}</Pill>
+                          <Pill tone="ghost">{used} материалов</Pill>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => updateContentTag(tag.id, { isActive: !tag.isActive })}
+                    className="grid h-7 w-7 place-items-center rounded-lg text-black/35 transition-colors hover:bg-black/[0.04] hover:text-[#0056FF] dark:text-white/35 dark:hover:bg-white/[0.05]"
+                    title={tag.isActive ? "Отключить" : "Включить"}
+                  >
+                    {tag.isActive ? <Eye size={13} /> : <Eye size={13} className="opacity-40" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Удалить тег «${tag.name}»? В старых публикациях он останется текстом.`)) deleteContentTag(tag.id);
+                    }}
+                    className="grid h-7 w-7 place-items-center rounded-lg text-black/25 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-white/25"
+                    title="Удалить"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
             </Card>
           );
         })}
@@ -943,13 +1100,14 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
           : section === "moderation" ? moderationBody
           : section === "scenarios" ? scenariosBody
           : section === "categories" ? categoriesBody
+          : section === "tags" ? tagsBody
           : section === "law" ? <LawEditor mobile={mobile} />
           : section === "authorities" ? authoritiesBody
           : section === "regions" ? regionsBody
           : section === "users" ? usersBody
           : section === "audit" ? auditBody
           : section === "rules" ? rulesBody
-          : section === "extremist" ? extremistLinkBody
+          : section === "extremist" ? extremistBody
           : placeholderBody}
       </div>
     </div>

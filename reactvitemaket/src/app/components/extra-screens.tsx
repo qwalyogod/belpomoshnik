@@ -653,18 +653,37 @@ export function LearningPage() {
 }
 
 /* ---------------- AI ASSISTANT ---------------- */
+type AssistantLink = {
+  title: string;
+  path: string;
+  kind: string;
+  snippet?: string;
+};
 type AssistantMsg = {
   role: "user" | "assistant";
   text: string;
   section?: { id: string; title: string; description: string; route: string };
   warning?: boolean;
+  links?: AssistantLink[];
+  source?: "llm" | "local";
+};
+
+const LINK_ICONS: Record<string, React.ReactNode> = {
+  scenario: <FileText size={15} />,
+  problem: <AlertCircle size={15} />,
+  law: <BookOpen size={15} />,
+  extremist: <Shield size={15} />,
+  news: <Newspaper size={15} />,
+  authority: <Building2 size={15} />,
+  document: <FileText size={15} />,
+  section: <ArrowUpRight size={15} />,
 };
 
 export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { role } = useStore();
+  const { role, authSession } = useStore();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<AssistantMsg[]>([
-    { role: "assistant", text: "Здравствуйте! Напишите, что хотите найти или сделать — подскажу подходящий раздел." },
+    { role: "assistant", text: "Здравствуйте! Напишите, что хотите найти или сделать — подскажу подходящий раздел или конкретный материал." },
   ]);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -678,19 +697,56 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
     setValue("");
     setBusy(true);
     try {
-      const res = await apiClient.askAssistant<{
-        response_text: string;
-        section: { id: string; title: string; description: string; route: string };
-        requires_auth_warning: boolean;
-      }>({ message: text, role, is_guest: role === "guest" });
-      setMessages((m) => [...m, { role: "assistant", text: res.response_text, section: res.section, warning: res.requires_auth_warning }]);
+      // Авторизованные — RAG-чат с поиском по БД; гости — старый keyword-router.
+      const token = authSession?.access_token;
+      if (token) {
+        const res = await apiClient.askAssistantChat<{
+          response_text: string;
+          links: AssistantLink[];
+          source: "llm" | "local";
+        }>(token, { message: text, role, is_guest: false });
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            text: res.response_text,
+            links: res.links,
+            source: res.source,
+          },
+        ]);
+      } else {
+        const res = await apiClient.askAssistant<{
+          response_text: string;
+          section: { id: string; title: string; description: string; route: string };
+          requires_auth_warning: boolean;
+        }>({ message: text, role, is_guest: true });
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            text: res.response_text,
+            section: res.section,
+            warning: res.requires_auth_warning,
+          },
+        ]);
+      }
     } catch {
-      setMessages((m) => [...m, { role: "assistant", text: "Не удалось связаться с помощником. Попробуйте позже или воспользуйтесь поиском и каталогом." }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", text: "Не удалось связаться с помощником. Попробуйте позже или воспользуйтесь поиском и каталогом." },
+      ]);
     } finally {
       setBusy(false);
     }
   };
 
+  // path — относительный путь от бэка (например "/scenarios/3"). Склеиваем с
+  // текущим origin, чтобы ссылка работала на любом IP/сервере (localhost, LAN, prod).
+  const goToPath = (path: string) => {
+    onClose();
+    if (path.startsWith("/")) navigate(path);
+    else navigate(`/${path}`);
+  };
   const goTo = (route: string) => { onClose(); navigate(route); };
 
   return (
@@ -716,7 +772,37 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
                 ? "ml-auto bg-[#0056FF] text-white"
                 : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
                 {m.text}
+                {m.source && m.source === "local" && m.links && m.links.length > 0 && (
+                  <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">
+                    Локальный ответ · {m.links.length} материал(а)
+                  </div>
+                )}
               </div>
+              {/* RAG-ссылки: чипы с иконкой по kind. */}
+              {m.links && m.links.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {m.links.map((l, li) => (
+                    <button
+                      key={`${i}-l-${li}`}
+                      onClick={() => goToPath(l.path)}
+                      className="group flex w-full items-center gap-2.5 rounded-2xl border border-black/[0.08] bg-white px-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                      title={l.path}
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                        {LINK_ICONS[l.kind] ?? <ArrowUpRight size={15} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{l.title}</span>
+                        {l.snippet && (
+                          <span className="block truncate text-[11px] tracking-tight text-black/45 dark:text-white/45">{l.snippet}</span>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-medium tracking-tight text-[#0056FF]">→</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Legacy: keyword-router fallback (для guest). */}
               {m.section && (
                 <button onClick={() => goTo(m.section!.route)}
                   className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-3 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]">

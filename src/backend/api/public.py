@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.auth import require_role
 from backend.database import get_db
 from backend import schemas
+from backend.models import ContentTag
 from backend.service import (
     get_published_problem_by_slug,
     get_published_scenario_by_slug,
@@ -86,6 +88,12 @@ def get_documents(db: Session = Depends(get_db)):
 @router.get("/authorities", response_model=list[schemas.AuthorityOut])
 def get_authorities(db: Session = Depends(get_db)):
     return [schemas.AuthorityOut.model_validate(item) for item in list_authorities(db)]
+
+
+@router.get("/content-tags", response_model=list[schemas.ContentTagOut])
+def get_content_tags(db: Session = Depends(get_db)):
+    stmt = select(ContentTag).where(ContentTag.is_active.is_(True)).order_by(ContentTag.name.asc())
+    return [schemas.ContentTagOut.model_validate(item) for item in db.scalars(stmt).all()]
 
 
 @router.get("/law-updates", response_model=list[schemas.LawUpdateOut])

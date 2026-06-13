@@ -3,14 +3,14 @@ import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
   AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
-  UserAddress, UserNote, NoteCategory,
+  ContentTag, UserAddress, UserNote, NoteCategory,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptArticle, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
+import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
@@ -37,6 +37,7 @@ type Store = {
   resetSession: () => void;
 
   categories: typeof CATEGORIES;
+  contentTags: ContentTag[];
   scenarios: Scenario[];
   problems: Problem[];
   legal: LegalUpdate[];
@@ -89,6 +90,7 @@ type Store = {
   uploadMedia: (file: File) => Promise<string | null>;
   viewsDaily: { date: string; count: number }[];
   meId: string | null;
+  loadArticles: (signal?: AbortSignal) => Promise<void>;
 
   favorites: string[];
   toggleFavorite: (scenarioId: string) => void;
@@ -100,6 +102,9 @@ type Store = {
 
   profile: UserProfile;
   updateProfile: (patch: Partial<UserProfile>) => void;
+  updateAccountName: (name: string) => void;
+  changeAccountEmail: (payload: { email: string; password: string }) => Promise<{ ok: boolean; message?: string }>;
+  changeAccountPassword: (payload: { oldPassword: string; newPassword: string; repeatPassword: string }) => Promise<{ ok: boolean; message?: string }>;
   // v1.2: загрузка обрезанного аватара (из редактора-кропера) на бэк и удаление.
   // uploadAvatar бросает ошибку при неудаче — UI ловит и показывает сообщение.
   uploadAvatar: (blob: Blob) => Promise<void>;
@@ -143,6 +148,11 @@ type Store = {
   addCategory: (name: string) => void;
   updateCategory: (id: string, name: string) => void;
   deleteCategory: (id: string) => void;
+
+  // content tags, editable by editor/admin and assignable in content editor
+  addContentTag: (input: Pick<ContentTag, "name"> & Partial<Omit<ContentTag, "id" | "slug" | "name">>) => void;
+  updateContentTag: (id: string, patch: Partial<ContentTag>) => void;
+  deleteContentTag: (id: string) => void;
 
   // institutions (authorities), editable by admin
   addAuthority: (item: Omit<Institution, "id">) => void;
@@ -225,7 +235,21 @@ const ARTICLES_KEY = "belp.articles";
 const BLOCKED_SUBMITTERS_KEY = "belp.blockedSubmitters";
 const LEGAL_KEY = "belp.legal";
 const CATEGORIES_KEY = "belp.categories";
+const CONTENT_TAGS_KEY = "belp.contentTags";
 const AUTHORITIES_KEY = "belp.authorities";
+
+const DEFAULT_CONTENT_TAGS: ContentTag[] = [
+  { id: "tag-documents", name: "Документы", slug: "документы", description: "Паспорта, справки, заявления и личные документы", color: "#2563EB", isActive: true },
+  { id: "tag-family", name: "Семья", slug: "семья", description: "Семейные ситуации, дети, пособия", color: "#16A34A", isActive: true },
+  { id: "tag-housing", name: "ЖКХ", slug: "жкх", description: "Коммунальные платежи, жильё и обслуживание", color: "#0EA5E9", isActive: true },
+  { id: "tag-taxes", name: "Налоги", slug: "налоги", description: "Налоговые обязательства физических лиц и ИП", color: "#F59E0B", isActive: true },
+  { id: "tag-health", name: "Здоровье", slug: "здоровье", description: "Медицина, поликлиники и документы", color: "#14B8A6", isActive: true },
+  { id: "tag-work", name: "Работа", slug: "работа", description: "Трудовые вопросы и занятость", color: "#7C3AED", isActive: true },
+  { id: "tag-business", name: "Бизнес/ИП", slug: "бизнес-ип", description: "Регистрация ИП и отчётность", color: "#9333EA", isActive: true },
+  { id: "tag-auto", name: "Авто", slug: "авто", description: "Водительские документы и авто", color: "#0891B2", isActive: true },
+  { id: "tag-law", name: "Закон-апдейт", slug: "закон-апдейт", description: "Изменения законодательства", color: "#D97706", isActive: true },
+  { id: "tag-extremist", name: "Экстремистские материалы", slug: "экстремистские-материалы", description: "Справочные материалы по официальным реестрам", color: "#DC2626", isActive: true },
+];
 
 type PersistedUserData = {
   situations: UserSituation[];
@@ -325,6 +349,10 @@ function publicKey(item: PublicListItem) {
 
 function uniqueStrings(items: string[]) {
   return Array.from(new Set(items));
+}
+
+function isStaffRole(role: Role | string) {
+  return role === "content_editor" || role === "platform_admin" || role === "editor" || role === "admin";
 }
 
 function isBackendNumericId(id: string) {
@@ -535,6 +563,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [publicDocuments, setPublicDocuments] = useState<DocumentRef[]>([]);
   const [authorities, setAuthorities] = useState<Institution[]>(() => safeRead<Institution[]>(AUTHORITIES_KEY, []));
   const [mutableCategories, setMutableCategories] = useState<Category[]>(() => safeRead<Category[]>(CATEGORIES_KEY, CATEGORIES));
+  const [contentTags, setContentTags] = useState<ContentTag[]>(() => safeRead<ContentTag[]>(CONTENT_TAGS_KEY, DEFAULT_CONTENT_TAGS));
   const [publicContentStatus, setPublicContentStatus] = useState<Store["publicContentStatus"]>("fallback");
   const [publicContentError, setPublicContentError] = useState<string | undefined>(undefined);
   const [situations, setSituations] = useState<UserSituation[]>(INITIAL_SITUATIONS);
@@ -612,6 +641,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { safeWrite(GEO_KEY, geo); }, [geo]);
   useEffect(() => { safeWrite(LEGAL_KEY, legal); }, [legal]);
   useEffect(() => { safeWrite(CATEGORIES_KEY, mutableCategories); }, [mutableCategories]);
+  useEffect(() => { safeWrite(CONTENT_TAGS_KEY, contentTags); }, [contentTags]);
   useEffect(() => { safeWrite(AUTHORITIES_KEY, authorities); }, [authorities]);
 
   // --- Geography CRUD (admin "Регионы и города") ---
@@ -657,6 +687,61 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const deleteCategory = useCallback((id: string) => {
     setMutableCategories(prev => prev.filter(c => c.id !== id));
   }, []);
+
+  // --- Content tags CRUD ---
+  const normalizeTagInput = (input: Pick<ContentTag, "name"> & Partial<Omit<ContentTag, "id" | "slug" | "name">>): ContentTag => {
+    const name = input.name.trim();
+    const slug = name.toLowerCase().replace(/[^0-9a-zа-яё]+/g, "-").replace(/^-+|-+$/g, "") || "tag";
+    return {
+      id: uid("tag"),
+      name,
+      slug,
+      description: input.description?.trim() ?? "",
+      color: input.color?.trim() ?? "",
+      isActive: input.isActive ?? true,
+    };
+  };
+  const addContentTag: Store["addContentTag"] = useCallback((input) => {
+    const normalized = normalizeTagInput(input);
+    if (!normalized.name) return;
+    setContentTags(prev => (prev.some(t => t.name.toLowerCase() === normalized.name.toLowerCase()) ? prev : [...prev, normalized]));
+    const token = authSession?.access_token;
+    if (!token) return;
+    apiClient.createAdminContentTag<Record<string, unknown>>(token, {
+      name: normalized.name,
+      description: normalized.description,
+      color: normalized.color,
+      is_active: normalized.isActive,
+    })
+      .then(saved => {
+        const adapted = adaptContentTag(saved);
+        setContentTags(prev => prev.map(t => t.id === normalized.id ? adapted : t));
+      })
+      .catch(error => console.warn("Content tag created locally; backend create failed.", error));
+  }, [authSession?.access_token]);
+  const updateContentTag: Store["updateContentTag"] = useCallback((id, patch) => {
+    setContentTags(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+    const token = authSession?.access_token;
+    if (!token || !/^\d+$/.test(id)) return;
+    const payload: Record<string, unknown> = {};
+    if (patch.name !== undefined) payload.name = patch.name;
+    if (patch.description !== undefined) payload.description = patch.description;
+    if (patch.color !== undefined) payload.color = patch.color;
+    if (patch.isActive !== undefined) payload.is_active = patch.isActive;
+    apiClient.updateAdminContentTag<Record<string, unknown>>(token, id, payload)
+      .then(saved => {
+        const adapted = adaptContentTag(saved);
+        setContentTags(prev => prev.map(t => t.id === id ? adapted : t));
+      })
+      .catch(error => console.warn("Content tag updated locally; backend update failed.", error));
+  }, [authSession?.access_token]);
+  const deleteContentTag: Store["deleteContentTag"] = useCallback((id) => {
+    setContentTags(prev => prev.filter(t => t.id !== id));
+    const token = authSession?.access_token;
+    if (!token || !/^\d+$/.test(id)) return;
+    apiClient.deleteAdminContentTag(token, id)
+      .catch(error => console.warn("Content tag deleted locally; backend delete failed.", error));
+  }, [authSession?.access_token]);
 
   // --- Authorities CRUD (P11) с backend sync.
   // Маппер из локального Institution (name/...) в backend payload (title/...).
@@ -754,7 +839,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // Server is the source of truth when reachable; otherwise the local cache stays.
   const loadArticles = useCallback(async (signal?: AbortSignal) => {
     const token = authSession?.access_token;
-    const staff = role === "editor" || role === "admin";
+    const staff = isStaffRole(role);
     try {
       if (staff && token) {
         const raw = await apiClient.getAllArticles<Record<string, unknown>[]>(token, { signal });
@@ -905,7 +990,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // Editor/admin content: pull the scenario catalog from the protected admin API.
   useEffect(() => {
     const token = authSession?.access_token;
-    if (!token || (currentUser.role !== "admin" && currentUser.role !== "editor")) {
+    if (!token || !isStaffRole(currentUser.role)) {
       setAdminScenarios([]);
       setAdminStatus("fallback");
       setAdminUsers([]);
@@ -941,7 +1026,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => { /* keep empty */ });
 
-    if (currentUser.role === "admin") {
+    apiClient.getAdminContentTags<Record<string, unknown>[]>(token, { signal: controller.signal })
+      .then(rows => {
+        if (controller.signal.aborted || !Array.isArray(rows)) return;
+        setContentTags(rows.map(adaptContentTag));
+      })
+      .catch(() => { /* keep public/fallback tags */ });
+
+    if (currentUser.role === "admin" || currentUser.role === "platform_admin") {
       apiClient.getAdminUsers<Record<string, unknown>[]>(token, { signal: controller.signal })
         .then(rows => {
           if (controller.signal.aborted || !Array.isArray(rows)) return;
@@ -1090,11 +1182,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setPublicContentStatus("loading");
       setPublicContentError(undefined);
 
-      const [problemsResult, scenariosResult, documentsResult, authoritiesResult, legalResult] = await Promise.allSettled([
+      const [problemsResult, scenariosResult, documentsResult, authoritiesResult, tagsResult, legalResult] = await Promise.allSettled([
         apiClient.getProblems<Record<string, unknown>[]>({ signal: controller.signal }),
         apiClient.getScenarios<Record<string, unknown>[]>({ signal: controller.signal }),
         apiClient.getDocuments<Record<string, unknown>[]>({ signal: controller.signal }),
         apiClient.getAuthorities<Record<string, unknown>[]>({ signal: controller.signal }),
+        apiClient.getContentTags<Record<string, unknown>[]>({ signal: controller.signal }),
         apiClient.getLawUpdates<Record<string, unknown>[]>({ signal: controller.signal }),
       ]);
 
@@ -1146,6 +1239,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }
       } else if (authoritiesResult.status === "rejected") {
         errors.push(authoritiesResult.reason instanceof Error ? authoritiesResult.reason.message : "Не удалось загрузить учреждения");
+      }
+
+      if (tagsResult.status === "fulfilled" && Array.isArray(tagsResult.value)) {
+        const nextTags = tagsResult.value.map(adaptContentTag);
+        if (nextTags.length) {
+          setContentTags(prev => mergeById(prev, nextTags));
+          loadedSomething = true;
+        }
+      } else if (tagsResult.status === "rejected") {
+        errors.push(tagsResult.reason instanceof Error ? tagsResult.reason.message : "Не удалось загрузить теги");
       }
 
       if (legalResult.status === "fulfilled" && Array.isArray(legalResult.value)) {
@@ -1626,6 +1729,59 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [authSession?.access_token, profile, role]);
 
+  const updateAccountName: Store["updateAccountName"] = useCallback((name) => {
+    const nextName = name.trim();
+    if (!nextName || !requireAccount()) return;
+    setProfile(p => ({ ...p, name: nextName }));
+    setCurrentUser(u => ({ ...u, name: nextName }));
+    setQuickAccounts(prev => prev.map(account => account.id === currentUser.id ? { ...account, name: nextName } : account));
+    if (authSession?.access_token) {
+      apiClient.updateUserProfile(authSession.access_token, userProfilePayload({ ...profile, name: nextName }))
+        .catch(error => console.warn("Name saved locally; backend update failed.", error));
+    }
+  }, [authSession?.access_token, currentUser.id, profile, role]);
+
+  const changeAccountEmail: Store["changeAccountEmail"] = useCallback(async ({ email, password }) => {
+    if (!requireAccount()) return { ok: false, message: "Нужен вход в аккаунт." };
+    const nextEmail = email.trim().toLowerCase();
+    if (!nextEmail || !password) return { ok: false, message: "Введите новый email и текущий пароль." };
+    const token = authSession?.access_token;
+    if (!token) return { ok: false, message: "Серверная сессия недоступна. Войдите заново и повторите действие." };
+    try {
+      const updated = await apiClient.changeUserEmail<Record<string, unknown>>(token, { email: nextEmail, password });
+      const adapted = adaptUserProfile(updated, { ...profile, email: nextEmail });
+      setProfile(adapted);
+      setCurrentUser(u => ({ ...u, email: nextEmail, name: adapted.name || u.name }));
+      setQuickAccounts(prev => prev.map(account => account.id === currentUser.id ? { ...account, email: nextEmail, name: adapted.name || account.name } : account));
+      const tokens = await apiClient.login<AuthTokens>(nextEmail, password);
+      setAuthSession(tokens);
+      apiClient.saveTokens(tokens);
+      return { ok: true, message: "Email обновлён." };
+    } catch (error) {
+      console.warn("Email change failed.", error);
+      return { ok: false, message: "Не удалось изменить email. Проверьте пароль и доступность сервера." };
+    }
+  }, [authSession?.access_token, currentUser.id, profile, role]);
+
+  const changeAccountPassword: Store["changeAccountPassword"] = useCallback(async ({ oldPassword, newPassword, repeatPassword }) => {
+    if (!requireAccount()) return { ok: false, message: "Нужен вход в аккаунт." };
+    if (!oldPassword || !newPassword || !repeatPassword) return { ok: false, message: "Заполните все поля пароля." };
+    if (newPassword !== repeatPassword) return { ok: false, message: "Новый пароль и повтор не совпадают." };
+    if (newPassword.length < 8) return { ok: false, message: "Новый пароль должен быть не короче 8 символов." };
+    const token = authSession?.access_token;
+    if (!token) return { ok: false, message: "Серверная сессия недоступна. Войдите заново и повторите действие." };
+    try {
+      await apiClient.changeUserPassword(token, { old_password: oldPassword, new_password: newPassword });
+      const tokens = await apiClient.login<AuthTokens>(profile.email, newPassword);
+      setAuthSession(tokens);
+      apiClient.saveTokens(tokens);
+      return { ok: true, message: "Пароль обновлён." };
+    } catch (error) {
+      console.warn("Password change failed.", error);
+      return { ok: false, message: "Не удалось изменить пароль. Проверьте старый пароль." };
+    }
+  }, [authSession?.access_token, profile.email, role]);
+
   const uploadAvatar: Store["uploadAvatar"] = useCallback(async (blob) => {
     if (!requireAccount()) return;
     const token = authSession?.access_token;
@@ -1824,7 +1980,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     role, setRole,
     currentUser, authSession, quickAccounts, isAuthenticated: role !== "guest",
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
-    categories: mutableCategories, scenarios, problems, legal, publicDocuments, authorities,
+    categories: mutableCategories, contentTags, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
     admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
@@ -1832,10 +1988,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
     articles, addArticle, updateArticle, removeArticle,
-    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId,
+    blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     favorites, toggleFavorite,
     notifications: allNotifications, markRead, markAllRead, unreadCount,
-    profile, updateProfile, uploadAvatar, removeAvatar, applyQuizResult,
+    profile, updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress,
     togglePreferredSource,
@@ -1843,12 +1999,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory,
+    addContentTag, updateContentTag, deleteContentTag,
     addAuthority, updateAuthority, deleteAuthority,
     setAdminUserRole, setAdminUserActive, deleteAdminUser,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
-    role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, publicContentStatus, publicContentError,
+    role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, contentTags, publicContentStatus, publicContentError,
     adminScenarios, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
     notes, addNote, updateNote, toggleNote, removeNote,
@@ -1861,10 +2018,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addTax, updateTax, deleteTax,
     reminders, allNotifications,
     markRead, markAllRead, unreadCount,
-    updateProfile, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,
+    updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
-    addCategory, updateCategory, deleteCategory, mutableCategories,
+    addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, mutableCategories,
     addAuthority, updateAuthority, deleteAuthority,
     setAdminUserRole, setAdminUserActive, deleteAdminUser,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
