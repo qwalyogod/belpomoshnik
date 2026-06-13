@@ -107,3 +107,15 @@ def editor_token(client):
 @pytest.fixture
 def editor_headers(editor_token):
     return {"Authorization": f"Bearer {editor_token}"}
+
+
+@pytest.fixture
+def admin_token(client):
+    _make_user("admin@bel.by", "admin-pass-1", "platform_admin", "Admin")
+    r = client.post("/api/auth/login", data={"username": "admin@bel.by", "password": "admin-pass-1"})
+    return r.json()["access_token"]
+
+
+@pytest.fixture
+def admin_headers(admin_token):
+    return {"Authorization": f"Bearer {admin_token}"}

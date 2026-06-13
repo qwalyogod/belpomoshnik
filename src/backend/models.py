@@ -493,7 +493,9 @@ class User(Base, TimestampMixin):
     avatar_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     role: Mapped[Role] = relationship(back_populates="users")
     documents: Mapped[list[UserDocument]] = relationship(
@@ -845,11 +847,22 @@ class AuditLog(Base, TimestampMixin):
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     role_id: Mapped[str] = mapped_column(String(64), nullable=False, default="content_editor")
     event_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
     action: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="demo")
+    entity_type: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    entity_id: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    before_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    after_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    ip_address: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    user_agent: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ok")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 

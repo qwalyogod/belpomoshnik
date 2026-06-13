@@ -293,8 +293,32 @@ export interface AdminScenarioRow {
   id: string;
   title: string;
   category: CategoryId;
-  status: "published" | "review" | "draft";
+  status: "published" | "review" | "draft" | "archived";
   taskCount: number;
+  stageCount?: number;
+  verifiedAt?: string;
+}
+
+export interface AdminProblemRow {
+  id: string;
+  slug: string;
+  title: string;
+  category: CategoryId;
+  status: "published" | "draft" | "archived";
+  shortDescription?: string;
+}
+
+export interface AdminDashboardStats {
+  usersTotal: number;
+  usersActive: number;
+  usersBlocked: number;
+  publicationsTotal: number;
+  publicationsReview: number;
+  problemsTotal: number;
+  scenariosTotal: number;
+  authoritiesTotal: number;
+  regionsTotal: number;
+  notificationsTotal: number;
 }
 
 export interface AppNotification {

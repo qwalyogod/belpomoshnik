@@ -697,6 +697,10 @@ export const apiClient = {
 
   getAdminScenarios: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/scenarios", { headers: authHeaders(accessToken), ...options }),
+  getAdminDashboardStats: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/dashboard/stats", { headers: authHeaders(accessToken), ...options }),
+  checkAdminScenarioIntegrity: <T>(accessToken: string, scenarioId: string | number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/scenarios/${encodeURIComponent(String(scenarioId))}/integrity`, { headers: authHeaders(accessToken), ...options }),
   getAdminUsers: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/users", { headers: authHeaders(accessToken), ...options }),
   getAdminUser: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
@@ -719,6 +723,19 @@ export const apiClient = {
     requestJson<T>(`/api/admin/users/${userId}`, {
       method: "DELETE",
       headers: authHeaders(accessToken),
+      ...options,
+    }),
+  revokeAdminUserSessions: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/sessions/revoke`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  createAdminUserNotification: <T>(accessToken: string, userId: number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/notifications`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
       ...options,
     }),
   getAuditLogs: <T>(accessToken: string, options?: ApiRequestOptions) =>

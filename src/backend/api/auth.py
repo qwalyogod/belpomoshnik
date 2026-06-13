@@ -138,7 +138,23 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Ses
         login_limiter.record(client_key)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль.")
     login_limiter.reset(client_key)
-    return _issue_tokens(db, user)
+    user.last_login_at = datetime.now(timezone.utc)
+    response = _issue_tokens(db, user)
+    if user.role_id in {"content_editor", "platform_admin"}:
+        from backend.service import log_audit_event
+
+        log_audit_event(
+            db,
+            actor=user.email,
+            actor_user_id=user.id,
+            role_id=user.role_id,
+            action="Вход в панель управления",
+            event_type="login",
+            entity_type="session",
+            ip_address=request.client.host if request.client else "",
+            user_agent=request.headers.get("user-agent", "")[:500],
+        )
+    return response
 
 
 @router.post("/refresh", response_model=TokenResponse)

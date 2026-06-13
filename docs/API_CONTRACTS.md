@@ -11,7 +11,7 @@
 | Base URL | `http://127.0.0.1:8060` |
 | Prefix | `/api` |
 | Формат | JSON |
-| Аутентификация | MVP: без auth. Production: JWT Bearer (Этап H) |
+| Аутентификация | JWT Bearer для пользовательских и административных действий |
 | Документация | `http://127.0.0.1:8060/docs` (Swagger UI) |
 
 ---
@@ -52,7 +52,13 @@
 
 ## Административные эндпоинты (prefix `/api/admin`)
 
-> MVP: без auth. Production: требуется роль `content_editor` или `platform_admin` (Этап H).
+> Требуется JWT. Базовые контентные действия доступны `content_editor` и выше. Управление пользователями, ролями, блокировками, сессиями и системными уведомлениями доступно только `platform_admin`.
+
+### Обзор
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/dashboard/stats` | Реальная сводка админ-панели |
 
 ### Проблемы
 
@@ -61,6 +67,7 @@
 | GET | `/api/admin/problems` |
 | POST | `/api/admin/problems` |
 | PUT | `/api/admin/problems/{id}` |
+| DELETE | `/api/admin/problems/{id}` |
 
 ### Сценарии
 
@@ -68,6 +75,7 @@
 |---|---|
 | GET/POST | `/api/admin/scenarios` |
 | GET/PUT/DELETE | `/api/admin/scenarios/{id}` |
+| GET | `/api/admin/scenarios/{id}/integrity` |
 | GET/POST | `/api/admin/scenarios/{id}/stages` |
 | GET/POST | `/api/admin/stages/{id}/steps` |
 | PUT/DELETE | `/api/admin/stages/{id}`, `/api/admin/steps/{id}` |
@@ -78,6 +86,29 @@
 |---|---|
 | POST/DELETE | `/api/admin/dependencies` / `/{id}` |
 | POST/DELETE | `/api/admin/related-scenarios` / `/{id}` |
+
+### Пользователи и роли (`platform_admin`)
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/roles` | Справочник ролей |
+| GET | `/api/admin/users` | Список пользователей с фильтрами `search`, `role`, `active`, `limit`, `offset` |
+| GET | `/api/admin/users/{id}` | Карточка пользователя с счётчиками связанных сущностей |
+| PATCH | `/api/admin/users/{id}/role` | Изменить роль |
+| PATCH | `/api/admin/users/{id}/active` | Заблокировать/разблокировать |
+| POST | `/api/admin/users/{id}/sessions/revoke` | Отозвать refresh-сессии пользователя |
+| POST | `/api/admin/users/{id}/notifications` | Создать системное in-app уведомление |
+| DELETE | `/api/admin/users/{id}` | Soft-delete: деактивация и отзыв сессий |
+
+### Аудит
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/audit-logs` | Журнал действий; фильтры `actor`, `entity_type`, `event_type`, `status`, `limit` |
+
+### Регионы и города
+
+На 2026-06-14 географический справочник админки хранится во frontend/store (`localStorage: belp.geo`) и использует расширенную модель `GeoRegion` с координатами карточек на карте. Backend API `/api/admin/regions/*` запланирован следующим инфраструктурным шагом, чтобы перенести этот справочник из локального состояния в БД.
 | POST/DELETE | `/api/admin/source-references` / `/{id}` |
 
 ### Контент

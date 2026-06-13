@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, useRef, useState, ReactNode, useCal
 import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
-  AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
+  AdminScenarioRow, AdminProblemRow, AdminDashboardStats, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
   ContentTag, UserAddress, UserNote, NoteCategory,
   UtilityRequest,
 } from "./types";
@@ -11,20 +11,20 @@ import {
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, adaptUtilityRequest, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload, utilityRequestPayload } from "./adapters";
+import { adaptAdminDashboardStats, adaptAdminProblemRow, adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, adaptUtilityRequest, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload, utilityRequestPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
 import { checkNativeNotificationPermission, clearNativeNotificationSchedule, syncNativeNotificationSchedule } from "../services/nativeNotifications";
 import { checkPushPermission, registerNativePush, unregisterNativePushToken } from "../services/nativePush";
-import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
+import { GEO_KEY, GEO_SEED, defaultRegionPosition, normalizeGeoRegion, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export interface AdminUserRow { id: string; email: string; name: string; role: string; isActive: boolean; city: string; region: string }
-export interface AuditLogRow { id: string; actor: string; roleId: string; eventType: string; action: string; status: string; createdAt: string }
+export interface AdminUserRow { id: string; email: string; name: string; role: string; isActive: boolean; emailVerified?: boolean; isTestAccount?: boolean; city: string; region: string; createdAt?: string; lastLoginAt?: string; situationsCount?: number; documentsCount?: number; notificationsCount?: number; proposalsCount?: number }
+export interface AuditLogRow { id: string; actor: string; roleId: string; eventType: string; action: string; status: string; createdAt: string; entityType?: string; entityId?: string }
 
 type Store = {
   role: Role;
@@ -52,6 +52,8 @@ type Store = {
 
   admin: {
     scenarios: AdminScenarioRow[];
+    problems: AdminProblemRow[];
+    stats: AdminDashboardStats | null;
     status: "loading" | "api" | "fallback";
     users: AdminUserRow[];
     auditLogs: AuditLogRow[];
@@ -589,7 +591,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
   // Editable geography (regions → districts → city). Admin edits persist globally.
-  const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED));
+  const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED).map((r, i) => normalizeGeoRegion(r, i)));
   const [viewsDaily, setViewsDaily] = useState<{ date: string; count: number }[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
@@ -603,6 +605,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
   const [authSession, setAuthSession] = useState<AuthTokens | null>(null);
   const [adminScenarios, setAdminScenarios] = useState<AdminScenarioRow[]>([]);
+  const [adminProblems, setAdminProblems] = useState<AdminProblemRow[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminDashboardStats | null>(null);
   const [adminStatus, setAdminStatus] = useState<"loading" | "api" | "fallback">("fallback");
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
@@ -662,17 +666,48 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const addRegion = useCallback((name: string) => {
     const region = name.trim();
     if (!region) return;
-    setGeo((prev) => (prev.some((r) => r.region === region) ? prev : [...prev, { region, region_center: "", districts: [] }]));
+    setGeo((prev) => {
+      if (prev.some((r) => r.region.toLowerCase() === region.toLowerCase())) return prev;
+      const pos = defaultRegionPosition(region, prev.length);
+      return [...prev, normalizeGeoRegion({
+        id: `region-${Date.now()}`,
+        region,
+        displayName: pos.short,
+        region_center: "",
+        districts: [],
+        mapLabelX: pos.x,
+        mapLabelY: pos.y,
+        mapLabelOrder: pos.order,
+        mapLabelVisible: true,
+        isActive: true,
+      }, prev.length)];
+    });
   }, []);
   const deleteRegion = useCallback((region: string) => {
-    setGeo((prev) => prev.filter((r) => r.region !== region));
+    setGeo((prev) => prev.map((r) => (r.region === region ? { ...r, isActive: false, updatedAt: new Date().toISOString() } : r)));
   }, []);
   const updateRegion = useCallback((originalName: string, next: GeoRegion) => {
     const region = next.region.trim();
     if (!region) return;
-    setGeo((prev) => prev.map((r) => (r.region === originalName ? { ...next, region } : r)));
+    setGeo((prev) => prev.map((r, index) => {
+      if (r.region !== originalName) return r;
+      return normalizeGeoRegion({
+        ...r,
+        ...next,
+        region,
+        id: r.id,
+        mapLabelX: next.mapLabelX ?? r.mapLabelX,
+        mapLabelY: next.mapLabelY ?? r.mapLabelY,
+        mapLabelAnchor: next.mapLabelAnchor ?? r.mapLabelAnchor,
+        mapLabelOrder: next.mapLabelOrder ?? r.mapLabelOrder,
+        mapLabelVisible: next.mapLabelVisible ?? r.mapLabelVisible,
+        isActive: next.isActive ?? r.isActive,
+        createdAt: r.createdAt,
+        updatedAt: new Date().toISOString(),
+      }, index);
+    }));
   }, []);
-  const resetGeo = useCallback(() => setGeo(GEO_SEED), []);
+  const resetGeo = useCallback(() => setGeo(GEO_SEED.map((r, i) => normalizeGeoRegion(r, i))), []);
 
   // --- Legal updates CRUD ---
   const addLegal = useCallback((item: Omit<LegalUpdate, "id">) => {
@@ -1015,6 +1050,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const token = authSession?.access_token;
     if (!token || !isStaffRole(currentUser.role)) {
       setAdminScenarios([]);
+      setAdminProblems([]);
+      setAdminStats(null);
       setAdminStatus("fallback");
       setAdminUsers([]);
       setAuditLogs([]);
@@ -1038,13 +1075,28 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }
       });
 
+    apiClient.getAdminProblems<Record<string, unknown>[]>(token, { signal: controller.signal })
+      .then(items => {
+        if (controller.signal.aborted || !Array.isArray(items)) return;
+        setAdminProblems(items.map(adaptAdminProblemRow));
+      })
+      .catch(() => { /* keep empty */ });
+
+    apiClient.getAdminDashboardStats<Record<string, unknown>>(token, { signal: controller.signal })
+      .then(stats => {
+        if (controller.signal.aborted || !stats) return;
+        setAdminStats(adaptAdminDashboardStats(stats));
+      })
+      .catch(() => { setAdminStats(null); });
+
     apiClient.getAuditLogs<Record<string, unknown>[]>(token, { signal: controller.signal })
       .then(rows => {
         if (controller.signal.aborted || !Array.isArray(rows)) return;
-        setAuditLogs(rows.map(r => ({
-          id: String(r.id), actor: String(r.actor ?? ""), roleId: String(r.role_id ?? ""),
-          eventType: String(r.event_type ?? ""), action: String(r.action ?? ""),
+          setAuditLogs(rows.map(r => ({
+            id: String(r.id), actor: String(r.actor ?? ""), roleId: String(r.role_id ?? ""),
+            eventType: String(r.event_type ?? ""), action: String(r.action ?? ""),
           status: String(r.status ?? ""), createdAt: String(r.created_at ?? ""),
+          entityType: String(r.entity_type ?? ""), entityId: String(r.entity_id ?? ""),
         })));
       })
       .catch(() => { /* keep empty */ });
@@ -1063,7 +1115,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           setAdminUsers(rows.map(u => ({
             id: String(u.id), email: String(u.email ?? ""), name: String(u.name ?? ""),
             role: String(u.role_id ?? ""), isActive: Boolean(u.is_active),
+            emailVerified: Boolean(u.email_verified), isTestAccount: Boolean(u.is_test_account),
             city: String(u.city ?? ""), region: String(u.region ?? ""),
+            createdAt: String(u.created_at ?? ""), lastLoginAt: String(u.last_login_at ?? ""),
+            situationsCount: Number(u.situations_count ?? 0), documentsCount: Number(u.documents_count ?? 0),
+            notificationsCount: Number(u.notifications_count ?? 0), proposalsCount: Number(u.proposals_count ?? 0),
           })));
         })
         .catch(() => { /* keep empty */ });
@@ -2114,7 +2170,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
     categories: mutableCategories, contentTags, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
-    admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
+    admin: { scenarios: adminScenarios, problems: adminProblems, stats: adminStats, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
     documents, addDocument, updateDocument, deleteDocument, refreshDocuments,
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
@@ -2139,7 +2195,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
     role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, contentTags, publicContentStatus, publicContentError,
-    adminScenarios, adminStatus, adminUsers, auditLogs,
+    adminScenarios, adminProblems, adminStats, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress, togglePreferredSource,

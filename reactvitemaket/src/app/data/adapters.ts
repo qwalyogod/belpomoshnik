@@ -1,5 +1,7 @@
 import type {
   AdminScenarioRow,
+  AdminProblemRow,
+  AdminDashboardStats,
   AppNotification,
   CategoryId,
   ContentTag,
@@ -588,6 +590,8 @@ export function adaptAdminScenarioRow(input: LooseRecord): AdminScenarioRow {
   const status: AdminScenarioRow["status"] =
     rawStatus === "published"
       ? "published"
+      : rawStatus === "archived"
+        ? "archived"
       : input.content_verified_at
         ? "review"
         : "draft";
@@ -597,6 +601,35 @@ export function adaptAdminScenarioRow(input: LooseRecord): AdminScenarioRow {
     category: category(input.category),
     status,
     taskCount: numberValue(input.task_count ?? input.taskCount, 0),
+    stageCount: numberValue(input.stage_count ?? input.stageCount, 0),
+    verifiedAt: text(input.content_verified_at ?? input.verifiedAt, "") || undefined,
+  };
+}
+
+export function adaptAdminProblemRow(input: LooseRecord): AdminProblemRow {
+  const rawStatus = text(input.status).toLowerCase();
+  return {
+    id: identifier(input.id, text(input.slug, "problem")),
+    slug: text(input.slug, identifier(input.id, "problem")),
+    title: text(input.title, "Проблема"),
+    category: category(input.category || input.title),
+    status: rawStatus === "published" ? "published" : rawStatus === "archived" ? "archived" : "draft",
+    shortDescription: text(input.short_description ?? input.shortDescription, ""),
+  };
+}
+
+export function adaptAdminDashboardStats(input: LooseRecord): AdminDashboardStats {
+  return {
+    usersTotal: numberValue(input.users_total ?? input.usersTotal, 0),
+    usersActive: numberValue(input.users_active ?? input.usersActive, 0),
+    usersBlocked: numberValue(input.users_blocked ?? input.usersBlocked, 0),
+    publicationsTotal: numberValue(input.publications_total ?? input.publicationsTotal, 0),
+    publicationsReview: numberValue(input.publications_review ?? input.publicationsReview, 0),
+    problemsTotal: numberValue(input.problems_total ?? input.problemsTotal, 0),
+    scenariosTotal: numberValue(input.scenarios_total ?? input.scenariosTotal, 0),
+    authoritiesTotal: numberValue(input.authorities_total ?? input.authoritiesTotal, 0),
+    regionsTotal: numberValue(input.regions_total ?? input.regionsTotal, 0),
+    notificationsTotal: numberValue(input.notifications_total ?? input.notificationsTotal, 0),
   };
 }
 

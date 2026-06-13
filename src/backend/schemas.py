@@ -473,10 +473,17 @@ class ScenarioFullOut(ORMModel):
 class AuditLogOut(ORMModel):
     """F7 — схема журнала действий редактора для будущего backend endpoint."""
     id: int
+    actor_user_id: int | None = None
     actor: str
     role_id: str
     event_type: str
     action: str
+    entity_type: str = ""
+    entity_id: str = ""
+    before_json: str = ""
+    after_json: str = ""
+    ip_address: str = ""
+    user_agent: str = ""
     status: str
     created_at: datetime
 
@@ -488,9 +495,43 @@ class UserAdminOut(BaseModel):
     name: str
     role_id: str
     is_active: bool
+    email_verified: bool = False
+    is_test_account: bool = False
     city: str = ""
     region: str = ""
     created_at: datetime | None = None
+    last_login_at: datetime | None = None
+    situations_count: int = 0
+    documents_count: int = 0
+    notifications_count: int = 0
+    proposals_count: int = 0
+
+
+class AdminDashboardStats(BaseModel):
+    users_total: int = 0
+    users_active: int = 0
+    users_blocked: int = 0
+    publications_total: int = 0
+    publications_review: int = 0
+    problems_total: int = 0
+    scenarios_total: int = 0
+    authorities_total: int = 0
+    regions_total: int = 0
+    notifications_total: int = 0
+
+
+class AdminUserNotificationCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    description: str = Field(default="", max_length=4000)
+    notification_type: str = Field(default="system", max_length=64)
+    route: str = Field(default="/notifications", max_length=255)
+
+
+class ScenarioIntegrityCheck(BaseModel):
+    scenario_id: int
+    is_valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class UserRoleUpdate(BaseModel):

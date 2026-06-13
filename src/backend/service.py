@@ -321,6 +321,13 @@ def log_audit_event(
     role_id: str = "content_editor",
     event_type: str = "other",
     status: str = "ok",
+    actor_user_id: int | None = None,
+    entity_type: str = "",
+    entity_id: str | int = "",
+    before_json: str = "",
+    after_json: str = "",
+    ip_address: str = "",
+    user_agent: str = "",
 ) -> AuditLog:
     """H9 — Записать событие в таблицу audit_logs."""
     if event_type == "other":
@@ -333,7 +340,20 @@ def log_audit_event(
             event_type = "delete"
         elif lower.startswith("опубликован"):
             event_type = "publish"
-    entry = AuditLog(actor=actor, action=action, role_id=role_id, event_type=event_type, status=status)
+    entry = AuditLog(
+        actor_user_id=actor_user_id,
+        actor=actor,
+        action=action,
+        role_id=role_id,
+        event_type=event_type,
+        entity_type=entity_type,
+        entity_id=str(entity_id) if entity_id != "" else "",
+        before_json=before_json,
+        after_json=after_json,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        status=status,
+    )
     db.add(entry)
     db.commit()
     db.refresh(entry)
