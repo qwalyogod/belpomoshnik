@@ -12,6 +12,7 @@ import { Logo, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "
 import { AppStoreProvider, useStore, readAvatarForUser } from "./data/store";
 import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
+import { scrollContentToTop } from "./services/scroll";
 import { AdminWindowMount } from "./components/admin-window";
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { ConnectionBanner } from "./components/ConnectionBanner";
@@ -157,7 +158,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
         </AnimatePresence>
       </div>
       {showBottomNav && <MobileBottomFade color={fadeColor} />}
-      {showBottomNav && <MobileNav active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />}
+      {showBottomNav && <MobileNav active={page as Page} onChange={(p) => { if (p === page) scrollContentToTop("smooth"); else navigate(`/${p === 'home' ? '' : p}`); }} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />
       <GuestGuardModal
         open={guardOpen}
@@ -950,10 +951,10 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
 
   return (
     <div className="grid h-[100dvh] grid-cols-[260px_1fr] overflow-hidden bg-[#F4F5FA] dark:bg-[#05060A]">
-      <DesktopSidebar active={page as Page} onChange={(p) => navigate(`/${p === 'home' ? '' : p}`)} />
+      <DesktopSidebar active={page as Page} onChange={(p) => { if (p === page) scrollContentToTop("smooth"); else navigate(`/${p === 'home' ? '' : p}`); }} />
       <div className="flex flex-col overflow-hidden">
         <DesktopTopBar onSearch={() => setSearchOpen(true)} onNotifications={() => navigate("/notifications")} />
-        <div className="flex-1 overflow-y-auto">
+        <div data-scroll-root className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -1067,7 +1068,7 @@ function DesktopHeaderShell() {
   const openScenario = (id: string) => navigate(`/scenarios/${id}`);
   const openMySituation = (id: string) => navigate(`/situations/${id}`);
   const protectedGuard = () => { if (role === "guest") { setGuardOpen(true); return false; } return true; };
-  const go = (p: Page) => navigate(`/${p === "home" ? "" : p}`);
+  const go = (p: Page) => { if (p === page) scrollContentToTop("smooth"); else navigate(`/${p === "home" ? "" : p}`); };
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F4F5FA] dark:bg-[#05060A]">
@@ -1100,7 +1101,7 @@ function DesktopHeaderShell() {
         <HeaderUserMenu />
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div data-scroll-root className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div key={location.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
             <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
@@ -2056,6 +2057,17 @@ function AccessibilityBridge() {
   return null;
 }
 
+/* При смене маршрута страница обязана открываться сверху, а не на позиции
+   скролла предыдущей. Сбрасываем и окно (mobile native scroll), и desktop-
+   контейнер [data-scroll-root]. Рендерит null — живёт в дереве RootLayout. */
+function ScrollResetBridge() {
+  const location = useLocation();
+  useEffect(() => {
+    scrollContentToTop("auto");
+  }, [location.pathname]);
+  return null;
+}
+
 export function RootLayout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     try { return (localStorage.getItem("themeMode") as ThemeMode) || "system"; } catch { return "system"; }
@@ -2108,6 +2120,7 @@ export function RootLayout() {
             <AppStoreProvider>, поэтому живёт в return-дереве RootLayout, а не
             в его теле. */}
         <AccessibilityBridge />
+        <ScrollResetBridge />
         <GuestGuardBridge />
         <OnboardingGate />
         <div className={dark ? "dark" : ""}>

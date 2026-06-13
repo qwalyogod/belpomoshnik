@@ -1,0 +1,14 @@
+{
+  "name": "belpomoshnik",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Корневой launcher проекта «Белпомощник». Делегирует команды во фронтенд (reactvitemaket/). Сам фронтенд-код живёт только там — см. CLAUDE.md. Бэкенд (FastAPI) поднимается через scripts/dev_backend.sh.",
+  "scripts": {
+    "dev:all": "pnpm -C reactvitemaket run dev:all",
+    "dev": "pnpm -C reactvitemaket run dev",
+    "dev:lan": "pnpm -C reactvitemaket run dev:lan",
+    "dev:backend": "bash scripts/dev_backend.sh",
+    "build": "pnpm -C reactvitemaket run build",
+    "web:install": "pnpm -C reactvitemaket install"
+  }
+}

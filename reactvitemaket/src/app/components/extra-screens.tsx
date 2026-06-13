@@ -4,7 +4,7 @@ import {
   Search, FileText, Building2, Lock, Check, ChevronRight, ChevronLeft, AlertCircle,
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
   Eye, Upload, Download, ExternalLink,
-  Award, BookOpen, Sparkles, Clock, MapPin, Wrench,
+  Award, BookOpen, Sparkles, Clock, MapPin, Wrench, Newspaper,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";

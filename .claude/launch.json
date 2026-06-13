@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "belpomoshnik-fullstack",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:all"],
+      "port": 8560,
+      "autoPort": false
+    },
+    {
       "name": "belpomoshnik-react",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["-C", "reactvitemaket", "dev"],
