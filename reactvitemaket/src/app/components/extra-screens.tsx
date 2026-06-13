@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import {
   Search, FileText, Building2, Lock, Check, ChevronRight, ChevronLeft, AlertCircle,
@@ -756,42 +756,169 @@ const LINK_ICONS: Record<string, React.ReactNode> = {
   section: <ArrowUpRight size={15} />,
 };
 
+/** Промпт 4: ChatGPT-like UI с историей сессий, structured response,
+ * actions (create_user_situation) и empty state с starter prompts.
+ *
+ * Архитектура:
+ * - desktop: sidebar истории + основная панель сообщений (≈900–1100px)
+ * - mobile: одна панель на весь экран
+ * - guest: локальный state без сохранения, без actions
+ * - citizen+: backend sessions + messages + actions
+ */
+type AssistantAction = {
+  type: string;
+  label: string;
+  scenario_id?: string;
+  title?: string;
+  path?: string;
+  disabled?: boolean;
+  completed?: boolean;
+};
+type AssistantSource = { kind: string; title: string; path?: string };
+type AssistantMsg2 = {
+  id?: string;
+  role: "user" | "assistant";
+  text: string;
+  links?: AssistantLink[];
+  actions?: AssistantAction[];
+  sources?: AssistantSource[];
+  source?: "llm" | "local";
+  section?: { id: string; title: string; description: string; route: string };
+  warning?: boolean;
+  /** Промпт 4: пометки UI для action-completed. */
+  meta?: Record<string, unknown>;
+};
+type AssistantSession = {
+  id: string;
+  title: string;
+  mode: string;
+  archived: boolean;
+  last_message_preview: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const STARTER_PROMPTS = [
+  "Я потерял паспорт, что делать?",
+  "Куда обратиться по ЖКХ?",
+  "Как оформить ситуацию по рождению ребёнка?",
+  "Какие документы нужны для водительского удостоверения?",
+  "Что делать с налогом на недвижимость?",
+];
+
 export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { role, authSession } = useStore();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<AssistantMsg[]>([
-    { role: "assistant", text: "Здравствуйте! Напишите, что хотите найти или сделать — подскажу подходящий раздел или конкретный материал." },
-  ]);
+  const isAuth = !!authSession?.access_token;
+  const accessToken = authSession?.access_token ?? null;
+
+  // Сессии (только для авторизованных)
+  const [sessions, setSessions] = useState<AssistantSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AssistantMsg2[]>([]);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Загружаем сессии при открытии.
+  useEffect(() => {
+    if (!open || !accessToken) return;
+    apiClient.listAssistantSessions<AssistantSession[]>(accessToken)
+      .then((arr) => {
+        setSessions(Array.isArray(arr) ? arr : []);
+      })
+      .catch(() => setSessions([]));
+  }, [open, accessToken]);
+
+  // Загружаем сообщения текущей сессии.
+  useEffect(() => {
+    if (!open || !accessToken || !currentSession) return;
+    apiClient.listAssistantMessages<any[]>(accessToken, currentSession)
+      .then((arr) => {
+        if (!Array.isArray(arr)) return;
+        setMessages(arr.map((m): AssistantMsg2 => ({
+          id: m.id,
+          role: m.role,
+          text: m.content,
+          links: m.links,
+          actions: m.actions,
+          sources: m.sources,
+          source: m.source,
+        })));
+      })
+      .catch(() => undefined);
+  }, [open, accessToken, currentSession]);
+
+  // Сброс при закрытии.
+  useEffect(() => {
+    if (!open) {
+      setValue("");
+      setSidebarOpen(false);
+    }
+  }, [open]);
 
   if (!open) return null;
 
-  const send = async () => {
-    const text = value.trim();
+  const newChat = () => {
+    setCurrentSession(null);
+    setMessages([]);
+  };
+
+  const openSession = (id: string) => {
+    setCurrentSession(id);
+    setSidebarOpen(false);
+  };
+
+  const deleteSession = async (id: string) => {
+    if (!accessToken) return;
+    try {
+      await apiClient.deleteAssistantSession(accessToken, id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (currentSession === id) newChat();
+    } catch {/* ignore */}
+  };
+
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? value).trim();
     if (!text || busy) return;
     setMessages((m) => [...m, { role: "user", text }]);
     setValue("");
     setBusy(true);
     try {
-      // Авторизованные — RAG-чат с поиском по БД; гости — старый keyword-router.
-      const token = authSession?.access_token;
-      if (token) {
-        const res = await apiClient.askAssistantChat<{
-          response_text: string;
+      if (accessToken) {
+        // Создаём сессию, если её ещё нет.
+        let sid = currentSession;
+        if (!sid) {
+          const created = await apiClient.createAssistantSession<AssistantSession>(accessToken, {});
+          sid = created.id;
+          setCurrentSession(sid);
+          setSessions((prev) => [created, ...prev]);
+        }
+        const res = await apiClient.sendAssistantMessage<{
+          id: string;
+          role: string;
+          content: string;
           links: AssistantLink[];
+          actions: AssistantAction[];
+          sources: AssistantSource[];
           source: "llm" | "local";
-        }>(token, { message: text, role, is_guest: false });
+        }>(accessToken, sid, text);
         setMessages((m) => [
           ...m,
           {
+            id: res.id,
             role: "assistant",
-            text: res.response_text,
+            text: res.content,
             links: res.links,
+            actions: res.actions,
+            sources: res.sources,
             source: res.source,
           },
         ]);
+        // Обновляем list of sessions (превью + порядок).
+        apiClient.listAssistantSessions<AssistantSession[]>(accessToken).then(setSessions).catch(() => undefined);
       } else {
+        // Guest: legacy router без истории.
         const res = await apiClient.askAssistant<{
           response_text: string;
           section: { id: string; title: string; description: string; route: string };
@@ -817,8 +944,6 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
     }
   };
 
-  // path — относительный путь от бэка (например "/scenarios/3"). Склеиваем с
-  // текущим origin, чтобы ссылка работала на любом IP/сервере (localhost, LAN, prod).
   const goToPath = (path: string) => {
     onClose();
     if (path.startsWith("/")) navigate(path);
@@ -826,83 +951,224 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
   };
   const goTo = (route: string) => { onClose(); navigate(route); };
 
+  const handleAction = async (msgIdx: number, action: AssistantAction) => {
+    if (!accessToken || action.type !== "create_user_situation" || !action.scenario_id) return;
+    setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+      ...m,
+      actions: m.actions?.map((a) => a === action ? { ...a, disabled: true } : a),
+    } : m));
+    try {
+      const res = await apiClient.createSituationFromAssistant<{
+        created: boolean;
+        situation_id: string;
+        route: string;
+        message: string;
+      }>(accessToken, action.scenario_id, currentSession ?? undefined);
+      setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+        ...m,
+        actions: m.actions?.map((a) => a === action ? {
+          ...a,
+          completed: true,
+          disabled: false,
+          label: res.created ? "Открыть в моих ситуациях" : "Открыть существующую ситуацию",
+          path: res.route,
+          type: "open_link",
+        } : a),
+      } : m));
+    } catch {
+      setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+        ...m,
+        actions: m.actions?.map((a) => a === action ? { ...a, disabled: false } : a),
+      } : m));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-end p-0 sm:items-end sm:justify-end sm:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
       <div onClick={(e) => e.stopPropagation()}
-        className="relative flex h-[80vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[560px] sm:w-[400px] sm:rounded-3xl">
-        <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-4 dark:border-white/[0.06]">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0056FF] text-white"><Sparkles size={16} /></span>
-            <div>
-              <div className="tracking-tight text-black dark:text-white">Помощник</div>
-              <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">Ориентир по разделам</div>
+        className="relative flex h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[640px] sm:w-[920px] sm:max-w-[92vw] sm:rounded-3xl sm:flex-row">
+        {/* Sidebar — история (desktop) / drawer (mobile) */}
+        {isAuth && (
+          <div className={`absolute inset-y-0 left-0 z-10 w-[72%] max-w-[260px] transform border-r border-black/[0.06] bg-white transition-transform dark:border-white/[0.06] dark:bg-[#0B0D13] sm:relative sm:w-[240px] sm:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}`}>
+            <div className="flex items-center justify-between p-3">
+              <button onClick={newChat} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-black/10 px-3 py-2 text-[13px] tracking-tight hover:bg-black/[0.04] dark:border-white/10 dark:text-white/85 dark:hover:bg-white/[0.06]">
+                <Plus size={14} /> Новый чат
+              </button>
+              <button onClick={() => setSidebarOpen(false)} className="ml-2 grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 sm:hidden"><X size={14} /></button>
             </div>
-          </div>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 dark:hover:bg-white/[0.06]"><X size={16} /></button>
-        </div>
-
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
-          {messages.map((m, i) => (
-            <div key={i}>
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] tracking-tight ${m.role === "user"
-                ? "ml-auto bg-[#0056FF] text-white"
-                : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
-                {m.text}
-                {m.source && m.source === "local" && m.links && m.links.length > 0 && (
-                  <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">
-                    Локальный ответ · {m.links.length} материал(а)
+            <div className="px-2 pb-3">
+              <div className="px-2 pb-2 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">История</div>
+              <div className="space-y-1 max-h-[calc(88vh-100px)] overflow-y-auto pr-1 sm:max-h-[540px]">
+                {sessions.map((s) => (
+                  <div key={s.id} className={`group flex items-center gap-1 rounded-xl px-2 py-2 text-[13px] tracking-tight ${currentSession === s.id ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/70 hover:bg-black/[0.04] dark:text-white/70 dark:hover:bg-white/[0.06]"}`}>
+                    <button onClick={() => openSession(s.id)} className="min-w-0 flex-1 truncate text-left">
+                      {s.title || "Новый чат"}
+                    </button>
+                    <button onClick={() => deleteSession(s.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-black/35 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-white/35"><Trash2 size={12} /></button>
                   </div>
+                ))}
+                {sessions.length === 0 && (
+                  <div className="px-2 py-1 text-[11px] tracking-tight text-black/40 dark:text-white/40">История пустая. Задайте первый вопрос.</div>
                 )}
               </div>
-              {/* RAG-ссылки: чипы с иконкой по kind. */}
-              {m.links && m.links.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {m.links.map((l, li) => (
-                    <button
-                      key={`${i}-l-${li}`}
-                      onClick={() => goToPath(l.path)}
-                      className="group flex w-full items-center gap-2.5 rounded-2xl border border-black/[0.08] bg-white px-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                      title={l.path}
-                    >
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                        {LINK_ICONS[l.kind] ?? <ArrowUpRight size={15} />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{l.title}</span>
-                        {l.snippet && (
-                          <span className="block truncate text-[11px] tracking-tight text-black/45 dark:text-white/45">{l.snippet}</span>
-                        )}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-medium tracking-tight text-[#0056FF]">→</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {/* Legacy: keyword-router fallback (для guest). */}
-              {m.section && (
-                <button onClick={() => goTo(m.section!.route)}
-                  className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-3 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><ArrowUpRight size={16} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block tracking-tight text-black dark:text-white">{m.section.title}</span>
-                    <span className="block truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{m.warning ? "Нужен вход или регистрация" : m.section.description}</span>
-                  </span>
-                  <span className="text-[12px] font-medium tracking-tight text-[#0056FF]">Перейти →</span>
+            </div>
+          </div>
+        )}
+
+        {/* Главная панель */}
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              {isAuth && (
+                <button onClick={() => setSidebarOpen((v) => !v)} className="grid h-8 w-8 place-items-center rounded-lg text-black/55 hover:bg-black/[0.04] dark:text-white/55 sm:hidden">
+                  <ListChecks size={15} />
                 </button>
               )}
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0056FF] text-white"><Sparkles size={16} /></span>
+              <div>
+                <div className="tracking-tight text-black dark:text-white">AI-помощник Белпомощника</div>
+                <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">Подскажет по материалам проекта</div>
+              </div>
             </div>
-          ))}
-          {busy && <div className="text-[12px] tracking-tight text-black/40 dark:text-white/40">Помощник печатает…</div>}
-        </div>
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 dark:hover:bg-white/[0.06]"><X size={16} /></button>
+          </div>
 
-        <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 dark:border-white/[0.06]">
-          <textarea value={value} onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            rows={1} placeholder="Например: хочу добавить паспорт"
-            className="max-h-24 flex-1 resize-none rounded-2xl bg-[#F6F7FB] px-4 py-2.5 text-[14px] tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white" />
-          <button onClick={send} disabled={busy || !value.trim()}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"><ArrowUpRight size={18} /></button>
+          {/* Тело */}
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
+            {messages.length === 0 && (
+              <div className="grid h-full place-items-center py-6 text-center">
+                <div className="max-w-[520px] space-y-3 px-2">
+                  <div className="text-[22px] tracking-tight text-black dark:text-white">Чем помочь?</div>
+                  <p className="text-[13px] tracking-tight text-black/55 dark:text-white/55">
+                    Опишите проблему обычными словами — я найду подходящие материалы в Белпомощнике.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+                    {STARTER_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => send(p)}
+                        className="rounded-full border border-black/[0.08] bg-white px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:border-[#0056FF] hover:text-[#0056FF] dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/70"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  {!isAuth && (
+                    <div className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] tracking-tight text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                      Войдите, чтобы сохранять историю чатов и добавлять сценарии в «Мои ситуации».
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m, i) => (
+              <div key={i}>
+                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] tracking-tight ${m.role === "user"
+                  ? "ml-auto bg-[#0056FF] text-white"
+                  : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
+                  {m.text}
+                  {m.source && m.source === "local" && (
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">
+                      Локальный ответ — AI-провайдер недоступен
+                    </div>
+                  )}
+                </div>
+
+                {m.links && m.links.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {m.links.map((l, li) => (
+                      <button
+                        key={`${i}-l-${li}`}
+                        onClick={() => goToPath(l.path)}
+                        className="group flex w-full items-center gap-2.5 rounded-2xl border border-black/[0.08] bg-white px-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                        title={l.path}
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                          {LINK_ICONS[l.kind] ?? <ArrowUpRight size={15} />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{l.title}</span>
+                          {l.snippet && (
+                            <span className="block truncate text-[11px] tracking-tight text-black/45 dark:text-white/45">{l.snippet}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-medium tracking-tight text-[#0056FF]">→</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Промпт 3+4: actions — кнопки добавить в «Мои ситуации» */}
+                {m.actions && m.actions.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {m.actions.map((a, ai) => (
+                      <button
+                        key={`${i}-a-${ai}`}
+                        onClick={() => {
+                          if (a.type === "open_link" && a.path) {
+                            goToPath(a.path);
+                            return;
+                          }
+                          if (!isAuth) {
+                            onClose();
+                            navigate("/login");
+                            return;
+                          }
+                          handleAction(i, a);
+                        }}
+                        disabled={a.disabled}
+                        className={`group flex w-full items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition-colors disabled:opacity-60 ${a.completed
+                          ? "border-emerald-300/60 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                          : "border-[#0056FF]/30 bg-[#E3E7FC] text-[#0056FF] hover:bg-[#D5DCFB] dark:border-[#0056FF]/30 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"}`}
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-[#0056FF] dark:bg-white/10 dark:text-[#7FA8FF]">
+                          {a.completed ? <Check size={15} /> : <Plus size={15} />}
+                        </span>
+                        <span className="min-w-0 flex-1 text-[13px] tracking-tight">{a.label}</span>
+                        <span className="shrink-0 text-[11px] font-medium tracking-tight">→</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Legacy для guest */}
+                {m.section && (
+                  <button onClick={() => goTo(m.section!.route)}
+                    className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-3 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><ArrowUpRight size={16} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block tracking-tight text-black dark:text-white">{m.section.title}</span>
+                      <span className="block truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{m.warning ? "Нужен вход или регистрация" : m.section.description}</span>
+                    </span>
+                    <span className="text-[12px] font-medium tracking-tight text-[#0056FF]">Перейти →</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            {busy && <div className="text-[12px] tracking-tight text-black/40 dark:text-white/40">Помощник печатает…</div>}
+          </div>
+
+          {/* Composer */}
+          <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 dark:border-white/[0.06]">
+            <textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+              rows={1}
+              placeholder={isAuth ? "Например: я потерял паспорт" : "Гость — задайте вопрос, без сохранения истории"}
+              className="max-h-28 flex-1 resize-none rounded-2xl bg-[#F6F7FB] px-4 py-2.5 text-[14px] tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white"
+            />
+            <button
+              onClick={() => void send()}
+              disabled={busy || !value.trim()}
+              aria-label="Отправить"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"
+            >
+              <ArrowUpRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1304,9 +1570,6 @@ export function DocumentEditModal({
   if (!open) return null;
 
   const fields = DOC_FIELDS_BY_TYPE[type];
-  // Сводная валидация: title обязателен, иначе — для конкретного типа ещё что-то
-  const missingRequired = fields.some((f) => f.required && !valueFor(f.key).trim());
-
   const valueFor = (key: DocFieldDef["key"]): string => {
     switch (key) {
       case "title": return title;
@@ -1317,6 +1580,8 @@ export function DocumentEditModal({
       case "comment": return comment;
     }
   };
+  // Сводная валидация: title обязателен, иначе — для конкретного типа ещё что-то
+  const missingRequired = fields.some((f) => f.required && !valueFor(f.key).trim());
   const setValueFor = (key: DocFieldDef["key"], v: string): void => {
     switch (key) {
       case "title": setTitle(v); break;
@@ -1506,7 +1771,7 @@ export function formatDocumentNumber(num: string, masked: boolean) {
 }
 
 /* ============================================================
-   v0.3 — Полная карточка документа (read-only preview + PDF upload)
+   Промпт 1 — Полная карточка документа (encrypted preview + multi-format upload)
    ============================================================ */
 export function DocumentCardModal({
   open, onClose, docId, onEdit,
@@ -1516,51 +1781,104 @@ export function DocumentCardModal({
   docId: string | null;
   onEdit?: (id: string) => void;
 }) {
-  const { documents, authSession } = useStore();
+  const { documents, authSession, refreshDocuments } = useStore();
   const doc = docId ? documents.find((d) => d.id === docId) : undefined;
 
-  // PDF-превью: хранится на бэке, мы храним относительный путь
-  // (DOCUMENT_SCAN_DIR / user_id / doc_id / token.pdf) в doc.scan_path.
-  // Превью показываем только когда есть scan_path И бэк доступен (authSession).
-  const [scanUrl, setScanUrl] = useState<string | null>(null);
+  // Скан хранится на сервере в зашифрованном виде. Получаем как Blob и
+  // показываем через ObjectURL — никаких публичных URL на личные документы.
+  const [scanObjectUrl, setScanObjectUrl] = useState<string | null>(null);
+  const [scanMime, setScanMime] = useState<string>("");
   const [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [revealNumber, setRevealNumber] = useState(false);
+  const lastObjectUrlRef = useRef<string | null>(null);
 
-  // При открытии модалки сбрасываем локальный стейт
+  const releaseObjectUrl = () => {
+    if (lastObjectUrlRef.current) {
+      URL.revokeObjectURL(lastObjectUrlRef.current);
+      lastObjectUrlRef.current = null;
+    }
+    setScanObjectUrl(null);
+    setScanMime("");
+  };
+
+  // Сброс при закрытии — освобождаем ObjectURL чтобы не текла память.
   useEffect(() => {
     if (!open) {
-      setScanUrl(null);
+      releaseObjectUrl();
       setScanError(null);
       setRevealNumber(false);
     }
+    return () => releaseObjectUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const accessToken = authSession?.access_token ?? null;
+  const scanMeta = doc?.scan;
+
+  // Подгружаем скан при открытии, если он есть и пользователь авторизован.
+  useEffect(() => {
+    if (!open || !doc || !scanMeta?.hasScan || !accessToken) return;
+    let cancelled = false;
+    setScanBusy(true);
+    setScanError(null);
+    apiClient
+      .downloadDocumentScan(accessToken, doc.id)
+      .then(({ blob, mimeType }) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        lastObjectUrlRef.current = url;
+        setScanObjectUrl(url);
+        setScanMime(mimeType);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setScanError(err instanceof Error ? err.message : "Не удалось загрузить скан.");
+      })
+      .finally(() => {
+        if (!cancelled) setScanBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, doc?.id, scanMeta?.hasScan, accessToken]);
 
   if (!open || !doc) return null;
 
-  const accessToken = authSession?.access_token ?? null;
+  const MAX_BYTES = 8 * 1024 * 1024;
+  const ALLOWED_EXT = /\.(pdf|jpe?g|png|webp)$/i;
+  const ALLOWED_MIME = /^(application\/pdf|image\/(jpeg|png|webp))$/i;
 
   const handleFile = async (file: File) => {
     if (!accessToken) {
       setScanError("Войдите, чтобы загрузить скан.");
       return;
     }
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setScanError("Только PDF.");
+    const mimeOk = ALLOWED_MIME.test(file.type) || ALLOWED_EXT.test(file.name);
+    if (!mimeOk) {
+      setScanError("Поддерживаются PDF, JPG, PNG, WEBP.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setScanError("Файл больше 5 МБ.");
+    if (file.size > MAX_BYTES) {
+      setScanError("Файл больше 8 МБ.");
       return;
     }
     setScanBusy(true);
     setScanError(null);
     try {
-      const res = await apiClient.uploadDocumentScan(accessToken, doc.id, file);
-      // Префикс /uploads/documents/... не зависит от API_BASE_URL (тот же origin),
-      // но мы домножаем на всякий случай, чтобы при поднятии бэка на другом хосте
-      // (LAN-режим) превью тоже открывалось.
-      setScanUrl(`${apiBaseUrl()}${res.scan_url}`);
+      await apiClient.uploadDocumentScan(accessToken, doc.id, file);
+      // Обновляем список документов в сторе (приходят новые scan metadata).
+      if (typeof refreshDocuments === "function") {
+        await refreshDocuments();
+      }
+      // И сразу качаем расшифрованный blob для предпросмотра.
+      const { blob, mimeType } = await apiClient.downloadDocumentScan(accessToken, doc.id);
+      releaseObjectUrl();
+      const url = URL.createObjectURL(blob);
+      lastObjectUrlRef.current = url;
+      setScanObjectUrl(url);
+      setScanMime(mimeType);
     } catch (err) {
       setScanError(err instanceof Error ? err.message : "Не удалось загрузить скан.");
     } finally {
@@ -1574,7 +1892,8 @@ export function DocumentCardModal({
     setScanError(null);
     try {
       await apiClient.deleteDocumentScan(accessToken, doc.id);
-      setScanUrl(null);
+      releaseObjectUrl();
+      if (typeof refreshDocuments === "function") await refreshDocuments();
     } catch (err) {
       setScanError(err instanceof Error ? err.message : "Не удалось удалить скан.");
     } finally {
@@ -1582,7 +1901,22 @@ export function DocumentCardModal({
     }
   };
 
+  const handleDownload = () => {
+    if (!scanObjectUrl) return;
+    const a = document.createElement("a");
+    a.href = scanObjectUrl;
+    a.download = scanMeta?.originalFilename || `document-${doc.id}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const maskedNumber = maskDocumentNumber(doc.number || "", !revealNumber);
+  const isImageScan = scanMime.startsWith("image/");
+  const sizeLabel = scanMeta?.size ? `${Math.round(scanMeta.size / 1024)} КБ` : "";
+  const uploadedAtLabel = scanMeta?.uploadedAt
+    ? new Date(scanMeta.uploadedAt).toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" })
+    : "";
 
   return (
     <div
@@ -1650,30 +1984,48 @@ export function DocumentCardModal({
             />
           </div>
 
-          {/* Скан */}
+          {/* Скан — Промпт 1: зашифровано на сервере, превью через ObjectURL */}
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Скан документа</div>
-              {scanUrl && (
-                <a
-                  href={scanUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[12px] tracking-tight text-[#0056FF]"
-                >
-                  <ExternalLink size={12} /> Открыть
-                </a>
-              )}
+              <div className="inline-flex items-center gap-1 text-[11px] tracking-tight text-emerald-600 dark:text-emerald-400">
+                <Lock size={11} /> Зашифровано на сервере
+              </div>
             </div>
 
-            {scanUrl ? (
+            {scanMeta?.hasScan ? (
               <div className="relative">
                 <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#F6F7FB] dark:border-white/[0.06] dark:bg-white/[0.04]">
-                  <iframe
-                    src={scanUrl}
-                    title={`Скан: ${doc.title}`}
-                    className="h-[280px] w-full"
-                  />
+                  {scanBusy && !scanObjectUrl ? (
+                    <div className="grid h-[280px] place-items-center text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                      Расшифровываем…
+                    </div>
+                  ) : scanObjectUrl ? (
+                    isImageScan ? (
+                      <img
+                        src={scanObjectUrl}
+                        alt={`Скан: ${doc.title}`}
+                        className="h-[280px] w-full object-contain"
+                      />
+                    ) : (
+                      <iframe
+                        src={scanObjectUrl}
+                        title={`Скан: ${doc.title}`}
+                        className="h-[280px] w-full"
+                      />
+                    )
+                  ) : (
+                    <div className="grid h-[280px] place-items-center text-[12px] tracking-tight text-black/45 dark:text-white/45">
+                      Скан зашифрован. Не удалось получить превью.
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] tracking-tight text-black/50 dark:text-white/50">
+                  <span>
+                    {scanMeta.mimeType || "файл"}
+                    {sizeLabel ? ` · ${sizeLabel}` : ""}
+                    {uploadedAtLabel ? ` · загружен ${uploadedAtLabel}` : ""}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <button
@@ -1683,13 +2035,13 @@ export function DocumentCardModal({
                   >
                     <Trash2 size={13} /> Удалить скан
                   </button>
-                  <a
-                    href={scanUrl}
-                    download
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[12px] tracking-tight text-white"
+                  <button
+                    onClick={handleDownload}
+                    disabled={!scanObjectUrl || scanBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[12px] tracking-tight text-white disabled:opacity-50"
                   >
                     <Download size={13} /> Скачать
-                  </a>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1697,11 +2049,11 @@ export function DocumentCardModal({
                 className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/15 bg-[#F6F7FB] py-8 text-[13px] tracking-tight text-black/55 transition-colors hover:bg-black/[0.02] dark:border-white/15 dark:bg-white/[0.04] dark:text-white/55 dark:hover:bg-white/[0.04] ${scanBusy ? "pointer-events-none opacity-50" : ""}`}
               >
                 <Upload size={20} className="text-[#0056FF]" />
-                <span>{scanBusy ? "Загружаем…" : "Загрузить PDF-скан"}</span>
-                <span className="text-[11px] text-black/40 dark:text-white/40">до 5 МБ</span>
+                <span>{scanBusy ? "Загружаем…" : "Загрузить скан (PDF, JPG, PNG, WEBP)"}</span>
+                <span className="text-[11px] text-black/40 dark:text-white/40">до 8 МБ · файл шифруется на сервере</span>
                 <input
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
                   className="sr-only"
                   onChange={(e) => {
                     const f = e.target.files?.[0];

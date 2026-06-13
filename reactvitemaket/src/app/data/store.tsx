@@ -4,13 +4,14 @@ import {
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
   AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
   ContentTag, UserAddress, UserNote, NoteCategory,
+  UtilityRequest,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
+import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, adaptUtilityRequest, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload, utilityRequestPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
@@ -64,6 +65,8 @@ type Store = {
   addDocument: (doc: Omit<UserDocument, "id" | "status"> & { status?: UserDocument["status"] }) => void;
   updateDocument: (id: string, patch: Partial<UserDocument>) => void;
   deleteDocument: (id: string) => void;
+  /** Промпт 1: forced re-fetch с бэка (после upload/delete скана). */
+  refreshDocuments: () => Promise<void>;
 
   utilityAccounts: UtilityAccount[];
   addUtilityAccount: (account: Pick<UtilityAccount, "address" | "accountNumber" | "provider">) => void;
@@ -77,6 +80,12 @@ type Store = {
   addTax: (tax: Omit<TaxObligation, "id">) => void;
   updateTax: (id: string, patch: Partial<TaxObligation>) => void;
   deleteTax: (id: string) => void;
+
+  /** Промпт 2: заявки 115 (локальный органайзер ЖКХ). */
+  utilityRequests: UtilityRequest[];
+  addUtilityRequest: (input: Omit<UtilityRequest, "id" | "createdAt" | "updatedAt">) => void;
+  updateUtilityRequest: (id: string, patch: Partial<UtilityRequest>) => void;
+  deleteUtilityRequest: (id: string) => void;
 
   // Editor / UGC publications (platform-wide, local-first).
   articles: Article[];
@@ -570,6 +579,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<UserDocument[]>(INITIAL_DOCUMENTS);
   const [utilityAccounts, setUtilityAccounts] = useState<UtilityAccount[]>(INITIAL_UTILITY_ACCOUNTS);
   const [taxes, setTaxes] = useState<TaxObligation[]>(INITIAL_TAXES);
+  // Промпт 2: заявки 115 (локальный органайзер ЖКХ).
+  const [utilityRequests, setUtilityRequests] = useState<UtilityRequest[]>([]);
   // Platform-wide editorial + UGC content (shared across roles so the editor's
   // moderation queue can see citizen submissions). Global localStorage, not per-user.
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
@@ -1461,6 +1472,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [authSession?.access_token, role]);
 
+  // Промпт 1: forced re-fetch (после upload/delete скана нужны свежие scan metadata).
+  const refreshDocuments: Store["refreshDocuments"] = useCallback(async () => {
+    if (!authSession?.access_token) return;
+    try {
+      const items = await apiClient.getUserDocuments<Record<string, unknown>[]>(authSession.access_token);
+      if (!Array.isArray(items)) return;
+      const apiDocuments = items.map(adaptUserDocument);
+      setDocuments(prev => mergeById(prev, apiDocuments));
+    } catch (error) {
+      console.warn("refreshDocuments failed", error);
+    }
+  }, [authSession?.access_token]);
+
   // --- Taxes (ТЗ §18) ---
   const addTax: Store["addTax"] = useCallback((tax) => {
     if (!requireAccount()) return;
@@ -1490,6 +1514,76 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (authSession?.access_token && isBackendSituationId(id)) {
       apiClient.deleteTax(authSession.access_token, id)
         .catch(error => console.warn("Tax deleted locally; backend delete failed.", error));
+    }
+  }, [authSession?.access_token, role]);
+
+  // --- Промпт 2: заявки 115 (CRUD) ---
+  useEffect(() => {
+    if (role === "guest" || !authSession?.access_token) {
+      setUtilityRequests([]);
+      return;
+    }
+    const controller = new AbortController();
+    apiClient.getUtilityRequests<Record<string, unknown>[]>(authSession.access_token, { signal: controller.signal })
+      .then(items => {
+        if (controller.signal.aborted || !Array.isArray(items)) return;
+        setUtilityRequests(items.map(adaptUtilityRequest));
+      })
+      .catch(err => {
+        if (!controller.signal.aborted) {
+          console.warn("Utility requests API unavailable; using empty.", err);
+        }
+      });
+    return () => controller.abort();
+  }, [authSession?.access_token, role]);
+
+  const addUtilityRequest: Store["addUtilityRequest"] = useCallback((input) => {
+    if (!requireAccount()) return;
+    const temp: UtilityRequest = {
+      id: uid("ureq"),
+      title: input.title,
+      category: input.category,
+      address: input.address,
+      accountId: input.accountId,
+      description: input.description,
+      status: input.status ?? "draft",
+      externalNumber: input.externalNumber,
+      externalUrl: input.externalUrl,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setUtilityRequests(prev => [temp, ...prev]);
+    if (authSession?.access_token) {
+      apiClient.createUtilityRequest<Record<string, unknown>>(authSession.access_token, utilityRequestPayload(temp))
+        .then(saved => {
+          const adapted = adaptUtilityRequest(saved);
+          setUtilityRequests(prev => prev.map(r => r.id === temp.id ? adapted : r));
+        })
+        .catch(err => console.warn("Utility request saved locally; backend create failed.", err));
+    }
+  }, [authSession?.access_token, role]);
+
+  const updateUtilityRequest: Store["updateUtilityRequest"] = useCallback((id, patch) => {
+    if (!requireAccount()) return;
+    setUtilityRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch, updatedAt: new Date().toISOString() } : r));
+    if (authSession?.access_token) {
+      const existing = utilityRequests.find(r => r.id === id);
+      const merged = existing ? { ...existing, ...patch } : patch;
+      apiClient.updateUtilityRequest<Record<string, unknown>>(authSession.access_token, id, utilityRequestPayload(merged))
+        .then(saved => {
+          const adapted = adaptUtilityRequest(saved);
+          setUtilityRequests(prev => prev.map(r => r.id === id ? adapted : r));
+        })
+        .catch(err => console.warn("Utility request updated locally; backend update failed.", err));
+    }
+  }, [authSession?.access_token, role, utilityRequests]);
+
+  const deleteUtilityRequest: Store["deleteUtilityRequest"] = useCallback((id) => {
+    if (!requireAccount()) return;
+    setUtilityRequests(prev => prev.filter(r => r.id !== id));
+    if (authSession?.access_token) {
+      apiClient.deleteUtilityRequest(authSession.access_token, id)
+        .catch(err => console.warn("Utility request deleted locally; backend delete failed.", err));
     }
   }, [authSession?.access_token, role]);
 
@@ -1993,9 +2087,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     publicContentStatus, publicContentError, loadScenarioDetail,
     admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
-    documents, addDocument, updateDocument, deleteDocument,
+    documents, addDocument, updateDocument, deleteDocument, refreshDocuments,
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
+    utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest,
     articles, addArticle, updateArticle, removeArticle,
     blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     favorites, toggleFavorite,
@@ -2022,9 +2117,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
-    addDocument, updateDocument, deleteDocument, toggleFavorite,
+    addDocument, updateDocument, deleteDocument, refreshDocuments, toggleFavorite,
     addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     addTax, updateTax, deleteTax,
+    utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest,
     reminders, allNotifications,
     markRead, markAllRead, unreadCount,
     updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,

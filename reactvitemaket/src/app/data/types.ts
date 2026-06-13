@@ -148,11 +148,23 @@ export interface CustomField {
   value: string;
 }
 
+/** Промпт 1: metadata зашифрованного скана. Передаётся в UI вместо raw URL.
+ * Сам файл скачивается через `GET /api/user/documents/{id}/scan` (JWT). */
+export interface UserDocumentScan {
+  hasScan: boolean;
+  mimeType?: string;
+  size?: number;
+  originalFilename?: string;
+  uploadedAt?: string;
+  /** Серверный путь, который надо запросить с Authorization. */
+  downloadUrl?: string;
+}
+
 export interface UserDocument {
   id: string;
   type: UserDocumentType;
   title: string;
-  number: string;             // raw — UI masks it
+  number: string;             // raw — UI masks it (decrypted only for owner)
   issuedAt?: string;
   issuedBy?: string;
   comment?: string;
@@ -160,6 +172,20 @@ export interface UserDocument {
   status: UserDocumentStatus;
   /** v0.4: только для type='other'. Хранится в БД как JSON-строка. */
   customFields?: CustomField[];
+  /** Промпт 1: helper-флаг для UI («Зашифровано на сервере»). */
+  encryptedAtRest?: boolean;
+  /** Промпт 1: metadata скана. Если undefined — скан не загружен. */
+  scan?: UserDocumentScan;
+}
+
+/** Промпт 2: одна позиция в детализации платежа («вода 3.20 м³ × тариф = 12.40»). */
+export interface UtilityBreakdownItem {
+  service: "electricity" | "cold_water" | "hot_water" | "gas" | "heating" | "maintenance" | "capital_repair" | "waste" | "other";
+  amount?: number;
+  previousReading?: number;
+  currentReading?: number;
+  consumption?: number;
+  tariffLabel?: string;
 }
 
 export interface UtilityPayment {
@@ -173,7 +199,15 @@ export interface UtilityPayment {
   readingsDeadline?: string;
   paymentDeadline?: string;
   comment?: string;
+  /** Промпт 2: разбивка начислений (вода, свет, газ и т.д.). */
+  breakdown?: UtilityBreakdownItem[];
+  /** Промпт 2: источник записи. manual = пользователь ввёл вручную. */
+  source?: "manual" | "erip" | "receipt";
+  /** Промпт 2: путь к зашифрованной квитанции (или URL preview). */
+  receiptPath?: string;
 }
+
+export type UtilityServiceType = UtilityBreakdownItem["service"];
 
 export interface UtilityAccount {
   id: string;
@@ -181,7 +215,20 @@ export interface UtilityAccount {
   accountNumber: string;
   provider: string;
   payments: UtilityPayment[];
+  /** Промпт 2: пользовательская подпись («Квартира», «Дача»). */
+  label?: string;
+  /** Промпт 2: какие услуги учитываются по этому счёту. */
+  serviceTypes?: UtilityServiceType[];
+  /** Промпт 2: владелец / плательщик. */
+  payerName?: string;
+  /** Промпт 2: «ручной» режим — не имитируем интеграции. */
+  manualMode?: boolean;
+  /** Промпт 2: примечание про синхронизацию (последняя ручная сверка). */
+  lastSyncNote?: string;
 }
+
+/** Промпт 2: тип налогового обязательства. */
+export type TaxType = "property" | "land" | "transport" | "income" | "single_property_payment" | "ip" | "other";
 
 export interface TaxObligation {
   id: string;
@@ -193,6 +240,53 @@ export interface TaxObligation {
   period?: string;
   comment?: string;
   receiptPath?: string;
+  /** Промпт 2: тип налога — определяет иконку, hint и фильтрацию. */
+  taxType?: TaxType;
+  /** Промпт 2: откуда пришла запись. */
+  source?: "manual" | "mns_notice" | "demo";
+  /** Получатель платежа (ИМНС/название). */
+  recipient?: string;
+  /** УНП плательщика (для оплаты через ЕРИП). */
+  unp?: string;
+  /** Номер извещения МНС. */
+  noticeNumber?: string;
+  /** Код назначения платежа в ЕРИП. */
+  paymentCode?: string;
+  /** Дата фактической оплаты. */
+  paidAt?: string;
+  /** Внешняя ссылка («открыть инструкцию», «личный кабинет МНС»). */
+  externalUrl?: string;
+  /** Короткое объяснение для гражданина. */
+  helpText?: string;
+}
+
+/** Промпт 2: пользовательская заявка в 115 (ЖКХ-портал). Это локальный
+ * органайзер — никакой реальной отправки в 115.бел нет. */
+export type UtilityRequestStatus = "draft" | "sent" | "in_progress" | "resolved" | "rejected";
+export type UtilityRequestCategory =
+  | "water"
+  | "heating"
+  | "electricity"
+  | "waste_yard"
+  | "entrance"
+  | "elevator"
+  | "other";
+
+export interface UtilityRequest {
+  id: string;
+  /** К какому лицевому счёту/адресу относится. */
+  accountId?: string;
+  address?: string;
+  title: string;
+  category: UtilityRequestCategory;
+  description?: string;
+  status: UtilityRequestStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  /** Номер обращения, если был получен. */
+  externalNumber?: string;
+  /** Ссылка на статус во внешней системе. */
+  externalUrl?: string;
 }
 
 export interface AdminScenarioRow {

@@ -60,8 +60,8 @@ function isAdminRole(role: string | undefined | null): boolean {
 function isTopLevelRoute(pathname: string): boolean {
   // Служебные / auth / скрытые разделы — не top-level.
   if (isAuthPage(pathname) || isNavHidden(pathname)) return false;
-  // Любой /scenarios/:id, /situations/:id, /problem-detail/:id, /law-detail/:id — DETAIL.
-  if (/^\/(scenarios|situations|problem-detail|law-detail)\/[^/]+/.test(pathname)) return false;
+  // Любой /scenarios/:id, /situations/:id, /problem-detail/:id, /law-detail/:id, /news/:id — DETAIL.
+  if (/^\/(scenarios|situations|problem-detail|law-detail|news)\/[^/]+/.test(pathname)) return false;
   // Точное совпадение с top-level маршрутами.
   if (TOP_LEVEL_ROUTES.has(pathname)) return true;
   return false;
@@ -107,7 +107,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     // /login, /register, /welcome — без MobileShell, без MobileNav, без MobileTopBar.
     return (
       <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-        <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+        <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
       </div>
     );
   }
@@ -153,7 +153,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
             exit={{ y: -4, opacity: 0 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+            <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -962,7 +962,7 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
               transition={{ duration: 0.2 }}
               className="px-10 py-8"
             >
-              <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+              <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -1104,7 +1104,7 @@ function DesktopHeaderShell() {
       <div data-scroll-root className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div key={location.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
-            <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+            <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
       </div>

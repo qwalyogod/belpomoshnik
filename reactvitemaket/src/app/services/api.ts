@@ -252,6 +252,50 @@ export const apiClient = {
       ...options,
     }),
 
+  // Промпт 3+4: история чатов + structured response + actions.
+  listAssistantSessions: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/chat/sessions", { headers: authHeaders(accessToken), ...options }),
+  createAssistantSession: <T>(accessToken: string, payload: { title?: string; mode?: string } = {}, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/chat/sessions", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ title: payload.title ?? "", mode: payload.mode ?? "citizen" }),
+      ...options,
+    }),
+  patchAssistantSession: <T>(accessToken: string, sessionId: string, patch: { title?: string; archived?: boolean }, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(patch),
+      ...options,
+    }),
+  deleteAssistantSession: (accessToken: string, sessionId: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  listAssistantMessages: <T>(accessToken: string, sessionId: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}/messages`, {
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  sendAssistantMessage: <T>(accessToken: string, sessionId: string, content: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}/messages`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ content }),
+      ...options,
+    }),
+  /** Промпт 3: action из чата — добавить сценарий в «Мои ситуации». */
+  createSituationFromAssistant: <T>(accessToken: string, scenarioId: string, sessionId?: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/actions/create-situation", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ scenario_id: scenarioId, session_id: sessionId ?? null }),
+      ...options,
+    }),
+
   getProblems: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/problems", options),
   getProblem: <T>(slug: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/problems/${encodeURIComponent(slug)}`, options),
@@ -432,12 +476,23 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+  /** Промпт 1: загрузка скана (PDF/JPG/PNG/WEBP). Файл шифруется на сервере. */
   uploadDocumentScan: async (
     accessToken: string,
     docId: string,
     file: File,
     options?: ApiRequestOptions,
-  ): Promise<{ doc_id: number; scan_url: string; scan_size: number; updated_at: string | null }> => {
+  ): Promise<{
+    doc_id: number;
+    scan: {
+      has_scan: boolean;
+      mime_type: string;
+      size: number;
+      original_filename: string;
+      uploaded_at: string;
+      download_url: string;
+    };
+  }> => {
     const form = new FormData();
     form.append("file", file);
     const res = await fetch(`${API_BASE_URL}/api/user/documents/${encodeURIComponent(docId)}/scan`, {
@@ -451,6 +506,29 @@ export const apiClient = {
       throw new Error(message || `Upload failed: ${res.status}`);
     }
     return res.json();
+  },
+  /** Промпт 1: безопасное скачивание скана. Возвращает Blob, который UI
+   * превращает в ObjectURL для предпросмотра. */
+  downloadDocumentScan: async (
+    accessToken: string,
+    docId: string,
+    options?: ApiRequestOptions,
+  ): Promise<{ blob: Blob; mimeType: string; filename: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/user/documents/${encodeURIComponent(docId)}/scan`, {
+      method: "GET",
+      headers: authHeaders(accessToken),
+      ...options,
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => "");
+      throw new Error(message || `Download failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const mimeType = res.headers.get("Content-Type") || blob.type || "application/octet-stream";
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename="?([^"]+)"?/i.exec(disposition);
+    const filename = match?.[1] || `document-${docId}`;
+    return { blob, mimeType, filename };
   },
   deleteDocumentScan: (accessToken: string, id: string, options?: ApiRequestOptions) =>
     requestJson<void>(`/api/user/documents/${encodeURIComponent(id)}/scan`, {
@@ -563,6 +641,30 @@ export const apiClient = {
     }),
   deleteUtilityPayment: (accessToken: string, paymentId: string, options?: ApiRequestOptions) =>
     requestJson<void>(`/api/user/utility/payments/${encodeURIComponent(paymentId)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+
+  // Промпт 2: заявки 115.
+  getUtilityRequests: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/utility/requests", { headers: authHeaders(accessToken), ...options }),
+  createUtilityRequest: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/utility/requests", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateUtilityRequest: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/user/utility/requests/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteUtilityRequest: (accessToken: string, id: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/user/utility/requests/${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: authHeaders(accessToken),
       ...options,
@@ -717,15 +819,26 @@ export const apiClient = {
 
   // --- Auth helpers (хранилище токенов и выход) ---
 
+  /** Промпт 5: редакторский AI с расширенными режимами и тоном/длиной. */
   aiAssistContent: <T>(
     accessToken: string,
     payload: {
-      mode: "generate" | "rewrite" | "expand" | "summarize";
-      kind?: "news" | "scenario" | "problem" | "law";
+      mode:
+        | "generate" | "rewrite" | "expand" | "summarize" | "translate"
+        | "headline" | "outline" | "simplify" | "proofread" | "fact_check"
+        | "seo" | "social" | "neutralize";
+      kind?: "news" | "scenario" | "problem" | "law" | "guide";
       current_title?: string;
       current_summary?: string;
       current_body_html?: string;
       hint?: string;
+      tone?: "official" | "simple" | "newsworthy" | "neutral";
+      length?: "short" | "medium" | "long";
+      category?: string;
+      tags?: string[];
+      audience?: string;
+      source_label?: string;
+      source_url?: string;
     },
     options?: ApiRequestOptions,
   ) =>
@@ -739,6 +852,13 @@ export const apiClient = {
         current_summary: payload.current_summary ?? "",
         current_body_html: payload.current_body_html ?? "",
         hint: payload.hint ?? "",
+        tone: payload.tone ?? null,
+        length: payload.length ?? null,
+        category: payload.category ?? "",
+        tags: payload.tags ?? [],
+        audience: payload.audience ?? "",
+        source_label: payload.source_label ?? "",
+        source_url: payload.source_url ?? "",
       }),
       ...options,
     }),

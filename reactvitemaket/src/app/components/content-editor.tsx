@@ -109,7 +109,28 @@ export function ContentEditor({
   const [aiHint, setAiHint] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const askAi = async (mode: "generate" | "rewrite" | "expand" | "summarize" | "translate") => {
+  const [aiTone, setAiTone] = useState<"official" | "simple" | "newsworthy" | "neutral" | "">("");
+  const [aiLength, setAiLength] = useState<"short" | "medium" | "long" | "">("");
+  /** Промпт 5: preview-before-apply. */
+  type AiPreview = {
+    mode: string;
+    title: string;
+    summary: string;
+    body_html: string;
+    source: string;
+    suggestions?: { type: string; text: string }[];
+    headlines?: string[];
+    tags?: string[];
+    disclaimer?: string;
+  };
+  const [aiPreview, setAiPreview] = useState<AiPreview | null>(null);
+
+  type EditorMode =
+    | "generate" | "rewrite" | "expand" | "summarize" | "translate"
+    | "headline" | "outline" | "simplify" | "proofread" | "fact_check"
+    | "seo" | "social" | "neutralize";
+
+  const askAi = async (mode: EditorMode) => {
     if (!authSession?.access_token) {
       setAiError("Нужно войти как редактор или админ");
       return;
@@ -117,7 +138,7 @@ export function ContentEditor({
     setAiBusy(true);
     setAiError(null);
     try {
-      const resp = await apiClient.aiAssistContent<{ title: string; summary: string; body_html: string; source: string }>(
+      const resp = await apiClient.aiAssistContent<AiPreview>(
         authSession.access_token,
         {
           mode,
@@ -126,18 +147,17 @@ export function ContentEditor({
           current_summary: d.summary,
           current_body_html: d.bodyHtml,
           hint: aiHint,
+          tone: aiTone || undefined,
+          length: aiLength || undefined,
+          category: d.category,
+          tags: d.tags,
+          audience: d.audience,
+          source_label: d.source,
+          source_url: d.sourceUrl,
         },
       );
-      if (mode === "summarize" && resp.summary) set("summary", resp.summary);
-      if (mode === "generate" || mode === "rewrite" || mode === "expand") {
-        if (resp.title) set("title", resp.title);
-        if (resp.summary) set("summary", resp.summary);
-        if (resp.body_html) {
-          set("bodyHtml", resp.body_html);
-          const el = editorRef.current;
-          if (el) el.innerHTML = resp.body_html;
-        }
-      }
+      // Промпт 5: НЕ применяем сразу — показываем preview.
+      setAiPreview({ ...resp, mode });
       setAiOpen(false);
       setAiHint("");
     } catch (e) {
@@ -145,6 +165,33 @@ export function ContentEditor({
     } finally {
       setAiBusy(false);
     }
+  };
+
+  /** Промпт 5: применить только определённые поля из AI-preview. */
+  const applyAiPreview = (which: "all" | "title" | "summary" | "body") => {
+    if (!aiPreview) return;
+    if ((which === "all" || which === "title") && aiPreview.title) set("title", aiPreview.title);
+    if ((which === "all" || which === "summary") && aiPreview.summary) set("summary", aiPreview.summary);
+    if ((which === "all" || which === "body") && aiPreview.body_html) {
+      set("bodyHtml", aiPreview.body_html);
+      const el = editorRef.current;
+      if (el) {
+        el.innerHTML = aiPreview.body_html;
+        setBodyText(el.innerText);
+      }
+    }
+    setAiPreview(null);
+  };
+
+  const applyHeadline = (h: string) => {
+    set("title", h);
+    setAiPreview(null);
+  };
+
+  const copyAiPreviewToClipboard = () => {
+    if (!aiPreview) return;
+    const text = `${aiPreview.title}\n\n${aiPreview.summary}\n\n${aiPreview.body_html}`;
+    void navigator.clipboard?.writeText(text);
   };
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -255,33 +302,55 @@ export function ContentEditor({
           <Sparkles size={15} />
         </button>
         {aiOpen && (
-          <div className="absolute right-0 top-12 z-30 w-[300px] rounded-2xl border border-black/[0.06] bg-white p-3 shadow-2xl dark:border-white/[0.08] dark:bg-[#0F1117]">
-            <div className="mb-2 text-[12px] tracking-tight text-black/55 dark:text-white/55">
-              ИИ-помощник
+          <div className="absolute right-0 top-12 z-30 w-[360px] rounded-2xl border border-black/[0.06] bg-white p-3 shadow-2xl dark:border-white/[0.08] dark:bg-[#0F1117]">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">ИИ-помощник</div>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] tracking-tight text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">preview перед применением</span>
             </div>
             <input
               value={aiHint}
               onChange={(e) => setAiHint(e.target.value)}
-              placeholder="Подсказка для ИИ (необязательно)"
+              placeholder="Что учесть (необязательно)"
               className="mb-2 w-full rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] outline-none focus:border-[#0056FF] dark:border-white/12 dark:bg-white/[0.04] dark:text-white"
             />
+            <div className="mb-2 grid grid-cols-2 gap-1.5">
+              <select value={aiTone} onChange={(e) => setAiTone(e.target.value as typeof aiTone)} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white">
+                <option value="">Тон: не задан</option>
+                <option value="official">Официальный</option>
+                <option value="simple">Простой</option>
+                <option value="newsworthy">Новостной</option>
+                <option value="neutral">Нейтральный</option>
+              </select>
+              <select value={aiLength} onChange={(e) => setAiLength(e.target.value as typeof aiLength)} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white">
+                <option value="">Длина: не задана</option>
+                <option value="short">Коротко</option>
+                <option value="medium">Средне</option>
+                <option value="long">Подробно</option>
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <button onClick={() => askAi("generate")} disabled={aiBusy} className="rounded-lg bg-[#0056FF] px-2.5 py-1.5 text-[12px] text-white hover:bg-[#0049DB] disabled:opacity-50">Создать</button>
-              <button onClick={() => askAi("rewrite")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Переписать</button>
-              <button onClick={() => askAi("expand")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Расширить</button>
-              <button onClick={() => askAi("summarize")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Сократить</button>
-              {/* Перевод на белорусский */}
+              <button onClick={() => askAi("generate")} disabled={aiBusy} className="rounded-lg bg-[#0056FF] px-2 py-1.5 text-[11px] text-white hover:bg-[#0049DB] disabled:opacity-50">Создать</button>
+              <button onClick={() => askAi("rewrite")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Переписать</button>
+              <button onClick={() => askAi("expand")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Расширить</button>
+              <button onClick={() => askAi("summarize")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Сократить</button>
+              <button onClick={() => askAi("simplify")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Простым языком</button>
+              <button onClick={() => askAi("neutralize")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Нейтральнее</button>
+              <button onClick={() => askAi("proofread")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Корректор</button>
+              <button onClick={() => askAi("outline")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Структура</button>
+              <button onClick={() => askAi("headline")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Заголовки</button>
+              <button onClick={() => askAi("fact_check")} disabled={aiBusy} className="rounded-lg border border-amber-300/60 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200 disabled:opacity-50">Проверить факты</button>
+              <button onClick={() => askAi("seo")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">SEO</button>
+              <button onClick={() => askAi("social")} disabled={aiBusy} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50">Анонс</button>
               <button
                 onClick={() => askAi("translate")}
                 disabled={aiBusy}
-                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[12px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50"
+                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-white px-2.5 py-1.5 text-[11px] text-black/70 hover:bg-black/[0.04] dark:border-white/12 dark:bg-white/[0.04] dark:text-white/70 disabled:opacity-50"
               >
                 <Languages size={12} /> Перевести на белорусский
               </button>
-              {/* Открыть полный ассистент (RAG-чат) */}
               <button
                 onClick={() => { setAiOpen(false); openAssistant(); }}
-                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0056FF]/20 bg-[#E3E7FC] px-2.5 py-1.5 text-[12px] text-[#0056FF] hover:bg-[#0056FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
+                className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0056FF]/20 bg-[#E3E7FC] px-2.5 py-1.5 text-[11px] text-[#0056FF] hover:bg-[#0056FF]/20 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"
               >
                 <MessageCircle size={12} /> Спросить ИИ-ассистента
               </button>
@@ -295,7 +364,105 @@ export function ContentEditor({
               </div>
             )}
             <div className="mt-2 text-[10px] leading-snug text-black/45 dark:text-white/45">
-              Без GROQ_API_KEY работает локальный fallback с предупреждением «отредактируйте перед публикацией».
+              AI-черновик требует проверки редактором. Без GROQ_API_KEY работает локальный fallback.
+            </div>
+          </div>
+        )}
+        {/* Промпт 5: preview-before-apply modal */}
+        {aiPreview && (
+          <div className="fixed inset-0 z-[120] grid place-items-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setAiPreview(null)}>
+            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[680px] overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#0F1117]">
+              <div className="flex items-center justify-between border-b border-black/[0.06] px-6 py-4 dark:border-white/[0.06]">
+                <div>
+                  <div className="text-[12px] tracking-tight text-[#0056FF]">Предложение ИИ · режим «{aiPreview.mode}»</div>
+                  <div className="mt-0.5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Предпросмотр перед применением</div>
+                </div>
+                <button onClick={() => setAiPreview(null)} className="grid h-9 w-9 place-items-center rounded-full bg-black/[0.05] text-black/55 dark:bg-white/[0.06] dark:text-white/55">✕</button>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+                {aiPreview.source === "local" && (
+                  <div className="mb-3 rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                    Работает локальный fallback — качество ограничено. Подключите GROQ_API_KEY для полноценного AI.
+                  </div>
+                )}
+                {aiPreview.headlines && aiPreview.headlines.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Варианты заголовка</div>
+                    <div className="mt-2 space-y-1.5">
+                      {aiPreview.headlines.map((h, i) => (
+                        <button
+                          key={i}
+                          onClick={() => applyHeadline(h)}
+                          className="block w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-left text-[13px] tracking-tight text-black hover:border-[#0056FF] hover:bg-[#0056FF]/[0.04] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                        >
+                          {h}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiPreview.suggestions && aiPreview.suggestions.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Замечания</div>
+                    <ul className="mt-2 space-y-1.5">
+                      {aiPreview.suggestions.map((s, i) => (
+                        <li key={i} className={`rounded-xl border px-3 py-2 text-[12px] tracking-tight ${s.type === "warning" ? "border-red-200 bg-red-50 text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200" : s.type === "source_needed" ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200" : "border-black/10 bg-white text-black/80 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/80"}`}>
+                          <span className="text-[10px] uppercase tracking-[0.1em] opacity-70">{s.type}</span>
+                          <div className="mt-0.5">{s.text}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiPreview.title && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Заголовок</div>
+                    <div className="mt-1 rounded-xl bg-[#F6F7FB] px-3 py-2 text-[14px] tracking-tight text-black dark:bg-white/[0.04] dark:text-white">{aiPreview.title}</div>
+                  </div>
+                )}
+                {aiPreview.summary && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Краткое описание</div>
+                    <div className="mt-1 rounded-xl bg-[#F6F7FB] px-3 py-2 text-[13px] tracking-tight text-black/85 dark:bg-white/[0.04] dark:text-white/85">{aiPreview.summary}</div>
+                  </div>
+                )}
+                {aiPreview.body_html && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Текст</div>
+                    <div className="mt-1 max-h-[260px] overflow-y-auto rounded-xl bg-[#F6F7FB] p-3 text-[13px] leading-relaxed tracking-tight text-black/85 [&_h3]:mt-2 [&_h3]:font-medium [&_ul]:my-2 [&_ul]:pl-4 [&_ul]:list-disc dark:bg-white/[0.04] dark:text-white/85" dangerouslySetInnerHTML={{ __html: aiPreview.body_html }} />
+                  </div>
+                )}
+                {aiPreview.tags && aiPreview.tags.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Предложенные теги</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {aiPreview.tags.map((t, i) => (
+                        <span key={i} className="rounded-full bg-[#E3E7FC] px-2.5 py-1 text-[11px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">#{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiPreview.disclaimer && (
+                  <div className="mt-4 rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] tracking-tight text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                    {aiPreview.disclaimer}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-black/[0.06] px-6 py-4 dark:border-white/[0.06]">
+                <button onClick={copyAiPreviewToClipboard} className="rounded-lg border border-black/10 px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:bg-black/[0.04] dark:border-white/10 dark:text-white/70">Скопировать</button>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => setAiPreview(null)} className="rounded-lg border border-black/10 px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:bg-black/[0.04] dark:border-white/10 dark:text-white/70">Отмена</button>
+                  {aiPreview.summary && (
+                    <button onClick={() => applyAiPreview("summary")} className="rounded-lg border border-black/10 px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:bg-black/[0.04] dark:border-white/10 dark:text-white/70">Только summary</button>
+                  )}
+                  {aiPreview.body_html && aiPreview.mode !== "fact_check" && (
+                    <button onClick={() => applyAiPreview("body")} className="rounded-lg border border-black/10 px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:bg-black/[0.04] dark:border-white/10 dark:text-white/70">Только текст</button>
+                  )}
+                  {aiPreview.mode !== "fact_check" && aiPreview.mode !== "headline" && (
+                    <button onClick={() => applyAiPreview("all")} className="rounded-lg bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white hover:bg-[#0049DB]">Применить всё</button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

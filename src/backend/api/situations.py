@@ -99,6 +99,9 @@ class NotificationIn(BaseModel):
     # По ТЗ email-копии обязательны для 2 сценариев: дедлайн задачи, новый закон-апдейт.
     # Под капотом то же поведение, что и для типов task_due/legal_update/doc_expiry.
     send_email: bool = False
+    # Промпт 6: глубокая ссылка + dedupe.
+    route: str = ""
+    dedupe_key: str = ""
 
 
 class NotificationOut(BaseModel):
@@ -110,6 +113,8 @@ class NotificationOut(BaseModel):
     is_read: bool
     source: str
     due_date: str | None = None
+    route: str = ""
+    dedupe_key: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +280,18 @@ def create_notification(payload: NotificationIn, user: User = Depends(get_curren
     # Не пишем send_email в БД — это флаг для авто-постановки email-дубликата
     data = payload.model_dump()
     send_email_flag = data.pop("send_email", False)
+
+    # Промпт 6: dedupe — если для этого user+dedupe_key уже есть запись, возвращаем её.
+    if data.get("dedupe_key"):
+        existing = db.scalars(
+            select(UserNotification).where(
+                UserNotification.user_id == user.id,
+                UserNotification.dedupe_key == data["dedupe_key"],
+            ).limit(1)
+        ).first()
+        if existing:
+            return NotificationOut.model_validate(existing)
+
     n = UserNotification(id=_new_id(), user_id=user.id, **data)
     db.add(n)
     db.commit()
