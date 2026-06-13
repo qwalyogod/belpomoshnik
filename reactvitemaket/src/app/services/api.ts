@@ -764,6 +764,20 @@ export const apiClient = {
     }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/problems", { headers: authHeaders(accessToken), ...options }),
+  createAdminProblem: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/problems", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateAdminProblem: <T>(accessToken: string, id: string | number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/problems/${encodeURIComponent(String(id))}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
   updateAdminScenario: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/admin/scenarios/${encodeURIComponent(id)}`, {
       method: "PUT",

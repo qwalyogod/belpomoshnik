@@ -177,6 +177,8 @@ type Store = {
   setAdminUserRole: (id: string, role: string) => void;
   setAdminUserActive: (id: string, active: boolean) => void;
   deleteAdminUser: (id: string) => void;
+  createAdminProblem: (title: string) => Promise<void>;
+  setAdminProblemStatus: (id: string, status: AdminProblemRow["status"]) => void;
 
   // helpers
   scenarioById: (id: string) => Scenario | undefined;
@@ -875,10 +877,41 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     apiClient.deleteAdminUser<unknown>(token, Number(id))
-      .then(() => setAdminUsers(prev => prev.filter(u => u.id !== id)))
+      .then(() => setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u)))
       .catch(error => {
         console.warn("User delete failed; backend call failed.", error);
         window.alert("Не удалось удалить пользователя. Проверьте, что это не вы.");
+      });
+  }, [authSession?.access_token]);
+
+  const createAdminProblem = useCallback(async (title: string) => {
+    const clean = title.trim();
+    if (!clean) return;
+    const slugBase = clean.toLowerCase().replace(/[^0-9a-zа-яё]+/gi, "-").replace(/^-|-$/g, "") || `problem-${Date.now()}`;
+    const payload = { title: clean, slug: `${slugBase}-${Date.now().toString(36).slice(-4)}`, status: "draft" };
+    const token = authSession?.access_token;
+    if (!token) {
+      setAdminProblems(prev => [{ id: payload.slug, slug: payload.slug, title: clean, category: "documents", status: "draft" }, ...prev]);
+      return;
+    }
+    try {
+      const created = await apiClient.createAdminProblem<Record<string, unknown>>(token, payload);
+      setAdminProblems(prev => [adaptAdminProblemRow(created), ...prev]);
+    } catch (error) {
+      console.warn("Problem create failed; backend call failed.", error);
+      window.alert("Не удалось создать проблему.");
+    }
+  }, [authSession?.access_token]);
+
+  const setAdminProblemStatus = useCallback((id: string, status: AdminProblemRow["status"]) => {
+    setAdminProblems(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    const token = authSession?.access_token;
+    if (!token || !/^\d+$/.test(id)) return;
+    apiClient.updateAdminProblem<Record<string, unknown>>(token, id, { status })
+      .then(updated => setAdminProblems(prev => prev.map(p => p.id === id ? adaptAdminProblemRow(updated) : p)))
+      .catch(error => {
+        console.warn("Problem status update failed; backend call failed.", error);
+        window.alert("Не удалось изменить статус проблемы.");
       });
   }, [authSession?.access_token]);
 
@@ -2190,7 +2223,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addCategory, updateCategory, deleteCategory,
     addContentTag, updateContentTag, deleteContentTag,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive, deleteAdminUser,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
   }), [
@@ -2213,7 +2246,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, mutableCategories,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive, deleteAdminUser,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
     requireAccount, guestGuardSignal, dismissGuestGuard,

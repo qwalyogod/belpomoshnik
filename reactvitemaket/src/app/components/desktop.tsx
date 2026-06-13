@@ -252,7 +252,7 @@ const WEEK_BASE = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, contentTags, addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, setAdminUserRole, setAdminUserActive, deleteAdminUser, currentUser, authSession, loadArticles } = useStore();
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, contentTags, addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus, currentUser, authSession, loadArticles } = useStore();
   const [section, setSection] = useState("dashboard");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
@@ -365,6 +365,10 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       window.alert("Не удалось завершить сессии пользователя.");
     }
   };
+  const handleCreateProblem = async () => {
+    const title = window.prompt("Название новой проблемы");
+    if (title?.trim()) await createAdminProblem(title.trim());
+  };
   const catLabel = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
   const statusLabel = (s: string) => (s === "published" ? "Опубликовано" : s === "review" ? "На проверке" : s === "rejected" ? "Отклонено" : s === "archived" ? "Архив" : "Черновик");
 
@@ -417,7 +421,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     { id: "scenarios", icon: <FileText size={15} />, label: "Сценарии", short: "Сценарии", badge: total ? String(total) : undefined },
     { id: "law", icon: <BookOpen size={15} />, label: "Правовые обновления", short: "Право" },
     { id: "authorities", icon: <Building2 size={15} />, label: "Учреждения", short: "Учрежд." },
-    { id: "extremist", icon: <ShieldAlert size={15} />, label: "Экстремистский реестр", short: "Экстр." },
+    { id: "extremist", icon: <ShieldAlert size={15} />, label: "Экстремистские материалы", short: "Экстр." },
     { id: "users", icon: <Users size={15} />, label: "Пользователи и роли", short: "Люди", sys: true },
     { id: "regions", icon: <MapPin size={15} />, label: "Регионы и города", short: "Регионы", sys: true },
     { id: "rules", icon: <Bell size={15} />, label: "Правила уведомлений", short: "Правила", sys: true },
@@ -663,7 +667,8 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                 <th className="py-3">Название</th>
                 <th className="py-3">Slug</th>
                 <th className="py-3">Статус</th>
-                <th className="py-3 pr-5">Описание</th>
+                <th className="py-3">Описание</th>
+                <th className="py-3 pr-5" />
               </tr>
             </thead>
             <tbody className="text-[13px] tracking-tight text-black dark:text-white">
@@ -673,7 +678,21 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                   <td className="py-3.5 font-medium">{p.title}</td>
                   <td className="py-3.5 text-black/50 dark:text-white/50">{p.slug}</td>
                   <td className="py-3.5"><Pill tone={tone(statusLabel(p.status)) as any}>{statusLabel(p.status)}</Pill></td>
-                  <td className="max-w-[360px] truncate py-3.5 pr-5 text-black/55 dark:text-white/55">{p.shortDescription || "—"}</td>
+                  <td className="max-w-[360px] truncate py-3.5 text-black/55 dark:text-white/55">{p.shortDescription || "—"}</td>
+                  <td className="whitespace-nowrap py-3.5 pr-5 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <select value={p.status} onChange={(e) => setAdminProblemStatus(p.id, e.target.value as typeof p.status)} className="h-8 rounded-lg border border-black/10 bg-white px-2 text-[12px] tracking-tight outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white">
+                        <option value="draft">Черновик</option>
+                        <option value="published">Опубликовано</option>
+                        <option value="archived">Архив</option>
+                      </select>
+                      {p.status === "published" && (
+                        <button onClick={() => window.open(`/problem-detail/${p.slug}`, "_blank")} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] tracking-tight text-[#0056FF] hover:bg-[#0056FF]/[0.08]">
+                          Открыть <ArrowUpRight size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1225,7 +1244,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
           </div>
         )}
         {section === "problems" && (
-          <button onClick={() => openEditor("problem")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая проблема</button>
+          <button onClick={handleCreateProblem} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая проблема</button>
         )}
         {section === "publications" && (
           <button onClick={() => openEditor("news")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая публикация</button>
