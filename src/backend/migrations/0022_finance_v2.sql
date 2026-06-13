@@ -30,7 +30,9 @@ ALTER TABLE tax_obligations
 CREATE TABLE utility_requests (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   user_id BIGINT NOT NULL,
-  account_id VARCHAR(64) NULL,
+  -- account_id ссылается на utility_accounts.id (VARCHAR(255) из 0004) —
+  -- тип и длина обязаны совпадать, иначе InnoDB FK errno 150.
+  account_id VARCHAR(255) NULL,
   address VARCHAR(500) NOT NULL DEFAULT '',
   title VARCHAR(255) NOT NULL,
   category VARCHAR(40) NOT NULL DEFAULT 'other',
@@ -46,4 +48,4 @@ CREATE TABLE utility_requests (
   KEY ix_utility_requests_status (status),
   CONSTRAINT fk_utility_requests_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_utility_requests_account FOREIGN KEY (account_id) REFERENCES utility_accounts (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
