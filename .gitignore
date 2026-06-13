@@ -59,3 +59,6 @@ reactvitemaket/ios/DerivedData/
 
 # Figma snapshot (352 КБ) — не нужен в репо
 Web app design for Belpomoshch/
+
+# Рабочий .env вшит для запуска у препода (репозиторий приватный)
+!/.env
