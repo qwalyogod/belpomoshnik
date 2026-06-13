@@ -968,10 +968,15 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
       <div className="flex flex-col overflow-hidden">
         <DesktopTopBar onSearch={() => setSearchOpen(true)} onNotifications={() => navigate("/notifications")} />
         <div data-scroll-root className="flex-1 overflow-y-auto">
+          {/* Входящая страница НЕ стартует с opacity:0. Иначе при mode="wait"
+              потерянный exit-complete callback (гонка ре-рендера при переходе,
+              напр. на /settings) навсегда оставляет страницу невидимой —
+              «виден только фон, помогает только перезагрузка». Анимируем только y.
+              См. тот же фикс в мобильном shell выше. */}
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              initial={{ y: 8 }} animate={{ y: 0 }} exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2 }}
               className="px-10 py-8"
             >
@@ -1146,8 +1151,10 @@ function DesktopHeaderShell() {
       </header>
 
       <div data-scroll-root className="flex-1 overflow-y-auto">
+        {/* То же, что и выше: без initial opacity:0, чтобы потерянный
+            exit-complete не оставлял страницу невидимой до перезагрузки. */}
         <AnimatePresence mode="wait">
-          <motion.div key={location.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
+          <motion.div key={location.pathname} initial={{ y: 8 }} animate={{ y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
             <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
