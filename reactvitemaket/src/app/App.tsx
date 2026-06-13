@@ -1176,7 +1176,7 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
   const item = (id: Page, icon: React.ReactNode, label: string, badge?: string) => {
     const isActive = active === id;
     return (
-      <button onClick={() => onChange(id)} className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
+      <button key={id} onClick={() => onChange(id)} className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
         <span className="grid h-5 w-5 place-items-center">{icon}</span>
         <span className="flex-1 text-[14px]">{label}</span>
         {badge && <span className="rounded-full bg-[#0056FF] px-1.5 text-[10px] tracking-tight text-white">{badge}</span>}
