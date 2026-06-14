@@ -2,11 +2,10 @@
  * Сброс прокрутки контента наверх.
  *
  * В приложении две модели скролла:
- *  - mobile (MobileShell): страница скроллится нативно окном (min-h-[100dvh],
- *    без вложенного overflow-контейнера) → сбрасываем window;
+ *  - mobile (MobileShell): страница скроллится нативно окном; bottom-nav
+ *    защищён fade-подложкой и дополнительным нижним padding;
  *  - desktop (DesktopShell / DesktopHeaderShell): контент живёт в постоянном
- *    `flex-1 overflow-y-auto`, помеченном [data-scroll-root] → сбрасываем
- *    scrollTop каждого такого контейнера.
+ *    `flex-1 overflow-y-auto`, помеченном [data-scroll-root].
  *
  * behavior:
  *  - "auto"   — мгновенно: при переходе на новый маршрут (страница обязана

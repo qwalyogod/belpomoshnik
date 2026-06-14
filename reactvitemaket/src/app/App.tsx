@@ -115,11 +115,9 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   }
 
   return (
-    // На mobile скроллим страницу нативно (не вложенным overflow-auto) — это
-    // совпадает с поведением iOS-нативных приложений и решает проблему «главная
-    // не скроллится у гостя». overflow-x-hidden защищает от горизонтального
-    // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
-    // высоту viewport и плюс естественный overflow.
+    // На mobile оставляем нативный window-scroll: страницы уже содержат свои
+    // внутренние mobile-отступы и на iOS/WKWebView такая модель стабильнее
+    // вложенного scroll-root. Bottom-nav защищён отдельной fade-подложкой.
     <div
       className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]"
       style={{
@@ -141,11 +139,13 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       <div
         style={{
           paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))",
-          paddingBottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
+          paddingBottom: showBottomNav
+            ? "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))"
+            : "max(1.5rem, env(safe-area-inset-bottom))",
         }}
       >
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
-            на mobile это давало визуальный «флэш пустоты» при переходе на
+          на mobile это давало визуальный «флэш пустоты» при переходе на
             /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -177,10 +177,10 @@ function MobileBottomFade({ color }: { color: string }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-20"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[25]"
       style={{
-        height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 5.5rem)",
-        background: `linear-gradient(to bottom, ${color}00 0%, ${color}26 18%, ${color}a8 48%, ${color}f2 66%, ${color} 100%)`,
+        height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 7.5rem)",
+        background: `linear-gradient(to bottom, ${color}00 0%, ${color}33 16%, ${color}cc 42%, ${color}fa 58%, ${color} 100%)`,
       }}
     />
   );
@@ -246,7 +246,7 @@ export function MobileBrandBar() {
   const title = mobileTitleFromPath(location.pathname);
   return (
     <div
-      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB] px-4 pb-3 dark:border-white/[0.04] dark:bg-[#07080C]"
       style={{
         paddingTop: "calc(0.75rem + env(safe-area-inset-top))",
         // Высота хедера = padding-top (12px + safe-area) + h-10 (40px)
@@ -412,9 +412,8 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
   const assistantEnabled = systemState.featureFlags.assistant !== false;
   return (
     <>
-      {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
-          чтобы он оставался на месте при нативном page-scroll (когда shell
-          длиннее viewport, иначе нав повисает посреди контента).
+      {/* Mobile-nav прибит к viewport через `fixed`, а не к scroll-root через
+          `absolute`, чтобы он оставался на месте при прокрутке контента.
           CSS-переменная --belp-mobile-nav-h синхронизирует padding-bottom
           контента в MobileShell, чтобы последние элементы не обрезались. */}
       <div
@@ -424,7 +423,7 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
           ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
         }}
       >
-        <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
+        <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]">
           {left.map((t) => renderTab(t))}
           {assistantEnabled && <div className="w-16 shrink-0" />}
           {right.map((t) => renderTab(t, t.id === "profile"))}
