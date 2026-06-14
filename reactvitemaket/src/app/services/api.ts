@@ -300,6 +300,29 @@ export const apiClient = {
       ...options,
     }),
 
+  /** Промпт 3/4 (п.7): статус AI и управление личным Groq-ключом. */
+  getAiSettings: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings", { headers: authHeaders(accessToken), ...options }),
+  putGroqKey: <T>(accessToken: string, apiKey: string, model: string, verify: boolean, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/groq-key", {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ api_key: apiKey, model, verify }),
+      ...options,
+    }),
+  deleteGroqKey: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/groq-key", {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  testAiSettings: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/test", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+
   getProblems: <T>(options?: ApiRequestOptions) => requestJson<T>("/api/problems", options),
   getProblem: <T>(slug: string, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/problems/${encodeURIComponent(slug)}`, options),

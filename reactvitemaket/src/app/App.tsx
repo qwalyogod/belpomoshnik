@@ -152,7 +152,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
             key={location.pathname}
             initial={{ y: 6 }}
             animate={{ y: 0 }}
-            exit={{ y: -4, opacity: 0 }}
+            exit={{ y: -4 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
             <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
@@ -976,7 +976,7 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ y: 8 }} animate={{ y: 0 }} exit={{ opacity: 0, y: -4 }}
+              initial={{ y: 8 }} animate={{ y: 0 }} exit={{ y: -4 }}
               transition={{ duration: 0.2 }}
               className="px-10 py-8"
             >
@@ -1154,7 +1154,7 @@ function DesktopHeaderShell() {
         {/* То же, что и выше: без initial opacity:0, чтобы потерянный
             exit-complete не оставлял страницу невидимой до перезагрузки. */}
         <AnimatePresence mode="wait">
-          <motion.div key={location.pathname} initial={{ y: 8 }} animate={{ y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
+          <motion.div key={location.pathname} initial={{ y: 8 }} animate={{ y: 0 }} exit={{ y: -4 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
             <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>

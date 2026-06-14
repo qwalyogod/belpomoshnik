@@ -5,6 +5,7 @@ import {
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
   Eye, Upload, Download, ExternalLink,
   Award, BookOpen, Sparkles, Clock, MapPin, Wrench, Newspaper,
+  ListChecks, KeyRound, Loader2,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
@@ -462,7 +463,8 @@ export function MySituationDetail({ situationId, onBack }: { situationId: string
 
 /* ---------------- SETTINGS ---------------- */
 export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" | "dark" | "system"; setThemeMode: (m: "light" | "dark" | "system") => void }) {
-  const { settings, updateSettings, setLang } = useStore();
+  const { settings, updateSettings, setLang, authSession } = useStore();
+  const accessToken = authSession?.access_token ?? null;
 
   const Toggle = ({ on, onChange }: { on: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`relative h-7 w-12 rounded-full transition-colors ${on ? "bg-[#0056FF]" : "bg-black/10 dark:bg-white/15"}`}>
@@ -586,10 +588,170 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
         </div>
       </Card>
 
+      {/* Промпт 3/4: личный Groq-ключ. Доступно любому авторизованному пользователю. */}
+      {accessToken && <GroqKeyCard accessToken={accessToken} />}
+
       {/* Карточка «Разработка» скрыта: смена сервера теперь происходит в нативной
           оболочке (ServerPicker на экране ввода адресов). В вебе менять сервер
           не нужно — Vite dev запускается на :8560, бэк на :8060. */}
     </div>
+  );
+}
+
+type AiSettingsStatus = {
+  server_provider_available: boolean;
+  user_key_configured: boolean;
+  key_storage_available: boolean;
+  masked_key: string;
+  model: string;
+  effective_mode: "user_key" | "needs_key" | string;
+  last_checked_at?: string | null;
+};
+
+// Достаём дружелюбный текст ошибки из Error(message) = тело FastAPI {"detail":"..."}.
+function apiErrorText(e: any, fallback: string): string {
+  const raw: string = e?.message ?? "";
+  try {
+    const j = JSON.parse(raw);
+    if (j && typeof j.detail === "string" && j.detail) return j.detail;
+  } catch { /* not json */ }
+  return raw && raw.length > 0 && raw.length < 240 ? raw : fallback;
+}
+
+// Промпт 3 (п.3) + Промпт 4 (п.7): карточка управления личным Groq-ключом
+// в «Параметрах аккаунта». Полный ключ на фронт не приходит — только masked.
+function GroqKeyCard({ accessToken }: { accessToken: string }) {
+  const [status, setStatus] = useState<AiSettingsStatus | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [model, setModel] = useState("");
+  const [busy, setBusy] = useState<null | "save" | "test" | "delete">(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const refresh = () => {
+    apiClient.getAiSettings<AiSettingsStatus>(accessToken)
+      .then((s) => { setStatus(s); setModel((m) => m || s.model || ""); })
+      .catch(() => setStatus(null));
+  };
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [accessToken]);
+
+  const storageReady = status?.key_storage_available !== false;
+  const hasKey = !!status?.user_key_configured;
+
+  const save = async () => {
+    if (!keyInput.trim()) { setFeedback({ ok: false, text: "Введите ключ Groq." }); return; }
+    setBusy("save"); setFeedback(null);
+    try {
+      const s = await apiClient.putGroqKey<AiSettingsStatus>(accessToken, keyInput.trim(), model.trim(), true);
+      setStatus(s); setKeyInput("");
+      setFeedback({ ok: true, text: "Ключ сохранён и проверен — AI-помощник работает с вашим ключом." });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось сохранить ключ. Проверьте его и попробуйте снова.") });
+    } finally { setBusy(null); }
+  };
+  const test = async () => {
+    setBusy("test"); setFeedback(null);
+    try {
+      const r = await apiClient.testAiSettings<{ ok: boolean; message: string }>(accessToken);
+      setFeedback({ ok: r.ok, text: r.message });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось проверить ключ.") });
+    } finally { setBusy(null); }
+  };
+  const removeKey = async () => {
+    setBusy("delete"); setFeedback(null);
+    try {
+      const s = await apiClient.deleteGroqKey<AiSettingsStatus>(accessToken);
+      setStatus(s); setModel(s.model || "");
+      setFeedback({ ok: true, text: "Ключ удалён. AI-помощник снова попросит ключ." });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось удалить ключ.") });
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2"><KeyRound size={15} className="text-[#0056FF]" /><div className="tracking-tight text-black dark:text-white">AI-помощник (ключ Groq)</div></div>
+
+      <div className="mt-2.5 flex items-center gap-1.5 text-[12px] tracking-tight">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${hasKey ? "bg-emerald-500" : "bg-amber-500"}`} />
+        <span className={hasKey ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
+          {hasKey ? "Ключ подключён — AI-помощник работает" : "Ключ не задан — AI-помощник попросит его в чате"}
+        </span>
+      </div>
+
+      {hasKey && status?.masked_key && (
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-[#F6F7FB] px-3.5 py-2.5 text-[13px] tracking-tight dark:bg-white/[0.05]">
+          <span className="text-black/60 dark:text-white/60">Текущий ключ</span>
+          <span className="font-mono text-black dark:text-white">{status.masked_key}</span>
+        </div>
+      )}
+
+      {!storageReady && (
+        <div className="mt-3 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] tracking-tight text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+          Хранилище ключей не настроено на сервере — добавление ключа недоступно.
+        </div>
+      )}
+
+      <div className="mt-3 rounded-2xl bg-[#F6F7FB] px-3.5 py-3 text-[12px] leading-relaxed tracking-tight text-black/60 dark:bg-white/[0.04] dark:text-white/60">
+        Как получить ключ: откройте <span className="text-[#0056FF]">console.groq.com</span> → войдите или зарегистрируйтесь → раздел «API Keys» → «Create API Key» → скопируйте ключ (gsk_…) и вставьте ниже.
+      </div>
+
+      <label className="mt-3 block">
+        <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{hasKey ? "Новый ключ (для замены)" : "Groq API key"}</span>
+        <input
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          type="password"
+          autoComplete="off"
+          placeholder="gsk_..."
+          disabled={!storageReady}
+          className="mt-1 h-11 w-full rounded-2xl border border-black/[0.08] bg-white px-3.5 font-mono text-[14px] tracking-tight text-black outline-none focus:border-[#0056FF] disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white"
+        />
+      </label>
+
+      <label className="mt-3 block">
+        <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Модель (опционально)</span>
+        <input
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          placeholder="llama-3.1-8b-instant"
+          disabled={!storageReady}
+          className="mt-1 h-11 w-full rounded-2xl border border-black/[0.08] bg-white px-3.5 text-[14px] tracking-tight text-black outline-none focus:border-[#0056FF] disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white"
+        />
+      </label>
+
+      {feedback && (
+        <div className={`mt-3 rounded-2xl px-3 py-2 text-[12px] tracking-tight ${feedback.ok
+          ? "border border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+          : "border border-red-300/60 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"}`}>
+          {feedback.text}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={save} disabled={busy !== null || !storageReady}
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white disabled:opacity-50">
+          {busy === "save" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Сохранить ключ
+        </button>
+        {hasKey && (
+          <button onClick={test} disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-black/10 px-4 py-2.5 text-[13px] tracking-tight text-black/75 hover:bg-black/[0.04] disabled:opacity-50 dark:border-white/10 dark:text-white/75 dark:hover:bg-white/[0.06]">
+            {busy === "test" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Проверить
+          </button>
+        )}
+        {hasKey && (
+          <button onClick={removeKey} disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-red-200 px-4 py-2.5 text-[13px] tracking-tight text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10">
+            {busy === "delete" ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Удалить ключ
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1 text-[11px] leading-relaxed tracking-tight text-black/45 dark:text-white/45">
+        <p>Ключ хранится на сервере в зашифрованном виде и привязан к вашему аккаунту.</p>
+        <p>Полный ключ после сохранения не показывается.</p>
+      </div>
+    </Card>
   );
 }
 
@@ -742,7 +904,7 @@ type AssistantMsg = {
   section?: { id: string; title: string; description: string; route: string };
   warning?: boolean;
   links?: AssistantLink[];
-  source?: "llm" | "local";
+  source?: "llm" | "local" | "needs_key";
 };
 
 const LINK_ICONS: Record<string, React.ReactNode> = {
@@ -782,7 +944,7 @@ type AssistantMsg2 = {
   links?: AssistantLink[];
   actions?: AssistantAction[];
   sources?: AssistantSource[];
-  source?: "llm" | "local";
+  source?: "llm" | "local" | "needs_key";
   section?: { id: string; title: string; description: string; route: string };
   warning?: boolean;
   /** Промпт 4: пометки UI для action-completed. */
@@ -819,6 +981,15 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  // Авто-рост поля ввода под содержимое (без «выпирания» переносимого текста).
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [value]);
 
   // Загружаем сессии при открытии.
   useEffect(() => {
@@ -987,7 +1158,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
     <div className="fixed inset-0 z-[60] flex items-end justify-end p-0 sm:items-end sm:justify-end sm:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
       <div onClick={(e) => e.stopPropagation()}
-        className="relative flex h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[640px] sm:w-[920px] sm:max-w-[92vw] sm:rounded-3xl sm:flex-row">
+        className="relative flex h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[640px] sm:w-[920px] sm:max-w-[92vw] sm:rounded-3xl sm:flex-row">
         {/* Sidebar — история (desktop) / drawer (mobile) */}
         {isAuth && (
           <div className={`absolute inset-y-0 left-0 z-10 w-[72%] max-w-[260px] transform border-r border-black/[0.06] bg-white transition-transform dark:border-white/[0.06] dark:bg-[#0B0D13] sm:relative sm:w-[240px] sm:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}`}>
@@ -1017,7 +1188,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
         )}
 
         {/* Главная панель */}
-        <div className="relative flex min-w-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06]">
             <div className="flex items-center gap-2">
               {isAuth && (
@@ -1035,7 +1206,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
           </div>
 
           {/* Тело */}
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
             {messages.length === 0 && (
               <div className="grid h-full place-items-center py-6 text-center">
                 <div className="max-w-[520px] space-y-3 px-2">
@@ -1065,7 +1236,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
 
             {messages.map((m, i) => (
               <div key={i}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] tracking-tight ${m.role === "user"
+                <div className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed tracking-tight ${m.role === "user"
                   ? "ml-auto bg-[#0056FF] text-white"
                   : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
                   {m.text}
@@ -1075,6 +1246,16 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
                     </div>
                   )}
                 </div>
+
+                {/* Промпт 3/4: нет личного ключа → CTA открыть настройки. */}
+                {m.source === "needs_key" && (
+                  <button
+                    onClick={() => { onClose(); navigate("/settings"); }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white"
+                  >
+                    <KeyRound size={14} /> Открыть настройки и добавить ключ
+                  </button>
+                )}
 
                 {m.links && m.links.length > 0 && (
                   <div className="mt-2 flex flex-col gap-1.5">
@@ -1151,20 +1332,21 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
           </div>
 
           {/* Composer */}
-          <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 dark:border-white/[0.06]">
+          <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
             <textarea
+              ref={composerRef}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
               rows={1}
               placeholder={isAuth ? "Например: я потерял паспорт" : "Гость — задайте вопрос, без сохранения истории"}
-              className="max-h-28 flex-1 resize-none rounded-2xl bg-[#F6F7FB] px-4 py-2.5 text-[14px] tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white"
+              className="min-h-[48px] max-h-32 flex-1 resize-none overflow-y-auto rounded-2xl bg-[#F6F7FB] px-4 py-3 text-[14px] leading-relaxed tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white"
             />
             <button
               onClick={() => void send()}
               disabled={busy || !value.trim()}
               aria-label="Отправить"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"
             >
               <ArrowUpRight size={18} />
             </button>

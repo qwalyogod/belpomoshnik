@@ -18,7 +18,13 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import DATETIME as _MySQLDateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# Точное время с долями секунды (на MySQL — DATETIME(6)). Нужно там, где важен
+# строгий порядок записей, созданных в пределах одной секунды (напр. user- и
+# assistant-сообщения AI-чата при мгновенном ответе).
+_PRECISE_DT = DateTime(timezone=True).with_variant(_MySQLDateTime(fsp=6), "mysql")
 
 from backend.enums import (
     ActionType,
@@ -844,9 +850,32 @@ class AIChatMessage(Base):
     model: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     provider: Mapped[str] = mapped_column(String(40), default="", nullable=False)
     error_code: Mapped[str] = mapped_column(String(40), default="", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    # Доли секунды важны: user- и assistant-сообщения часто создаются в одну
+    # секунду, а порядок берётся по created_at (см. AIChatSession.messages).
+    created_at: Mapped[datetime] = mapped_column(_PRECISE_DT, default=_utcnow, nullable=False)
 
     session: Mapped[AIChatSession] = relationship(back_populates="messages")
+
+
+class UserAIProviderCredential(Base, TimestampMixin):
+    """Промпт 3 (п.3): пользовательский API-ключ AI-провайдера.
+
+    Полный ключ хранится только зашифрованным (Fernet, мастер-ключ
+    BELPOMOSHNIK_AI_KEYS_MASTER_KEY) и расшифровывается лишь в момент запроса к
+    провайдеру. На frontend уходит только masked-форма."""
+    __tablename__ = "user_ai_provider_credentials"
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", name="uq_user_ai_provider"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(40), default="groq", nullable=False)
+    encrypted_api_key: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    masked_key: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    model: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class UtilityRequest(Base, TimestampMixin):

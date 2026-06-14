@@ -1093,3 +1093,124 @@ def delete_note(
     note = _owned_note(db, user, note_id)
     db.delete(note)
     db.commit()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Промпт 3 (п.3) + Промпт 4 (п.7): пользовательский Groq-ключ.
+# Полный ключ хранится только зашифрованным (Fernet), наружу — masked + статус.
+# Любой авторизованный пользователь (включая тестовых) может задать/сменить/удалить.
+# ─────────────────────────────────────────────────────────────────────────────
+from backend.ai import (  # noqa: E402
+    DEFAULT_GROQ_MODEL,
+    describe_ai_status,
+    resolve_user_ai,
+    verify_groq_key,
+)
+from backend.models import UserAIProviderCredential  # noqa: E402
+from backend.security.ai_crypto import (  # noqa: E402
+    encrypt_api_key,
+    is_ai_crypto_configured,
+    mask_api_key,
+)
+
+
+class AISettingsOut(BaseModel):
+    server_provider_available: bool
+    user_key_configured: bool
+    key_storage_available: bool
+    masked_key: str
+    model: str
+    effective_mode: str
+    last_checked_at: str | None = None
+
+
+class GroqKeyIn(BaseModel):
+    api_key: str = Field(..., min_length=8, max_length=300)
+    model: str = Field(default="", max_length=120)
+    verify: bool = True
+
+
+class AITestOut(BaseModel):
+    ok: bool
+    message: str
+    effective_mode: str
+
+
+def _own_groq_cred(db: Session, user: User) -> UserAIProviderCredential | None:
+    return (
+        db.query(UserAIProviderCredential)
+        .filter(
+            UserAIProviderCredential.user_id == user.id,
+            UserAIProviderCredential.provider == "groq",
+        )
+        .first()
+    )
+
+
+@router.get("/ai-settings", response_model=AISettingsOut)
+def get_ai_settings(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Статус AI для аккаунта: есть ли личный ключ / нужен ключ."""
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.put("/ai-settings/groq-key", response_model=AISettingsOut)
+def put_groq_key(
+    payload: GroqKeyIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Сохранить/сменить личный Groq-ключ (шифруется). Опционально проверяет его
+    коротким тестовым запросом перед сохранением."""
+    if not is_ai_crypto_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Хранилище ключей не настроено на сервере (BELPOMOSHNIK_AI_KEYS_MASTER_KEY).",
+        )
+    key = payload.api_key.strip()
+    model = (payload.model or "").strip()
+    checked_at = None
+    if payload.verify:
+        ok, message = verify_groq_key(key, model or DEFAULT_GROQ_MODEL)
+        if not ok:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+        checked_at = datetime.now(timezone.utc)
+    cred = _own_groq_cred(db, user)
+    if cred is None:
+        cred = UserAIProviderCredential(user_id=user.id, provider="groq")
+        db.add(cred)
+    cred.encrypted_api_key = encrypt_api_key(key)
+    cred.masked_key = mask_api_key(key)
+    cred.model = model
+    cred.is_enabled = True
+    if checked_at is not None:
+        cred.last_checked_at = checked_at
+    db.commit()
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.delete("/ai-settings/groq-key", response_model=AISettingsOut)
+def delete_groq_key(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Удалить личный Groq-ключ."""
+    cred = _own_groq_cred(db, user)
+    if cred is not None:
+        db.delete(cred)
+        db.commit()
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.post("/ai-settings/test", response_model=AITestOut)
+def test_ai_settings(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Проверить личный ключ пользователя."""
+    resolved = resolve_user_ai(db, user)
+    if resolved.mode != "user_key":
+        return AITestOut(
+            ok=False,
+            message="Личный ключ не задан. Добавьте свой Groq key, чтобы включить AI.",
+            effective_mode=resolved.mode,
+        )
+    ok, message = verify_groq_key(resolved.api_key, resolved.model)
+    cred = _own_groq_cred(db, user)
+    if cred is not None:
+        cred.last_checked_at = datetime.now(timezone.utc)
+        db.commit()
+    return AITestOut(ok=ok, message=message, effective_mode=resolved.mode)

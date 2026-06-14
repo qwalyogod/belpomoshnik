@@ -21,6 +21,11 @@ import httpx
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from backend.ai import (
+    DEFAULT_GROQ_MODEL,
+    NEEDS_KEY_MESSAGE,
+    resolve_user_ai,
+)
 from backend.api.auth import get_current_user_email, require_role
 from backend.database import get_db
 from backend.models import ExtremistEntry
@@ -694,12 +699,22 @@ def _build_system_prompt(entities: list[dict]) -> str:
     )
 
 
-def _llm_chat(message: str, system_prompt: str) -> str | None:
-    """Groq-вызов. Возвращает text или None при ошибке/отсутствии ключа."""
-    api_key = os.getenv("GROQ_API_KEY")
+def _llm_chat(
+    message: str,
+    system_prompt: str,
+    api_key: str | None = None,
+    model: str | None = None,
+) -> str | None:
+    """Groq-вызов. Возвращает text или None при ошибке/отсутствии ключа.
+
+    api_key передаётся резолвленным (личный ключ пользователя). Если не передан —
+    откат на серверный env (для совместимости прочих вызовов)."""
+    if api_key is None:
+        api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return None
-    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    if not model:
+        model = os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL)
     try:
         resp = httpx.post(
             GROQ_URL,
@@ -1073,9 +1088,24 @@ def _structured_response(
     Возвращает dict с text/links/actions/sources/source/model. Никаких
     «выдуманных» путей — actions/links строятся только из server-side entities.
     """
+    # По требованию: помощник работает на ЛИЧНОМ ключе пользователя. Без ключа —
+    # выдаём инструкцию, как его получить (не зовём LLM и не показываем материалы).
+    resolved = resolve_user_ai(db, user)
+    if resolved.mode != "user_key":
+        return {
+            "text": NEEDS_KEY_MESSAGE,
+            "links": [],
+            "actions": [],
+            "sources": [],
+            "source": "needs_key",
+            "model": "",
+            "provider": "",
+            "error_code": "needs_key",
+        }
+
     entities = _collect_rag_entities(db, message)
     system_prompt = _build_system_prompt(entities)
-    raw = _llm_chat(message, system_prompt)
+    raw = _llm_chat(message, system_prompt, api_key=resolved.api_key, model=resolved.model)
     if raw is None:
         text, links = _local_chat_fallback(message, entities)
         source = "local"
@@ -1114,7 +1144,7 @@ def _structured_response(
         "actions": actions,
         "sources": sources,
         "source": source,
-        "model": os.getenv("GROQ_MODEL", "llama-3.1-8b-instant") if source == "llm" else "",
+        "model": resolved.model if source == "llm" else "",
         "provider": "groq" if source == "llm" else "",
         "error_code": "",
     }

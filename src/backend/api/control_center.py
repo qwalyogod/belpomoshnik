@@ -79,7 +79,7 @@ DEFAULT_STATE: dict[str, Any] = {
     "navigationLayout": {
         "desktop": ["home", "catalog", "situations", "documents", "finance", "news", "profile"],
         "tablet": ["home", "catalog", "situations", "documents", "news", "profile"],
-        "mobile": ["home", "catalog", "assistant", "news", "profile"],
+        "mobile": ["home", "catalog", "assistant", "situations", "news", "profile"],
     },
 }
 
