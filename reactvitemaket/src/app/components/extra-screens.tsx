@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import {
   Search, FileText, Building2, Lock, Check, ChevronRight, ChevronLeft, AlertCircle,
   ArrowUpRight, X, Star, Plus, Trash2, Edit3, Shield, Globe, BellRing, EyeOff,
   Eye, Upload, Download, ExternalLink,
   Award, BookOpen, Sparkles, Clock, MapPin, Wrench, Newspaper,
+  ListChecks, KeyRound, Loader2,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, LocationPicker } from "./belp-ui";
 import { ContentEditor, type ContentKind, type ContentDraft } from "./content-editor";
@@ -462,7 +463,8 @@ export function MySituationDetail({ situationId, onBack }: { situationId: string
 
 /* ---------------- SETTINGS ---------------- */
 export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" | "dark" | "system"; setThemeMode: (m: "light" | "dark" | "system") => void }) {
-  const { settings, updateSettings, setLang } = useStore();
+  const { settings, updateSettings, setLang, authSession } = useStore();
+  const accessToken = authSession?.access_token ?? null;
 
   const Toggle = ({ on, onChange }: { on: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`relative h-7 w-12 rounded-full transition-colors ${on ? "bg-[#0056FF]" : "bg-black/10 dark:bg-white/15"}`}>
@@ -586,10 +588,170 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
         </div>
       </Card>
 
+      {/* Промпт 3/4: личный Groq-ключ. Доступно любому авторизованному пользователю. */}
+      {accessToken && <GroqKeyCard accessToken={accessToken} />}
+
       {/* Карточка «Разработка» скрыта: смена сервера теперь происходит в нативной
           оболочке (ServerPicker на экране ввода адресов). В вебе менять сервер
           не нужно — Vite dev запускается на :8560, бэк на :8060. */}
     </div>
+  );
+}
+
+type AiSettingsStatus = {
+  server_provider_available: boolean;
+  user_key_configured: boolean;
+  key_storage_available: boolean;
+  masked_key: string;
+  model: string;
+  effective_mode: "user_key" | "needs_key" | string;
+  last_checked_at?: string | null;
+};
+
+// Достаём дружелюбный текст ошибки из Error(message) = тело FastAPI {"detail":"..."}.
+function apiErrorText(e: any, fallback: string): string {
+  const raw: string = e?.message ?? "";
+  try {
+    const j = JSON.parse(raw);
+    if (j && typeof j.detail === "string" && j.detail) return j.detail;
+  } catch { /* not json */ }
+  return raw && raw.length > 0 && raw.length < 240 ? raw : fallback;
+}
+
+// Промпт 3 (п.3) + Промпт 4 (п.7): карточка управления личным Groq-ключом
+// в «Параметрах аккаунта». Полный ключ на фронт не приходит — только masked.
+function GroqKeyCard({ accessToken }: { accessToken: string }) {
+  const [status, setStatus] = useState<AiSettingsStatus | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [model, setModel] = useState("");
+  const [busy, setBusy] = useState<null | "save" | "test" | "delete">(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const refresh = () => {
+    apiClient.getAiSettings<AiSettingsStatus>(accessToken)
+      .then((s) => { setStatus(s); setModel((m) => m || s.model || ""); })
+      .catch(() => setStatus(null));
+  };
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [accessToken]);
+
+  const storageReady = status?.key_storage_available !== false;
+  const hasKey = !!status?.user_key_configured;
+
+  const save = async () => {
+    if (!keyInput.trim()) { setFeedback({ ok: false, text: "Введите ключ Groq." }); return; }
+    setBusy("save"); setFeedback(null);
+    try {
+      const s = await apiClient.putGroqKey<AiSettingsStatus>(accessToken, keyInput.trim(), model.trim(), true);
+      setStatus(s); setKeyInput("");
+      setFeedback({ ok: true, text: "Ключ сохранён и проверен — AI-помощник работает с вашим ключом." });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось сохранить ключ. Проверьте его и попробуйте снова.") });
+    } finally { setBusy(null); }
+  };
+  const test = async () => {
+    setBusy("test"); setFeedback(null);
+    try {
+      const r = await apiClient.testAiSettings<{ ok: boolean; message: string }>(accessToken);
+      setFeedback({ ok: r.ok, text: r.message });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось проверить ключ.") });
+    } finally { setBusy(null); }
+  };
+  const removeKey = async () => {
+    setBusy("delete"); setFeedback(null);
+    try {
+      const s = await apiClient.deleteGroqKey<AiSettingsStatus>(accessToken);
+      setStatus(s); setModel(s.model || "");
+      setFeedback({ ok: true, text: "Ключ удалён. AI-помощник снова попросит ключ." });
+    } catch (e: any) {
+      setFeedback({ ok: false, text: apiErrorText(e, "Не удалось удалить ключ.") });
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2"><KeyRound size={15} className="text-[#0056FF]" /><div className="tracking-tight text-black dark:text-white">AI-помощник (ключ Groq)</div></div>
+
+      <div className="mt-2.5 flex items-center gap-1.5 text-[12px] tracking-tight">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${hasKey ? "bg-emerald-500" : "bg-amber-500"}`} />
+        <span className={hasKey ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
+          {hasKey ? "Ключ подключён — AI-помощник работает" : "Ключ не задан — AI-помощник попросит его в чате"}
+        </span>
+      </div>
+
+      {hasKey && status?.masked_key && (
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-[#F6F7FB] px-3.5 py-2.5 text-[13px] tracking-tight dark:bg-white/[0.05]">
+          <span className="text-black/60 dark:text-white/60">Текущий ключ</span>
+          <span className="font-mono text-black dark:text-white">{status.masked_key}</span>
+        </div>
+      )}
+
+      {!storageReady && (
+        <div className="mt-3 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] tracking-tight text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+          Хранилище ключей не настроено на сервере — добавление ключа недоступно.
+        </div>
+      )}
+
+      <div className="mt-3 rounded-2xl bg-[#F6F7FB] px-3.5 py-3 text-[12px] leading-relaxed tracking-tight text-black/60 dark:bg-white/[0.04] dark:text-white/60">
+        Как получить ключ: откройте <span className="text-[#0056FF]">console.groq.com</span> → войдите или зарегистрируйтесь → раздел «API Keys» → «Create API Key» → скопируйте ключ (gsk_…) и вставьте ниже.
+      </div>
+
+      <label className="mt-3 block">
+        <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">{hasKey ? "Новый ключ (для замены)" : "Groq API key"}</span>
+        <input
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          type="password"
+          autoComplete="off"
+          placeholder="gsk_..."
+          disabled={!storageReady}
+          className="mt-1 h-11 w-full rounded-2xl border border-black/[0.08] bg-white px-3.5 font-mono text-[14px] tracking-tight text-black outline-none focus:border-[#0056FF] disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white"
+        />
+      </label>
+
+      <label className="mt-3 block">
+        <span className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Модель (опционально)</span>
+        <input
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          placeholder="llama-3.1-8b-instant"
+          disabled={!storageReady}
+          className="mt-1 h-11 w-full rounded-2xl border border-black/[0.08] bg-white px-3.5 text-[14px] tracking-tight text-black outline-none focus:border-[#0056FF] disabled:opacity-50 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white"
+        />
+      </label>
+
+      {feedback && (
+        <div className={`mt-3 rounded-2xl px-3 py-2 text-[12px] tracking-tight ${feedback.ok
+          ? "border border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+          : "border border-red-300/60 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"}`}>
+          {feedback.text}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button onClick={save} disabled={busy !== null || !storageReady}
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white disabled:opacity-50">
+          {busy === "save" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Сохранить ключ
+        </button>
+        {hasKey && (
+          <button onClick={test} disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-black/10 px-4 py-2.5 text-[13px] tracking-tight text-black/75 hover:bg-black/[0.04] disabled:opacity-50 dark:border-white/10 dark:text-white/75 dark:hover:bg-white/[0.06]">
+            {busy === "test" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Проверить
+          </button>
+        )}
+        {hasKey && (
+          <button onClick={removeKey} disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-red-200 px-4 py-2.5 text-[13px] tracking-tight text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10">
+            {busy === "delete" ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Удалить ключ
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1 text-[11px] leading-relaxed tracking-tight text-black/45 dark:text-white/45">
+        <p>Ключ хранится на сервере в зашифрованном виде и привязан к вашему аккаунту.</p>
+        <p>Полный ключ после сохранения не показывается.</p>
+      </div>
+    </Card>
   );
 }
 
@@ -742,7 +904,7 @@ type AssistantMsg = {
   section?: { id: string; title: string; description: string; route: string };
   warning?: boolean;
   links?: AssistantLink[];
-  source?: "llm" | "local";
+  source?: "llm" | "local" | "needs_key";
 };
 
 const LINK_ICONS: Record<string, React.ReactNode> = {
@@ -756,42 +918,178 @@ const LINK_ICONS: Record<string, React.ReactNode> = {
   section: <ArrowUpRight size={15} />,
 };
 
+/** Промпт 4: ChatGPT-like UI с историей сессий, structured response,
+ * actions (create_user_situation) и empty state с starter prompts.
+ *
+ * Архитектура:
+ * - desktop: sidebar истории + основная панель сообщений (≈900–1100px)
+ * - mobile: одна панель на весь экран
+ * - guest: локальный state без сохранения, без actions
+ * - citizen+: backend sessions + messages + actions
+ */
+type AssistantAction = {
+  type: string;
+  label: string;
+  scenario_id?: string;
+  title?: string;
+  path?: string;
+  disabled?: boolean;
+  completed?: boolean;
+};
+type AssistantSource = { kind: string; title: string; path?: string };
+type AssistantMsg2 = {
+  id?: string;
+  role: "user" | "assistant";
+  text: string;
+  links?: AssistantLink[];
+  actions?: AssistantAction[];
+  sources?: AssistantSource[];
+  source?: "llm" | "local" | "needs_key";
+  section?: { id: string; title: string; description: string; route: string };
+  warning?: boolean;
+  /** Промпт 4: пометки UI для action-completed. */
+  meta?: Record<string, unknown>;
+};
+type AssistantSession = {
+  id: string;
+  title: string;
+  mode: string;
+  archived: boolean;
+  last_message_preview: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const STARTER_PROMPTS = [
+  "Я потерял паспорт, что делать?",
+  "Куда обратиться по ЖКХ?",
+  "Как оформить ситуацию по рождению ребёнка?",
+  "Какие документы нужны для водительского удостоверения?",
+  "Что делать с налогом на недвижимость?",
+];
+
 export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { role, authSession } = useStore();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<AssistantMsg[]>([
-    { role: "assistant", text: "Здравствуйте! Напишите, что хотите найти или сделать — подскажу подходящий раздел или конкретный материал." },
-  ]);
+  const isAuth = !!authSession?.access_token;
+  const accessToken = authSession?.access_token ?? null;
+
+  // Сессии (только для авторизованных)
+  const [sessions, setSessions] = useState<AssistantSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AssistantMsg2[]>([]);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+
+  // Авто-рост поля ввода под содержимое (без «выпирания» переносимого текста).
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [value]);
+
+  // Загружаем сессии при открытии.
+  useEffect(() => {
+    if (!open || !accessToken) return;
+    apiClient.listAssistantSessions<AssistantSession[]>(accessToken)
+      .then((arr) => {
+        setSessions(Array.isArray(arr) ? arr : []);
+      })
+      .catch(() => setSessions([]));
+  }, [open, accessToken]);
+
+  // Загружаем сообщения текущей сессии.
+  useEffect(() => {
+    if (!open || !accessToken || !currentSession) return;
+    apiClient.listAssistantMessages<any[]>(accessToken, currentSession)
+      .then((arr) => {
+        if (!Array.isArray(arr)) return;
+        setMessages(arr.map((m): AssistantMsg2 => ({
+          id: m.id,
+          role: m.role,
+          text: m.content,
+          links: m.links,
+          actions: m.actions,
+          sources: m.sources,
+          source: m.source,
+        })));
+      })
+      .catch(() => undefined);
+  }, [open, accessToken, currentSession]);
+
+  // Сброс при закрытии.
+  useEffect(() => {
+    if (!open) {
+      setValue("");
+      setSidebarOpen(false);
+    }
+  }, [open]);
 
   if (!open) return null;
 
-  const send = async () => {
-    const text = value.trim();
+  const newChat = () => {
+    setCurrentSession(null);
+    setMessages([]);
+  };
+
+  const openSession = (id: string) => {
+    setCurrentSession(id);
+    setSidebarOpen(false);
+  };
+
+  const deleteSession = async (id: string) => {
+    if (!accessToken) return;
+    try {
+      await apiClient.deleteAssistantSession(accessToken, id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (currentSession === id) newChat();
+    } catch {/* ignore */}
+  };
+
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? value).trim();
     if (!text || busy) return;
     setMessages((m) => [...m, { role: "user", text }]);
     setValue("");
     setBusy(true);
     try {
-      // Авторизованные — RAG-чат с поиском по БД; гости — старый keyword-router.
-      const token = authSession?.access_token;
-      if (token) {
-        const res = await apiClient.askAssistantChat<{
-          response_text: string;
+      if (accessToken) {
+        // Создаём сессию, если её ещё нет.
+        let sid = currentSession;
+        if (!sid) {
+          const created = await apiClient.createAssistantSession<AssistantSession>(accessToken, {});
+          sid = created.id;
+          setCurrentSession(sid);
+          setSessions((prev) => [created, ...prev]);
+        }
+        const res = await apiClient.sendAssistantMessage<{
+          id: string;
+          role: string;
+          content: string;
           links: AssistantLink[];
+          actions: AssistantAction[];
+          sources: AssistantSource[];
           source: "llm" | "local";
-        }>(token, { message: text, role, is_guest: false });
+        }>(accessToken, sid, text);
         setMessages((m) => [
           ...m,
           {
+            id: res.id,
             role: "assistant",
-            text: res.response_text,
+            text: res.content,
             links: res.links,
+            actions: res.actions,
+            sources: res.sources,
             source: res.source,
           },
         ]);
+        // Обновляем list of sessions (превью + порядок).
+        apiClient.listAssistantSessions<AssistantSession[]>(accessToken).then(setSessions).catch(() => undefined);
       } else {
+        // Guest: legacy router без истории.
         const res = await apiClient.askAssistant<{
           response_text: string;
           section: { id: string; title: string; description: string; route: string };
@@ -817,8 +1115,6 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
     }
   };
 
-  // path — относительный путь от бэка (например "/scenarios/3"). Склеиваем с
-  // текущим origin, чтобы ссылка работала на любом IP/сервере (localhost, LAN, prod).
   const goToPath = (path: string) => {
     onClose();
     if (path.startsWith("/")) navigate(path);
@@ -826,83 +1122,235 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
   };
   const goTo = (route: string) => { onClose(); navigate(route); };
 
+  const handleAction = async (msgIdx: number, action: AssistantAction) => {
+    if (!accessToken || action.type !== "create_user_situation" || !action.scenario_id) return;
+    setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+      ...m,
+      actions: m.actions?.map((a) => a === action ? { ...a, disabled: true } : a),
+    } : m));
+    try {
+      const res = await apiClient.createSituationFromAssistant<{
+        created: boolean;
+        situation_id: string;
+        route: string;
+        message: string;
+      }>(accessToken, action.scenario_id, currentSession ?? undefined);
+      setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+        ...m,
+        actions: m.actions?.map((a) => a === action ? {
+          ...a,
+          completed: true,
+          disabled: false,
+          label: res.created ? "Открыть в моих ситуациях" : "Открыть существующую ситуацию",
+          path: res.route,
+          type: "open_link",
+        } : a),
+      } : m));
+    } catch {
+      setMessages((prev) => prev.map((m, i) => i === msgIdx ? {
+        ...m,
+        actions: m.actions?.map((a) => a === action ? { ...a, disabled: false } : a),
+      } : m));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-end p-0 sm:items-end sm:justify-end sm:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
       <div onClick={(e) => e.stopPropagation()}
-        className="relative flex h-[80vh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[560px] sm:w-[400px] sm:rounded-3xl">
-        <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-4 dark:border-white/[0.06]">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0056FF] text-white"><Sparkles size={16} /></span>
-            <div>
-              <div className="tracking-tight text-black dark:text-white">Помощник</div>
-              <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">Ориентир по разделам</div>
+        className="relative flex h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-black/[0.08] bg-white shadow-[0_40px_120px_-30px_rgba(15,23,42,0.5)] dark:border-white/[0.08] dark:bg-[#0B0D13] sm:h-[640px] sm:w-[920px] sm:max-w-[92vw] sm:rounded-3xl sm:flex-row">
+        {/* Sidebar — история (desktop) / drawer (mobile) */}
+        {isAuth && (
+          <div className={`absolute inset-y-0 left-0 z-10 w-[72%] max-w-[260px] transform border-r border-black/[0.06] bg-white transition-transform dark:border-white/[0.06] dark:bg-[#0B0D13] sm:relative sm:w-[240px] sm:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"}`}>
+            <div className="flex items-center justify-between p-3">
+              <button onClick={newChat} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-black/10 px-3 py-2 text-[13px] tracking-tight hover:bg-black/[0.04] dark:border-white/10 dark:text-white/85 dark:hover:bg-white/[0.06]">
+                <Plus size={14} /> Новый чат
+              </button>
+              <button onClick={() => setSidebarOpen(false)} className="ml-2 grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 sm:hidden"><X size={14} /></button>
             </div>
-          </div>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 dark:hover:bg-white/[0.06]"><X size={16} /></button>
-        </div>
-
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
-          {messages.map((m, i) => (
-            <div key={i}>
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] tracking-tight ${m.role === "user"
-                ? "ml-auto bg-[#0056FF] text-white"
-                : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
-                {m.text}
-                {m.source && m.source === "local" && m.links && m.links.length > 0 && (
-                  <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">
-                    Локальный ответ · {m.links.length} материал(а)
+            <div className="px-2 pb-3">
+              <div className="px-2 pb-2 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">История</div>
+              <div className="space-y-1 max-h-[calc(88vh-100px)] overflow-y-auto pr-1 sm:max-h-[540px]">
+                {sessions.map((s) => (
+                  <div key={s.id} className={`group flex items-center gap-1 rounded-xl px-2 py-2 text-[13px] tracking-tight ${currentSession === s.id ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/70 hover:bg-black/[0.04] dark:text-white/70 dark:hover:bg-white/[0.06]"}`}>
+                    <button onClick={() => openSession(s.id)} className="min-w-0 flex-1 truncate text-left">
+                      {s.title || "Новый чат"}
+                    </button>
+                    <button onClick={() => deleteSession(s.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-black/35 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100 dark:text-white/35"><Trash2 size={12} /></button>
                   </div>
+                ))}
+                {sessions.length === 0 && (
+                  <div className="px-2 py-1 text-[11px] tracking-tight text-black/40 dark:text-white/40">История пустая. Задайте первый вопрос.</div>
                 )}
               </div>
-              {/* RAG-ссылки: чипы с иконкой по kind. */}
-              {m.links && m.links.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {m.links.map((l, li) => (
-                    <button
-                      key={`${i}-l-${li}`}
-                      onClick={() => goToPath(l.path)}
-                      className="group flex w-full items-center gap-2.5 rounded-2xl border border-black/[0.08] bg-white px-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
-                      title={l.path}
-                    >
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
-                        {LINK_ICONS[l.kind] ?? <ArrowUpRight size={15} />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{l.title}</span>
-                        {l.snippet && (
-                          <span className="block truncate text-[11px] tracking-tight text-black/45 dark:text-white/45">{l.snippet}</span>
-                        )}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-medium tracking-tight text-[#0056FF]">→</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {/* Legacy: keyword-router fallback (для guest). */}
-              {m.section && (
-                <button onClick={() => goTo(m.section!.route)}
-                  className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-3 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><ArrowUpRight size={16} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block tracking-tight text-black dark:text-white">{m.section.title}</span>
-                    <span className="block truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{m.warning ? "Нужен вход или регистрация" : m.section.description}</span>
-                  </span>
-                  <span className="text-[12px] font-medium tracking-tight text-[#0056FF]">Перейти →</span>
+            </div>
+          </div>
+        )}
+
+        {/* Главная панель */}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              {isAuth && (
+                <button onClick={() => setSidebarOpen((v) => !v)} className="grid h-8 w-8 place-items-center rounded-lg text-black/55 hover:bg-black/[0.04] dark:text-white/55 sm:hidden">
+                  <ListChecks size={15} />
                 </button>
               )}
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0056FF] text-white"><Sparkles size={16} /></span>
+              <div>
+                <div className="tracking-tight text-black dark:text-white">AI-помощник Белпомощника</div>
+                <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">Подскажет по материалам проекта</div>
+              </div>
             </div>
-          ))}
-          {busy && <div className="text-[12px] tracking-tight text-black/40 dark:text-white/40">Помощник печатает…</div>}
-        </div>
+            <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-black/40 hover:bg-black/[0.04] dark:text-white/40 dark:hover:bg-white/[0.06]"><X size={16} /></button>
+          </div>
 
-        <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 dark:border-white/[0.06]">
-          <textarea value={value} onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            rows={1} placeholder="Например: хочу добавить паспорт"
-            className="max-h-24 flex-1 resize-none rounded-2xl bg-[#F6F7FB] px-4 py-2.5 text-[14px] tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white" />
-          <button onClick={send} disabled={busy || !value.trim()}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"><ArrowUpRight size={18} /></button>
+          {/* Тело */}
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden">
+            {messages.length === 0 && (
+              <div className="grid h-full place-items-center py-6 text-center">
+                <div className="max-w-[520px] space-y-3 px-2">
+                  <div className="text-[22px] tracking-tight text-black dark:text-white">Чем помочь?</div>
+                  <p className="text-[13px] tracking-tight text-black/55 dark:text-white/55">
+                    Опишите проблему обычными словами — я найду подходящие материалы в Белпомощнике.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+                    {STARTER_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => send(p)}
+                        className="rounded-full border border-black/[0.08] bg-white px-3 py-1.5 text-[12px] tracking-tight text-black/70 hover:border-[#0056FF] hover:text-[#0056FF] dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/70"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  {!isAuth && (
+                    <div className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[12px] tracking-tight text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                      Войдите, чтобы сохранять историю чатов и добавлять сценарии в «Мои ситуации».
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m, i) => (
+              <div key={i}>
+                <div className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed tracking-tight ${m.role === "user"
+                  ? "ml-auto bg-[#0056FF] text-white"
+                  : "bg-[#F6F7FB] text-black dark:bg-white/[0.05] dark:text-white"}`}>
+                  {m.text}
+                  {m.source && m.source === "local" && (
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-black/40 dark:text-white/40">
+                      Локальный ответ — AI-провайдер недоступен
+                    </div>
+                  )}
+                </div>
+
+                {/* Промпт 3/4: нет личного ключа → CTA открыть настройки. */}
+                {m.source === "needs_key" && (
+                  <button
+                    onClick={() => { onClose(); navigate("/settings"); }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] font-medium tracking-tight text-white"
+                  >
+                    <KeyRound size={14} /> Открыть настройки и добавить ключ
+                  </button>
+                )}
+
+                {m.links && m.links.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {m.links.map((l, li) => (
+                      <button
+                        key={`${i}-l-${li}`}
+                        onClick={() => goToPath(l.path)}
+                        className="group flex w-full items-center gap-2.5 rounded-2xl border border-black/[0.08] bg-white px-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+                        title={l.path}
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                          {LINK_ICONS[l.kind] ?? <ArrowUpRight size={15} />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] tracking-tight text-black dark:text-white">{l.title}</span>
+                          {l.snippet && (
+                            <span className="block truncate text-[11px] tracking-tight text-black/45 dark:text-white/45">{l.snippet}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-medium tracking-tight text-[#0056FF]">→</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Промпт 3+4: actions — кнопки добавить в «Мои ситуации» */}
+                {m.actions && m.actions.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {m.actions.map((a, ai) => (
+                      <button
+                        key={`${i}-a-${ai}`}
+                        onClick={() => {
+                          if (a.type === "open_link" && a.path) {
+                            goToPath(a.path);
+                            return;
+                          }
+                          if (!isAuth) {
+                            onClose();
+                            navigate("/login");
+                            return;
+                          }
+                          handleAction(i, a);
+                        }}
+                        disabled={a.disabled}
+                        className={`group flex w-full items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition-colors disabled:opacity-60 ${a.completed
+                          ? "border-emerald-300/60 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                          : "border-[#0056FF]/30 bg-[#E3E7FC] text-[#0056FF] hover:bg-[#D5DCFB] dark:border-[#0056FF]/30 dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"}`}
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-[#0056FF] dark:bg-white/10 dark:text-[#7FA8FF]">
+                          {a.completed ? <Check size={15} /> : <Plus size={15} />}
+                        </span>
+                        <span className="min-w-0 flex-1 text-[13px] tracking-tight">{a.label}</span>
+                        <span className="shrink-0 text-[11px] font-medium tracking-tight">→</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Legacy для guest */}
+                {m.section && (
+                  <button onClick={() => goTo(m.section!.route)}
+                    className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-3 text-left transition-colors hover:bg-black/[0.02] dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><ArrowUpRight size={16} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block tracking-tight text-black dark:text-white">{m.section.title}</span>
+                      <span className="block truncate text-[12px] tracking-tight text-black/55 dark:text-white/55">{m.warning ? "Нужен вход или регистрация" : m.section.description}</span>
+                    </span>
+                    <span className="text-[12px] font-medium tracking-tight text-[#0056FF]">Перейти →</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            {busy && <div className="text-[12px] tracking-tight text-black/40 dark:text-white/40">Помощник печатает…</div>}
+          </div>
+
+          {/* Composer */}
+          <div className="flex items-end gap-2 border-t border-black/[0.06] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
+            <textarea
+              ref={composerRef}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+              rows={1}
+              placeholder={isAuth ? "Например: я потерял паспорт" : "Гость — задайте вопрос, без сохранения истории"}
+              className="min-h-[48px] max-h-32 flex-1 resize-none overflow-y-auto rounded-2xl bg-[#F6F7FB] px-4 py-3 text-[14px] leading-relaxed tracking-tight text-black outline-none dark:bg-white/[0.05] dark:text-white"
+            />
+            <button
+              onClick={() => void send()}
+              disabled={busy || !value.trim()}
+              aria-label="Отправить"
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#0056FF] text-white disabled:opacity-40"
+            >
+              <ArrowUpRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1304,9 +1752,6 @@ export function DocumentEditModal({
   if (!open) return null;
 
   const fields = DOC_FIELDS_BY_TYPE[type];
-  // Сводная валидация: title обязателен, иначе — для конкретного типа ещё что-то
-  const missingRequired = fields.some((f) => f.required && !valueFor(f.key).trim());
-
   const valueFor = (key: DocFieldDef["key"]): string => {
     switch (key) {
       case "title": return title;
@@ -1317,6 +1762,8 @@ export function DocumentEditModal({
       case "comment": return comment;
     }
   };
+  // Сводная валидация: title обязателен, иначе — для конкретного типа ещё что-то
+  const missingRequired = fields.some((f) => f.required && !valueFor(f.key).trim());
   const setValueFor = (key: DocFieldDef["key"], v: string): void => {
     switch (key) {
       case "title": setTitle(v); break;
@@ -1506,7 +1953,7 @@ export function formatDocumentNumber(num: string, masked: boolean) {
 }
 
 /* ============================================================
-   v0.3 — Полная карточка документа (read-only preview + PDF upload)
+   Промпт 1 — Полная карточка документа (encrypted preview + multi-format upload)
    ============================================================ */
 export function DocumentCardModal({
   open, onClose, docId, onEdit,
@@ -1516,51 +1963,104 @@ export function DocumentCardModal({
   docId: string | null;
   onEdit?: (id: string) => void;
 }) {
-  const { documents, authSession } = useStore();
+  const { documents, authSession, refreshDocuments } = useStore();
   const doc = docId ? documents.find((d) => d.id === docId) : undefined;
 
-  // PDF-превью: хранится на бэке, мы храним относительный путь
-  // (DOCUMENT_SCAN_DIR / user_id / doc_id / token.pdf) в doc.scan_path.
-  // Превью показываем только когда есть scan_path И бэк доступен (authSession).
-  const [scanUrl, setScanUrl] = useState<string | null>(null);
+  // Скан хранится на сервере в зашифрованном виде. Получаем как Blob и
+  // показываем через ObjectURL — никаких публичных URL на личные документы.
+  const [scanObjectUrl, setScanObjectUrl] = useState<string | null>(null);
+  const [scanMime, setScanMime] = useState<string>("");
   const [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [revealNumber, setRevealNumber] = useState(false);
+  const lastObjectUrlRef = useRef<string | null>(null);
 
-  // При открытии модалки сбрасываем локальный стейт
+  const releaseObjectUrl = () => {
+    if (lastObjectUrlRef.current) {
+      URL.revokeObjectURL(lastObjectUrlRef.current);
+      lastObjectUrlRef.current = null;
+    }
+    setScanObjectUrl(null);
+    setScanMime("");
+  };
+
+  // Сброс при закрытии — освобождаем ObjectURL чтобы не текла память.
   useEffect(() => {
     if (!open) {
-      setScanUrl(null);
+      releaseObjectUrl();
       setScanError(null);
       setRevealNumber(false);
     }
+    return () => releaseObjectUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const accessToken = authSession?.access_token ?? null;
+  const scanMeta = doc?.scan;
+
+  // Подгружаем скан при открытии, если он есть и пользователь авторизован.
+  useEffect(() => {
+    if (!open || !doc || !scanMeta?.hasScan || !accessToken) return;
+    let cancelled = false;
+    setScanBusy(true);
+    setScanError(null);
+    apiClient
+      .downloadDocumentScan(accessToken, doc.id)
+      .then(({ blob, mimeType }) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        lastObjectUrlRef.current = url;
+        setScanObjectUrl(url);
+        setScanMime(mimeType);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setScanError(err instanceof Error ? err.message : "Не удалось загрузить скан.");
+      })
+      .finally(() => {
+        if (!cancelled) setScanBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, doc?.id, scanMeta?.hasScan, accessToken]);
 
   if (!open || !doc) return null;
 
-  const accessToken = authSession?.access_token ?? null;
+  const MAX_BYTES = 8 * 1024 * 1024;
+  const ALLOWED_EXT = /\.(pdf|jpe?g|png|webp)$/i;
+  const ALLOWED_MIME = /^(application\/pdf|image\/(jpeg|png|webp))$/i;
 
   const handleFile = async (file: File) => {
     if (!accessToken) {
       setScanError("Войдите, чтобы загрузить скан.");
       return;
     }
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setScanError("Только PDF.");
+    const mimeOk = ALLOWED_MIME.test(file.type) || ALLOWED_EXT.test(file.name);
+    if (!mimeOk) {
+      setScanError("Поддерживаются PDF, JPG, PNG, WEBP.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setScanError("Файл больше 5 МБ.");
+    if (file.size > MAX_BYTES) {
+      setScanError("Файл больше 8 МБ.");
       return;
     }
     setScanBusy(true);
     setScanError(null);
     try {
-      const res = await apiClient.uploadDocumentScan(accessToken, doc.id, file);
-      // Префикс /uploads/documents/... не зависит от API_BASE_URL (тот же origin),
-      // но мы домножаем на всякий случай, чтобы при поднятии бэка на другом хосте
-      // (LAN-режим) превью тоже открывалось.
-      setScanUrl(`${apiBaseUrl()}${res.scan_url}`);
+      await apiClient.uploadDocumentScan(accessToken, doc.id, file);
+      // Обновляем список документов в сторе (приходят новые scan metadata).
+      if (typeof refreshDocuments === "function") {
+        await refreshDocuments();
+      }
+      // И сразу качаем расшифрованный blob для предпросмотра.
+      const { blob, mimeType } = await apiClient.downloadDocumentScan(accessToken, doc.id);
+      releaseObjectUrl();
+      const url = URL.createObjectURL(blob);
+      lastObjectUrlRef.current = url;
+      setScanObjectUrl(url);
+      setScanMime(mimeType);
     } catch (err) {
       setScanError(err instanceof Error ? err.message : "Не удалось загрузить скан.");
     } finally {
@@ -1574,7 +2074,8 @@ export function DocumentCardModal({
     setScanError(null);
     try {
       await apiClient.deleteDocumentScan(accessToken, doc.id);
-      setScanUrl(null);
+      releaseObjectUrl();
+      if (typeof refreshDocuments === "function") await refreshDocuments();
     } catch (err) {
       setScanError(err instanceof Error ? err.message : "Не удалось удалить скан.");
     } finally {
@@ -1582,7 +2083,22 @@ export function DocumentCardModal({
     }
   };
 
+  const handleDownload = () => {
+    if (!scanObjectUrl) return;
+    const a = document.createElement("a");
+    a.href = scanObjectUrl;
+    a.download = scanMeta?.originalFilename || `document-${doc.id}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const maskedNumber = maskDocumentNumber(doc.number || "", !revealNumber);
+  const isImageScan = scanMime.startsWith("image/");
+  const sizeLabel = scanMeta?.size ? `${Math.round(scanMeta.size / 1024)} КБ` : "";
+  const uploadedAtLabel = scanMeta?.uploadedAt
+    ? new Date(scanMeta.uploadedAt).toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" })
+    : "";
 
   return (
     <div
@@ -1650,30 +2166,48 @@ export function DocumentCardModal({
             />
           </div>
 
-          {/* Скан */}
+          {/* Скан — Промпт 1: зашифровано на сервере, превью через ObjectURL */}
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[12px] tracking-tight text-black/55 dark:text-white/55">Скан документа</div>
-              {scanUrl && (
-                <a
-                  href={scanUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[12px] tracking-tight text-[#0056FF]"
-                >
-                  <ExternalLink size={12} /> Открыть
-                </a>
-              )}
+              <div className="inline-flex items-center gap-1 text-[11px] tracking-tight text-emerald-600 dark:text-emerald-400">
+                <Lock size={11} /> Зашифровано на сервере
+              </div>
             </div>
 
-            {scanUrl ? (
+            {scanMeta?.hasScan ? (
               <div className="relative">
                 <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#F6F7FB] dark:border-white/[0.06] dark:bg-white/[0.04]">
-                  <iframe
-                    src={scanUrl}
-                    title={`Скан: ${doc.title}`}
-                    className="h-[280px] w-full"
-                  />
+                  {scanBusy && !scanObjectUrl ? (
+                    <div className="grid h-[280px] place-items-center text-[12px] tracking-tight text-black/55 dark:text-white/55">
+                      Расшифровываем…
+                    </div>
+                  ) : scanObjectUrl ? (
+                    isImageScan ? (
+                      <img
+                        src={scanObjectUrl}
+                        alt={`Скан: ${doc.title}`}
+                        className="h-[280px] w-full object-contain"
+                      />
+                    ) : (
+                      <iframe
+                        src={scanObjectUrl}
+                        title={`Скан: ${doc.title}`}
+                        className="h-[280px] w-full"
+                      />
+                    )
+                  ) : (
+                    <div className="grid h-[280px] place-items-center text-[12px] tracking-tight text-black/45 dark:text-white/45">
+                      Скан зашифрован. Не удалось получить превью.
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] tracking-tight text-black/50 dark:text-white/50">
+                  <span>
+                    {scanMeta.mimeType || "файл"}
+                    {sizeLabel ? ` · ${sizeLabel}` : ""}
+                    {uploadedAtLabel ? ` · загружен ${uploadedAtLabel}` : ""}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <button
@@ -1683,13 +2217,13 @@ export function DocumentCardModal({
                   >
                     <Trash2 size={13} /> Удалить скан
                   </button>
-                  <a
-                    href={scanUrl}
-                    download
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[12px] tracking-tight text-white"
+                  <button
+                    onClick={handleDownload}
+                    disabled={!scanObjectUrl || scanBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 py-2 text-[12px] tracking-tight text-white disabled:opacity-50"
                   >
                     <Download size={13} /> Скачать
-                  </a>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1697,11 +2231,11 @@ export function DocumentCardModal({
                 className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/15 bg-[#F6F7FB] py-8 text-[13px] tracking-tight text-black/55 transition-colors hover:bg-black/[0.02] dark:border-white/15 dark:bg-white/[0.04] dark:text-white/55 dark:hover:bg-white/[0.04] ${scanBusy ? "pointer-events-none opacity-50" : ""}`}
               >
                 <Upload size={20} className="text-[#0056FF]" />
-                <span>{scanBusy ? "Загружаем…" : "Загрузить PDF-скан"}</span>
-                <span className="text-[11px] text-black/40 dark:text-white/40">до 5 МБ</span>
+                <span>{scanBusy ? "Загружаем…" : "Загрузить скан (PDF, JPG, PNG, WEBP)"}</span>
+                <span className="text-[11px] text-black/40 dark:text-white/40">до 8 МБ · файл шифруется на сервере</span>
                 <input
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
                   className="sr-only"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -1881,6 +2415,15 @@ export function ProposeButton({ kind, label, className = "" }: { kind: ContentKi
 
 export function ProposeContentModal({ open, kind = "scenario", initial, editId, onClose }: { open: boolean; kind?: ContentKind; initial?: Partial<ContentDraft>; editId?: string; onClose: () => void }) {
   const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked, meId, uploadMedia } = useStore();
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("belp-propose-open");
+    return () => {
+      document.body.classList.remove("belp-propose-open");
+    };
+  }, [open]);
+
   if (!open) return null;
   const blocked = isSubmitterBlocked(meId ?? currentUser.id);
 

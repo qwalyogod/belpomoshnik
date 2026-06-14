@@ -7,6 +7,7 @@ ID генерируются на сервере (uuid4 hex).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +17,8 @@ from sqlalchemy.orm import Session
 from backend.api.user import get_current_user
 from backend.database import get_db
 from backend.models import User, UserNotification, UserSituation, UserSituationTask
+from backend.notifications.delivery import deliver_notification
+from backend.notifications.service import create_in_app_notification
 
 router = APIRouter(prefix="/api/user", tags=["situations"])
 
@@ -99,6 +102,9 @@ class NotificationIn(BaseModel):
     # По ТЗ email-копии обязательны для 2 сценариев: дедлайн задачи, новый закон-апдейт.
     # Под капотом то же поведение, что и для типов task_due/legal_update/doc_expiry.
     send_email: bool = False
+    # Промпт 6: глубокая ссылка + dedupe.
+    route: str = ""
+    dedupe_key: str = ""
 
 
 class NotificationOut(BaseModel):
@@ -110,6 +116,9 @@ class NotificationOut(BaseModel):
     is_read: bool
     source: str
     due_date: str | None = None
+    route: str = ""
+    dedupe_key: str = ""
+    created_at: datetime
 
 
 # ---------------------------------------------------------------------------
@@ -275,16 +284,19 @@ def create_notification(payload: NotificationIn, user: User = Depends(get_curren
     # Не пишем send_email в БД — это флаг для авто-постановки email-дубликата
     data = payload.model_dump()
     send_email_flag = data.pop("send_email", False)
-    n = UserNotification(id=_new_id(), user_id=user.id, **data)
-    db.add(n)
+
+    n, created = create_in_app_notification(db, user_id=user.id, **data)
     db.commit()
     db.refresh(n)
+
+    if created:
+        deliver_notification(db, n)
 
     # Авто-постановка в email-очередь:
     #  - send_email=True (явный запрос)
     #  - или тип уведомления из MVP-сценариев ТЗ: дедлайн задачи, закон-апдейт, срок документа
     auto_email_types = {"task_due", "legal_update", "law_update", "doc_expiry"}
-    if send_email_flag or payload.notification_type in auto_email_types:
+    if created and (send_email_flag or payload.notification_type in auto_email_types):
         from backend.email_service import build_email_for_notification, enqueue_email
 
         built = build_email_for_notification(db, n, user)

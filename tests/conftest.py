@@ -17,6 +17,10 @@ os.environ["BELPOMOSHNIK_DATABASE_URL"] = os.environ.get(
     "BELPOMOSHNIK_TEST_DATABASE_URL", _DEFAULT_TEST_URL
 )
 os.environ["BELPOMOSHNIK_SECRET_KEY"] = "pytest-secret-key-256bit-aaaaaaaaaaaaaaaa"
+os.environ.setdefault(
+    "BELPOMOSHNIK_DOCUMENT_MASTER_KEY",
+    "AUD1n4A8ghAsQAL2eaPOMEH63nY98UyHX1FmV8h4aIE=",
+)
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
@@ -103,3 +107,15 @@ def editor_token(client):
 @pytest.fixture
 def editor_headers(editor_token):
     return {"Authorization": f"Bearer {editor_token}"}
+
+
+@pytest.fixture
+def admin_token(client):
+    _make_user("admin@bel.by", "admin-pass-1", "platform_admin", "Admin")
+    r = client.post("/api/auth/login", data={"username": "admin@bel.by", "password": "admin-pass-1"})
+    return r.json()["access_token"]
+
+
+@pytest.fixture
+def admin_headers(admin_token):
+    return {"Authorization": f"Bearer {admin_token}"}

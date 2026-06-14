@@ -7,14 +7,15 @@ JWT-зависимость get_current_user_email уже работает (Эт�
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,21 +23,55 @@ from sqlalchemy.orm import Session
 from backend.api.auth import get_current_user_email
 from backend.auth import hash_password, verify_password
 from backend.database import get_db
-from backend.models import User, UserDocument, UserNote
+from backend.models import User, UserDocument, UserNote, UserPushToken
+from backend.notifications.delivery import deliver_notification
+from backend.notifications.native_push import is_native_push_ready
+from backend.notifications.preferences import get_notification_preferences
+from backend.notifications.service import create_in_app_notification
 from backend.schemas import (
     USER_NOTE_CATEGORIES,
     UserNoteCreate,
     UserNoteOut,
     UserNoteUpdate,
 )
+from backend.security import (
+    DocumentCryptoError,
+    decrypt_field,
+    encrypt_field,
+    encrypt_file,
+    decrypt_file,
+)
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
-# v0.3: папка для сканов документов. Создаётся при первом аплоаде.
-# Структура: data/uploads/documents/{user_id}/{doc_id}/{token}.pdf
-DOCUMENT_SCAN_DIR = Path(os.getenv("DOCUMENT_SCAN_DIR", "data/uploads/documents"))
-DOCUMENT_SCAN_MAX_BYTES = int(os.getenv("DOCUMENT_SCAN_MAX_BYTES", str(5 * 1024 * 1024)))  # 5MB
+# Промпт 1: сканы храним ВНЕ публичной /uploads — статический mount удалён.
+# Структура: data/secure/documents/{user_id}/{doc_id}/{token}.bin (Fernet blob).
+DOCUMENT_SCAN_DIR = Path(os.getenv("DOCUMENT_SCAN_DIR", "data/secure/documents"))
+DOCUMENT_SCAN_MAX_BYTES = int(os.getenv("DOCUMENT_SCAN_MAX_BYTES", str(8 * 1024 * 1024)))  # 8MB
 _SAFE_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
+
+# Разрешённые MIME-типы для скана. Магия (magic bytes) — главная проверка.
+_DOC_SCAN_ALLOWED_MIME = {
+    "application/pdf",
+    "application/x-pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+}
+
+
+def _detect_scan_mime(body: bytes) -> str | None:
+    """По magic bytes определить MIME. None — формат не поддерживается."""
+    if body.startswith(b"%PDF-"):
+        return "application/pdf"
+    if body[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if body[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if body[:4] == b"RIFF" and body[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 # v1.2: папка для аватаров. Лежит ВНУТРИ data/uploads, поэтому отдаётся тем же
 # StaticFiles-mount `/uploads`, что и остальной контент (отдельный mount не нужен).
@@ -75,6 +110,16 @@ class UserProfileOut(BaseModel):
     addresses: list[dict] = Field(default_factory=list)
     # v1.2: публичный путь к аватару (/uploads/avatars/...) или "".
     avatar_url: str = ""
+
+
+class NativePushTokenIn(BaseModel):
+    token: str = Field(min_length=16, max_length=4096)
+    platform: str = Field(pattern="^(ios|android)$")
+    device_label: str = Field(default="", max_length=120)
+
+
+class NativePushTokenDelete(BaseModel):
+    token: str | None = Field(default=None, min_length=16, max_length=4096)
 
 
 class UserProfileUpdate(BaseModel):
@@ -124,7 +169,18 @@ class UserDocumentUpdate(BaseModel):
     custom_fields_json: str | None = Field(default=None, max_length=2000)
 
 
+class UserDocumentScanMeta(BaseModel):
+    has_scan: bool = False
+    mime_type: str = ""
+    size: int = 0
+    original_filename: str = ""
+    uploaded_at: str = ""
+    # download_url требует JWT — не публичный путь.
+    download_url: str = ""
+
+
 class UserDocumentOut(BaseModel):
+    """Промпт 1: чувствительные поля приходят расшифрованными (только владельцу)."""
     model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
@@ -135,8 +191,12 @@ class UserDocumentOut(BaseModel):
     expiry_date: str
     is_sensitive: bool
     comment: str
-    scan_path: str
+    # Backward-compat: оставляем поле для уже выпущенного фронта, но
+    # фактически здесь пусто. UI должен смотреть на `scan`.
+    scan_path: str = ""
     custom_fields_json: str = ""
+    encrypted_at_rest: bool = True
+    scan: UserDocumentScanMeta = Field(default_factory=UserDocumentScanMeta)
 
 
 class UserEmailChangeIn(BaseModel):
@@ -411,15 +471,202 @@ def update_settings(
 
 
 # ---------------------------------------------------------------------------
-# G6 — Личные документы (CRUD, владелец-only)
+# Промпт 6 — native push token и тестовая доставка
 # ---------------------------------------------------------------------------
+
+@router.post("/push/native-token", status_code=status.HTTP_201_CREATED)
+def register_native_push_token(
+    payload: NativePushTokenIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+    existing = db.scalars(
+        select(UserPushToken).where(
+            UserPushToken.user_id == user.id,
+            UserPushToken.token_hash == token_hash,
+        ).limit(1)
+    ).first()
+    try:
+        encrypted = encrypt_field(payload.token)
+    except DocumentCryptoError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Шифрование push-токенов не настроено на сервере.",
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+    if existing is None:
+        existing = UserPushToken(
+            user_id=user.id,
+            platform=payload.platform,
+            token_hash=token_hash,
+            token_encrypted=encrypted,
+            device_label=payload.device_label.strip(),
+            is_active=True,
+            last_seen_at=now,
+        )
+        db.add(existing)
+    else:
+        existing.platform = payload.platform
+        existing.token_encrypted = encrypted
+        existing.device_label = payload.device_label.strip()
+        existing.is_active = True
+        existing.last_seen_at = now
+    db.commit()
+    db.refresh(existing)
+    return {
+        "id": existing.id,
+        "platform": existing.platform,
+        "device_label": existing.device_label,
+        "is_active": existing.is_active,
+        "last_seen_at": existing.last_seen_at,
+        "token_masked": f"••••{token_hash[-8:]}",
+    }
+
+
+@router.delete("/push/native-token")
+def unregister_native_push_token(
+    payload: NativePushTokenDelete | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = select(UserPushToken).where(UserPushToken.user_id == user.id)
+    if payload is not None and payload.token:
+        token_hash = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
+        query = query.where(UserPushToken.token_hash == token_hash)
+    tokens = db.scalars(query).all()
+    for token in tokens:
+        token.is_active = False
+    db.commit()
+    return {"deactivated": len(tokens)}
+
+
+@router.get("/push/status")
+def native_push_status(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    tokens = db.scalars(
+        select(UserPushToken).where(UserPushToken.user_id == user.id).order_by(UserPushToken.updated_at.desc())
+    ).all()
+    return {
+        "native_push_ready": is_native_push_ready(),
+        "preferences": get_notification_preferences(user),
+        "registered": any(token.is_active for token in tokens),
+        "tokens": [
+            {
+                "id": token.id,
+                "platform": token.platform,
+                "device_label": token.device_label,
+                "is_active": token.is_active,
+                "last_seen_at": token.last_seen_at,
+                "token_masked": f"••••{token.token_hash[-8:]}",
+            }
+            for token in tokens
+        ],
+    }
+
+
+@router.post("/push/test")
+def test_push_notification(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    notification, _ = create_in_app_notification(
+        db,
+        user_id=user.id,
+        title="Тестовое уведомление",
+        description="Каналы уведомлений настроены. Это сообщение сохранено внутри приложения.",
+        notification_type="security",
+        source="notification-settings",
+        route="/notifications",
+    )
+    db.commit()
+    db.refresh(notification)
+    delivery = deliver_notification(db, notification)
+    return {
+        "in_app_created": True,
+        "notification_id": notification.id,
+        **delivery,
+        "native_push_ready": is_native_push_ready(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# G6 — Личные документы (CRUD, владелец-only) — Промпт 1: encryption at-rest
+# ---------------------------------------------------------------------------
+
+# Поля, которые при наличии encrypted-варианта НЕ возвращаются из plain.
+# Read-путь: encrypted > plain (fallback) > "".
+# Write-путь: всегда пишем в encrypted, plain зануляем.
+_SENSITIVE_DOC_FIELDS = ("number", "issued_by", "comment", "custom_fields_json")
+
+
+def _doc_to_out(doc: UserDocument) -> UserDocumentOut:
+    """Собрать UserDocumentOut, расшифровывая чувствительные поля."""
+    number = decrypt_field(doc.number_encrypted) or doc.number or ""
+    issued_by = decrypt_field(doc.issued_by_encrypted) or doc.issued_by or ""
+    comment = decrypt_field(doc.comment_encrypted) or doc.comment or ""
+    custom = decrypt_field(doc.custom_fields_encrypted) or doc.custom_fields_json or ""
+
+    scan_meta = UserDocumentScanMeta()
+    if doc.scan_encrypted_path:
+        scan_meta = UserDocumentScanMeta(
+            has_scan=True,
+            mime_type=doc.scan_mime_type or "application/pdf",
+            size=doc.scan_size or 0,
+            original_filename=doc.scan_original_filename or "",
+            uploaded_at=doc.scan_uploaded_at.isoformat() if doc.scan_uploaded_at else "",
+            download_url=f"/api/user/documents/{doc.id}/scan",
+        )
+
+    return UserDocumentOut(
+        id=doc.id,
+        title=doc.title,
+        doc_type=doc.doc_type,
+        number=number,
+        issued_by=issued_by,
+        issued_date=doc.issued_date,
+        expiry_date=doc.expiry_date,
+        is_sensitive=doc.is_sensitive,
+        comment=comment,
+        scan_path="",  # пустой: для UI обязателен `scan.download_url`
+        custom_fields_json=custom,
+        encrypted_at_rest=True,
+        scan=scan_meta,
+    )
+
+
+def _apply_doc_payload(doc: UserDocument, validated: dict) -> None:
+    """Записать поля документа: чувствительные → encrypted, прочие — как есть."""
+    for field, value in validated.items():
+        if field in _SENSITIVE_DOC_FIELDS:
+            enc_attr = {
+                "number": "number_encrypted",
+                "issued_by": "issued_by_encrypted",
+                "comment": "comment_encrypted",
+                "custom_fields_json": "custom_fields_encrypted",
+            }[field]
+            try:
+                setattr(doc, enc_attr, encrypt_field(value or ""))
+            except DocumentCryptoError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Шифрование документов не настроено на сервере.",
+                ) from exc
+            # Plain зануляем — больше не храним чувствительное открытым текстом.
+            setattr(doc, field, "")
+        else:
+            setattr(doc, field, value)
+
 
 @router.get("/documents", response_model=list[UserDocumentOut])
 def list_documents(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     docs = db.scalars(
         select(UserDocument).where(UserDocument.user_id == user.id).order_by(UserDocument.id.desc())
     ).all()
-    return [UserDocumentOut.model_validate(d) for d in docs]
+    return [_doc_to_out(d) for d in docs]
 
 
 @router.post("/documents", response_model=UserDocumentOut, status_code=status.HTTP_201_CREATED)
@@ -428,11 +675,17 @@ def create_document(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = UserDocument(user_id=user.id, **_validate_doc_payload(payload.model_dump()))
+    validated = _validate_doc_payload(payload.model_dump())
+    # scan_path игнорируем — он управляется только через scan endpoint
+    validated.pop("scan_path", None)
+
+    non_sensitive = {k: v for k, v in validated.items() if k not in _SENSITIVE_DOC_FIELDS}
+    doc = UserDocument(user_id=user.id, **non_sensitive)
+    _apply_doc_payload(doc, {k: validated[k] for k in _SENSITIVE_DOC_FIELDS if k in validated})
     db.add(doc)
     db.commit()
     db.refresh(doc)
-    return UserDocumentOut.model_validate(doc)
+    return _doc_to_out(doc)
 
 
 @router.put("/documents/{doc_id}", response_model=UserDocumentOut)
@@ -444,11 +697,11 @@ def update_document(
 ):
     doc = _owned_document(db, user, doc_id)
     validated = _validate_doc_payload(payload.model_dump(exclude_none=True))
-    for field, value in validated.items():
-        setattr(doc, field, value)
+    validated.pop("scan_path", None)
+    _apply_doc_payload(doc, validated)
     db.commit()
     db.refresh(doc)
-    return UserDocumentOut.model_validate(doc)
+    return _doc_to_out(doc)
 
 
 def _validate_doc_payload(payload: dict) -> dict:
@@ -535,134 +788,14 @@ def _validate_addresses_payload(addresses: list) -> list[dict]:
     return normalized
 
 
-@router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(
-    doc_id: int,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    doc = _owned_document(db, user, doc_id)
-    # Подчищаем связанные PDF сканы
+def _wipe_scan_files(doc: UserDocument) -> None:
+    """Удалить связанные с документом файлы скана (encrypted + legacy plain)."""
+    candidates: list[Path] = []
+    if doc.scan_encrypted_path:
+        candidates.append(Path(doc.scan_encrypted_path))
     if doc.scan_path:
-        scan_full = Path(doc.scan_path)
-        if scan_full.exists():
-            try:
-                scan_full.unlink()
-            except OSError:
-                pass
-        # и родительскую папку (если пустая)
-        try:
-            scan_full.parent.rmdir()
-        except OSError:
-            pass
-    db.delete(doc)
-    db.commit()
-
-
-# ---------------------------------------------------------------------------
-# v0.3 — Загрузка скана документа (PDF)
-# ---------------------------------------------------------------------------
-
-@router.post("/documents/{doc_id}/scan")
-async def upload_document_scan(
-    doc_id: int,
-    file: UploadFile = File(...),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Загрузить PDF-скан к документу. Только владелец.
-
-    Сохраняет в `<DOCUMENT_SCAN_DIR>/<user_id>/<doc_id>/<token>.pdf`,
-    пишет относительный путь в `UserDocument.scan_path`. Возвращает
-    публичный URL для превью (`/uploads/documents/...`).
-    """
-    # 1) Ownership check — общий helper не используется потому что мы хотим
-    # отдать 404 (а не 403) на чужих, чтобы не палить существование id.
-    doc = db.scalars(
-        select(UserDocument).where(
-            UserDocument.id == doc_id,
-            UserDocument.user_id == user.id,
-        )
-    ).first()
-    if not doc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден.")
-
-    # 2) Content-Type — только PDF. iOS Safari WebView может прислать
-    # application/octet-stream если пользователь ткнул «Открыть в…», поэтому
-    # дополнительно проверяем расширение.
-    ctype = (file.content_type or "").lower()
-    filename = file.filename or ""
-    is_pdf = ctype in ("application/pdf", "application/x-pdf") or filename.lower().endswith(".pdf")
-    if not is_pdf:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Поддерживается только PDF.",
-        )
-
-    # 3) Читаем в памяти и проверяем размер. multipart уже отдал body,
-    # поэтому дополнительного чтения не делаем.
-    body = await file.read()
-    if not body:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Файл пустой.")
-    if len(body) > DOCUMENT_SCAN_MAX_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Файл больше {DOCUMENT_SCAN_MAX_BYTES // (1024*1024)} МБ.",
-        )
-    # Magic-bytes: %PDF-
-    if not body.startswith(b"%PDF-"):
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Содержимое файла не похоже на PDF.",
-        )
-
-    # 4) Куда пишем: data/uploads/documents/<user_id>/<doc_id>/<token>.pdf
-    user_dir = DOCUMENT_SCAN_DIR / str(user.id) / str(doc_id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    token = secrets.token_urlsafe(12)
-    target = user_dir / f"{token}.pdf"
-    target.write_bytes(body)
-
-    # 5) Старое (если было) — удалить
-    if doc.scan_path:
-        old = Path(doc.scan_path)
-        if old.exists() and old != target:
-            try:
-                old.unlink()
-            except OSError:
-                pass
-
-    # 6) Путь в БД храним относительным (для переносимости между окружениями)
-    rel_path = str(target)
-    doc.scan_path = rel_path
-    db.commit()
-    db.refresh(doc)
-
-    return {
-        "doc_id": doc.id,
-        "scan_url": f"/uploads/documents/{user.id}/{doc.id}/{token}.pdf",
-        "scan_size": len(body),
-        "updated_at": doc.updated_at.isoformat() if doc.updated_at else None,
-    }
-
-
-@router.delete("/documents/{doc_id}/scan", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document_scan(
-    doc_id: int,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Удалить скан документа (но не сам документ)."""
-    doc = db.scalars(
-        select(UserDocument).where(
-            UserDocument.id == doc_id,
-            UserDocument.user_id == user.id,
-        )
-    ).first()
-    if not doc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден.")
-    if doc.scan_path:
-        p = Path(doc.scan_path)
+        candidates.append(Path(doc.scan_path))
+    for p in candidates:
         if p.exists():
             try:
                 p.unlink()
@@ -672,14 +805,139 @@ def delete_document_scan(
             p.parent.rmdir()
         except OSError:
             pass
+
+
+@router.delete("/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = _owned_document(db, user, doc_id)
+    _wipe_scan_files(doc)
+    db.delete(doc)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Промпт 1 — Загрузка/выгрузка скана с шифрованием at-rest
+# ---------------------------------------------------------------------------
+
+@router.post("/documents/{doc_id}/scan")
+async def upload_document_scan(
+    doc_id: int,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Загрузить PDF/JPG/PNG/WEBP скан. Шифруется Fernet перед записью на диск.
+    Файл хранится ВНЕ публичного /uploads. Скачивание — через защищённый
+    `GET /api/user/documents/{id}/scan` (требует JWT + owner-check).
+    """
+    doc = db.scalars(
+        select(UserDocument).where(
+            UserDocument.id == doc_id,
+            UserDocument.user_id == user.id,
+        )
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден.")
+
+    body = await file.read()
+    if not body:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Файл пустой.")
+    if len(body) > DOCUMENT_SCAN_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Файл больше {DOCUMENT_SCAN_MAX_BYTES // (1024*1024)} МБ.",
+        )
+
+    # Magic-bytes — основной канал проверки. content-type может врать.
+    detected_mime = _detect_scan_mime(body)
+    if detected_mime is None:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Поддерживаются PDF, JPG, PNG, WEBP.",
+        )
+
+    # Шифрование и запись. Файл лежит в data/secure/documents/{user}/{doc}/.
+    try:
+        encrypted_blob = encrypt_file(body)
+    except DocumentCryptoError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Шифрование документов не настроено на сервере.",
+        ) from exc
+
+    user_dir = DOCUMENT_SCAN_DIR / str(user.id) / str(doc_id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    token = secrets.token_urlsafe(16)
+    target = user_dir / f"{token}.enc"
+    target.write_bytes(encrypted_blob)
+
+    # Чистим предыдущий файл (encrypted или legacy plain).
+    old_paths = [doc.scan_encrypted_path, doc.scan_path]
+    for old in old_paths:
+        if not old:
+            continue
+        p = Path(old)
+        if p.exists() and p != target:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+    safe_original = _SAFE_FILENAME.sub("_", (file.filename or "").strip())[:200] or "document"
+    doc.scan_encrypted_path = str(target)
+    doc.scan_original_filename = safe_original
+    doc.scan_mime_type = detected_mime
+    doc.scan_size = len(body)
+    doc.scan_uploaded_at = datetime.utcnow()
+    # legacy plain — обнуляем
+    doc.scan_path = ""
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "doc_id": doc.id,
+        "scan": {
+            "has_scan": True,
+            "mime_type": detected_mime,
+            "size": len(body),
+            "original_filename": safe_original,
+            "uploaded_at": doc.scan_uploaded_at.isoformat() if doc.scan_uploaded_at else "",
+            "download_url": f"/api/user/documents/{doc.id}/scan",
+        },
+    }
+
+
+@router.delete("/documents/{doc_id}/scan", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document_scan(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = db.scalars(
+        select(UserDocument).where(
+            UserDocument.id == doc_id,
+            UserDocument.user_id == user.id,
+        )
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден.")
+    _wipe_scan_files(doc)
+    doc.scan_encrypted_path = ""
+    doc.scan_original_filename = ""
+    doc.scan_mime_type = ""
+    doc.scan_size = 0
+    doc.scan_uploaded_at = None
     doc.scan_path = ""
     db.commit()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Защищённый download сканов. ВАЖНО: /uploads/documents/* static-mount оставлен
-# для обратной совместимости, но в коде UI нужно использовать этот endpoint
-# (FileResponse требует JWT + owner-check). TODO: переключить UI и удалить mount.
+# Защищённый download — расшифровка в памяти, выдача StreamingResponse.
+# Статический mount /uploads/documents больше НЕ подключен (см. app.py).
 # ─────────────────────────────────────────────────────────────────────────────
 @router.get("/documents/{doc_id}/scan")
 def download_document_scan(
@@ -687,17 +945,50 @@ def download_document_scan(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    import io  # локальный импорт — используется только здесь
+
     doc = _owned_document(db, user, doc_id)
-    if not doc.scan_path:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Скан не загружен.")
-    full = Path(doc.scan_path)
-    if not full.exists() or not full.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл скана не найден.")
-    return FileResponse(
-        path=str(full),
-        media_type="application/pdf",
-        filename=f"document-{doc_id}.pdf",
-    )
+    # Новый путь — encrypted blob.
+    if doc.scan_encrypted_path:
+        path = Path(doc.scan_encrypted_path)
+        if not path.exists() or not path.is_file():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл скана не найден.")
+        try:
+            plaintext = decrypt_file(path.read_bytes())
+        except DocumentCryptoError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Не удалось расшифровать скан.",
+            ) from exc
+        mime = doc.scan_mime_type or "application/octet-stream"
+        ext = {
+            "application/pdf": "pdf",
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        }.get(mime, "bin")
+        return StreamingResponse(
+            io.BytesIO(plaintext),
+            media_type=mime,
+            headers={
+                "Content-Disposition": f'inline; filename="document-{doc_id}.{ext}"',
+                "Cache-Control": "private, no-store",
+            },
+        )
+
+    # Legacy: plain PDF (для документов, созданных до миграции 0021).
+    if doc.scan_path:
+        full = Path(doc.scan_path)
+        if not full.exists() or not full.is_file():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл скана не найден.")
+        return FileResponse(
+            path=str(full),
+            media_type="application/pdf",
+            filename=f"document-{doc_id}.pdf",
+            headers={"Cache-Control": "private, no-store"},
+        )
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Скан не загружен.")
 
 
 # ---------------------------------------------------------------------------
@@ -802,3 +1093,124 @@ def delete_note(
     note = _owned_note(db, user, note_id)
     db.delete(note)
     db.commit()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Промпт 3 (п.3) + Промпт 4 (п.7): пользовательский Groq-ключ.
+# Полный ключ хранится только зашифрованным (Fernet), наружу — masked + статус.
+# Любой авторизованный пользователь (включая тестовых) может задать/сменить/удалить.
+# ─────────────────────────────────────────────────────────────────────────────
+from backend.ai import (  # noqa: E402
+    DEFAULT_GROQ_MODEL,
+    describe_ai_status,
+    resolve_user_ai,
+    verify_groq_key,
+)
+from backend.models import UserAIProviderCredential  # noqa: E402
+from backend.security.ai_crypto import (  # noqa: E402
+    encrypt_api_key,
+    is_ai_crypto_configured,
+    mask_api_key,
+)
+
+
+class AISettingsOut(BaseModel):
+    server_provider_available: bool
+    user_key_configured: bool
+    key_storage_available: bool
+    masked_key: str
+    model: str
+    effective_mode: str
+    last_checked_at: str | None = None
+
+
+class GroqKeyIn(BaseModel):
+    api_key: str = Field(..., min_length=8, max_length=300)
+    model: str = Field(default="", max_length=120)
+    verify: bool = True
+
+
+class AITestOut(BaseModel):
+    ok: bool
+    message: str
+    effective_mode: str
+
+
+def _own_groq_cred(db: Session, user: User) -> UserAIProviderCredential | None:
+    return (
+        db.query(UserAIProviderCredential)
+        .filter(
+            UserAIProviderCredential.user_id == user.id,
+            UserAIProviderCredential.provider == "groq",
+        )
+        .first()
+    )
+
+
+@router.get("/ai-settings", response_model=AISettingsOut)
+def get_ai_settings(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Статус AI для аккаунта: есть ли личный ключ / нужен ключ."""
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.put("/ai-settings/groq-key", response_model=AISettingsOut)
+def put_groq_key(
+    payload: GroqKeyIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Сохранить/сменить личный Groq-ключ (шифруется). Опционально проверяет его
+    коротким тестовым запросом перед сохранением."""
+    if not is_ai_crypto_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Хранилище ключей не настроено на сервере (BELPOMOSHNIK_AI_KEYS_MASTER_KEY).",
+        )
+    key = payload.api_key.strip()
+    model = (payload.model or "").strip()
+    checked_at = None
+    if payload.verify:
+        ok, message = verify_groq_key(key, model or DEFAULT_GROQ_MODEL)
+        if not ok:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+        checked_at = datetime.now(timezone.utc)
+    cred = _own_groq_cred(db, user)
+    if cred is None:
+        cred = UserAIProviderCredential(user_id=user.id, provider="groq")
+        db.add(cred)
+    cred.encrypted_api_key = encrypt_api_key(key)
+    cred.masked_key = mask_api_key(key)
+    cred.model = model
+    cred.is_enabled = True
+    if checked_at is not None:
+        cred.last_checked_at = checked_at
+    db.commit()
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.delete("/ai-settings/groq-key", response_model=AISettingsOut)
+def delete_groq_key(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Удалить личный Groq-ключ."""
+    cred = _own_groq_cred(db, user)
+    if cred is not None:
+        db.delete(cred)
+        db.commit()
+    return AISettingsOut(**describe_ai_status(db, user))
+
+
+@router.post("/ai-settings/test", response_model=AITestOut)
+def test_ai_settings(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Проверить личный ключ пользователя."""
+    resolved = resolve_user_ai(db, user)
+    if resolved.mode != "user_key":
+        return AITestOut(
+            ok=False,
+            message="Личный ключ не задан. Добавьте свой Groq key, чтобы включить AI.",
+            effective_mode=resolved.mode,
+        )
+    ok, message = verify_groq_key(resolved.api_key, resolved.model)
+    cred = _own_groq_cred(db, user)
+    if cred is not None:
+        cred.last_checked_at = datetime.now(timezone.utc)
+        db.commit()
+    return AITestOut(ok=ok, message=message, effective_mode=resolved.mode)

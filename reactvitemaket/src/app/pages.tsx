@@ -7,14 +7,15 @@ import {
   Search, FileText, Home, Building2, Briefcase, Hammer, Heart, Shield, Wallet,
   Plus, Check, Lock, MapPin, CalendarClock, ChevronRight, AlertCircle, Clock,
   ArrowUpRight, ArrowRight, X, ScanLine, Eye, EyeOff, Baby, Award, BookOpen, Star, Trash2,
-  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks, RefreshCw, ImagePlus
+  Bell, ChevronLeft, Edit3, Newspaper, Sparkles, ExternalLink, AlertTriangle, Camera, StickyNote, ListChecks, RefreshCw, ImagePlus,
+  Wrench,
 } from "lucide-react";
 import { Card, Pill, PrimaryButton, GhostButton, Logo, LocationPicker, RegionSearch, DistrictSearch, CitySearch } from "./components/belp-ui";
 import { motion } from "motion/react";
 import {
   CategoryId, Problem, Scenario, UserDocument, ExtremistEntry, ExtremistCategory, ExtremistStatus, ExtremistContentType,
   EXTREMIST_CATEGORY_LABEL, EXTREMIST_STATUS_LABEL, EXTREMIST_CONTENT_TYPE_LABEL,
-  NoteCategory, NOTE_CATEGORIES,
+  NoteCategory, NOTE_CATEGORIES, Article,
 } from "./data/types";
 import { OFFICIAL_SOURCES } from "./data/mock";
 import { matchesQuery } from "./services/search";
@@ -22,6 +23,24 @@ import { apiClient } from "./services/api";
 import { institutionsForScenario, matchInstitutionsForAddresses, profileAddresses } from "./services/institutions";
 import { ProfileEditModal, ProposeButton, MyContributions, EditorialFeed, DocumentCardModal } from "./components/extra-screens";
 import { AvatarCropper, validateAvatarFile } from "./components/avatar-cropper";
+import {
+  checkNativeNotificationPermission,
+  isNativeApp as isNativeNotificationApp,
+  requestNativeNotificationPermission,
+  scheduleLocalNotification,
+  syncNativeNotificationSchedule,
+} from "./services/nativeNotifications";
+import {
+  checkPushPermission,
+  registerNativePush,
+  requestPushPermission as requestNativePushPermission,
+} from "./services/nativePush";
+import {
+  checkWebNotificationPermission,
+  isDesktopBrowserNotificationAvailable,
+  requestWebNotificationPermission,
+  showWebNotification,
+} from "./services/webNotifications";
 
 function PageSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
@@ -32,6 +51,124 @@ function PageSearch({ value, onChange, placeholder }: { value: string; onChange:
       {value && <button onClick={() => onChange("")} className="shrink-0 text-black/35 hover:text-black/60 dark:text-white/35"><X size={15} /></button>}
     </div>
   );
+}
+
+type SearchSuggestion = {
+  id: string;
+  title: string;
+  description?: string;
+};
+
+function SuggestionSearch({
+  value,
+  onChange,
+  placeholder,
+  suggestions,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  suggestions: SearchSuggestion[];
+}) {
+  const [focused, setFocused] = useState(false);
+  const shouldShow = focused && value.trim().length > 0 && suggestions.length > 0;
+  return (
+    <div
+      className="relative"
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={() => window.setTimeout(() => setFocused(false), 120)}
+    >
+      <PageSearch value={value} onChange={onChange} placeholder={placeholder} />
+      {shouldShow && (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-30 overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-[0_18px_55px_-36px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-[#10131A]">
+          {suggestions.slice(0, 10).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                onChange(item.title);
+                setFocused(false);
+              }}
+              className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-black/[0.035] dark:hover:bg-white/[0.055]"
+            >
+              <Search size={15} className="mt-0.5 shrink-0 text-black/35 dark:text-white/35" />
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-medium tracking-tight text-black dark:text-white">
+                  {item.title}
+                </span>
+                {item.description && (
+                  <span className="mt-0.5 block truncate text-[12px] tracking-tight text-black/45 dark:text-white/45">
+                    {item.description}
+                  </span>
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function stripHtml(value = ""): string {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function textPreview(...values: Array<string | undefined | null>): string {
+  for (const value of values) {
+    const clean = stripHtml(value ?? "");
+    if (clean) return clean;
+  }
+  return "";
+}
+
+function displayDate(value?: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function articleAuthorLabel(article: Article): string {
+  const proposed = article.author.proposedBy;
+  if (article.author.anonymous && proposed) return "Пользователь";
+  return article.author.name || proposed || "Редакция";
+}
+
+function firstImageUrl(urls: string[]): string {
+  return urls.find(Boolean) ?? "";
+}
+
+function normalizeHost(value: string): string {
+  const raw = value.trim();
+  if (!raw) return "";
+  try {
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return new URL(withProtocol).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return raw.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase();
+  }
+}
+
+function resolveOfficialSourceId(record: { sourceIds?: string[]; sourceUrl?: string; sourceUrlDomain?: string }): string | null {
+  if (record.sourceIds && record.sourceIds.length > 0) return record.sourceIds[0];
+  const targetHost = normalizeHost(record.sourceUrlDomain ?? record.sourceUrl ?? "");
+  if (!targetHost) return null;
+  const hit = OFFICIAL_SOURCES.find((s) => {
+    const sourceHost = normalizeHost(s.url);
+    return targetHost === sourceHost || targetHost.endsWith(`.${sourceHost}`) || sourceHost.endsWith(`.${targetHost}`);
+  });
+  return hit?.id ?? null;
 }
 
 // Helper to get category icons
@@ -433,8 +570,9 @@ export function DocumentsPage() {
   const { isMobile } = useContext(ShellContext);
   const { documents, settings, role } = useStore();
   const navigate = useNavigate();
-  const context = useOutletContext<{ onAddDoc?: () => void }>();
+  const context = useOutletContext<{ onAddDoc?: () => void; onEditDoc?: (id: string) => void }>();
   const onAddDoc = context?.onAddDoc ?? (() => undefined);
+  const onEditDoc = context?.onEditDoc ?? (() => undefined);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   // v0.3: открытая карточка документа (read-only preview + PDF upload)
@@ -454,8 +592,8 @@ export function DocumentsPage() {
           <button onClick={onAddDoc} className="grid h-10 w-10 place-items-center rounded-full bg-[#0056FF] text-white shadow-sm"><Plus size={16} /></button>
         } />
         <div className="px-5">
-          <div className="mb-3 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-            <strong className="font-medium">Демо-режим.</strong> Сканы не шифруются. Не загружайте реальные паспортные данные.
+          <div className="mb-3 rounded-2xl border border-emerald-200/60 bg-emerald-50 px-3 py-2 text-[11px] leading-relaxed text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <strong className="font-medium">Демо-данные.</strong> Чувствительные поля и сканы шифруются на сервере (Fernet). Не загружайте реальные документы — это учебный проект.
           </div>
           <div className="mb-3"><PageSearch value={query} onChange={setQuery} placeholder="Поиск по документам" /></div>
           <div className="flex gap-2 overflow-x-auto pb-1 mb-4 [&::-webkit-scrollbar]:hidden">
@@ -500,7 +638,7 @@ export function DocumentsPage() {
           open={cardId !== null}
           onClose={() => setCardId(null)}
           docId={cardId}
-          onEdit={role === "guest" ? undefined : (id) => context?.onAddDoc?.()}
+          onEdit={role === "guest" ? undefined : (id) => onEditDoc(id)}
         />
       </div>
     );
@@ -518,8 +656,8 @@ export function DocumentsPage() {
         <PrimaryButton onClick={onAddDoc} className="gap-2 px-5"><Plus size={16}/> Добавить документ</PrimaryButton>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-amber-200/60 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-        <strong className="font-medium">Демо-режим.</strong> Сканы хранятся локально и не шифруются. Не загружайте реальные паспортные данные.
+      <div className="mt-5 rounded-2xl border border-emerald-200/60 bg-emerald-50 px-4 py-3 text-[12px] leading-relaxed text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <strong className="font-medium">Демо-данные.</strong> Чувствительные поля и сканы шифруются на сервере (Fernet). Не загружайте реальные документы — это учебный проект.
       </div>
 
       <div className="mt-6 max-w-[420px]"><PageSearch value={query} onChange={setQuery} placeholder="Поиск по документам" /></div>
@@ -561,7 +699,7 @@ export function DocumentsPage() {
         open={cardId !== null}
         onClose={() => setCardId(null)}
         docId={cardId}
-        onEdit={role === "guest" ? undefined : (id) => context?.onAddDoc?.()}
+        onEdit={role === "guest" ? undefined : (id) => onEditDoc(id)}
       />
     </div>
   );
@@ -885,11 +1023,49 @@ export function OnboardingPage() {
   );
 }
 
+type PublicFeedItem =
+  | {
+      kind: "news";
+      id: string;
+      title: string;
+      summary: string;
+      bodyHtml: string;
+      date: string;
+      cover: string;
+      gallery: string[];
+      tags: string[];
+      category: string;
+      sourceId: string | null;
+      sourceIds?: string[];
+      sourceUrl?: string;
+      sourceTitle?: string;
+      authorName: string;
+      views: number;
+    }
+  | {
+      kind: "law";
+      id: string;
+      title: string;
+      summary: string;
+      bodyHtml: string;
+      date: string;
+      category: string;
+      sourceId: string | null;
+      sourceIds?: string[];
+      sourceUrl?: string;
+      sourceTitle?: string;
+      priority?: boolean;
+      whatChanged: string;
+      whoAffected: string;
+      whatToDo: string;
+    };
+
 export function NewsPage() {
   const { isMobile } = useContext(ShellContext);
   const navigate = useNavigate();
   const { articles, legal } = useStore();
   const [preferredSourceIds, setPreferredSourceIds] = usePreferredSourceIds();
+  const [query, setQuery] = useState("");
 
   // v0.7: объединяем «Новости» (статьи с kind='news') и «Закон-апдейты»
   // (массив legal) в одну ленту с фильтр-чипами. Подписка на закон-апдейты
@@ -905,24 +1081,7 @@ export function NewsPage() {
   // Для law: приоритет sourceIds[0], иначе матч OFFICIAL_SOURCES по домену url.
   // Для article: sourceIds[0] или sourceUrl-матч по домену.
   const resolveSourceId = (record: { sourceIds?: string[]; sourceUrl?: string; sourceUrlDomain?: string }): string | null => {
-    if (record.sourceIds && record.sourceIds.length > 0) return record.sourceIds[0];
-    const normalizeHost = (value: string): string => {
-      const raw = value.trim();
-      if (!raw) return "";
-      try {
-        const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-        return new URL(withProtocol).hostname.replace(/^www\./, "").toLowerCase();
-      } catch {
-        return raw.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase();
-      }
-    };
-    const targetHost = normalizeHost(record.sourceUrlDomain ?? record.sourceUrl ?? "");
-    if (!targetHost) return null;
-    const hit = OFFICIAL_SOURCES.find((s) => {
-      const sourceHost = normalizeHost(s.url);
-      return targetHost === sourceHost || targetHost.endsWith(`.${sourceHost}`) || sourceHost.endsWith(`.${targetHost}`);
-    });
-    return hit?.id ?? null;
+    return resolveOfficialSourceId(record);
   };
 
   const newsList = articles
@@ -932,9 +1091,17 @@ export function NewsPage() {
       id: a.id,
       title: a.title,
       summary: a.summary ?? "",
-      date: a.publishedAt ?? a.updatedAt ?? "",
+      bodyHtml: a.bodyHtml ?? "",
+      date: a.date || a.updatedAt || "",
+      cover: a.cover ?? "",
+      gallery: Array.isArray(a.gallery) ? a.gallery : [],
+      tags: Array.isArray(a.tags) ? a.tags : [],
+      category: a.category ?? "",
       sourceIds: a.sourceIds,
       sourceUrl: a.sourceUrl,
+      sourceTitle: a.source || "",
+      authorName: articleAuthorLabel(a),
+      views: a.views ?? 0,
     }));
 
   const lawList = legal.map((l) => {
@@ -946,12 +1113,17 @@ export function NewsPage() {
       id: l.id,
       title: l.title,
       summary: l.summary ?? "",
+      bodyHtml: l.bodyHtml ?? "",
       date: l.effectiveDate ?? "",
+      category: l.category,
       sourceUrl: l.source.url,
       sourceTitle: l.source.title,
       sourceUrlDomain: domain,
       sourceIds: l.sourceIds,
       priority: l.priority,
+      whatChanged: l.whatChanged,
+      whoAffected: l.whoAffected,
+      whatToDo: l.whatToDo,
     };
   });
 
@@ -973,16 +1145,50 @@ export function NewsPage() {
     ? baseCombined.filter(it => it.sourceId === sourceFilter)
     : baseCombined;
 
+  const queryFiltered = query.trim()
+    ? combined.filter((it) => {
+        const sourceTitle = it.sourceId ? OFFICIAL_SOURCES.find(s => s.id === it.sourceId)?.title : it.sourceTitle;
+        const fields = it.kind === "news"
+          ? [it.title, it.summary, it.bodyHtml, it.category, it.authorName, sourceTitle, it.sourceUrl, ...it.tags]
+          : [it.title, it.summary, it.bodyHtml, it.category, it.whatChanged, it.whoAffected, it.whatToDo, sourceTitle, it.sourceUrl];
+        return matchesQuery(query, fields);
+      })
+    : combined;
+
   // Приоритетная сортировка: preferred sources → выше.
   const preferredSet = new Set(preferredSourceIds);
   const sorted = preferredSourceIds.length === 0
-    ? combined
-    : [...combined].sort((a, b) => {
+    ? queryFiltered
+    : [...queryFiltered].sort((a, b) => {
         const ap = a.sourceId && preferredSet.has(a.sourceId) ? 1 : 0;
         const bp = b.sourceId && preferredSet.has(b.sourceId) ? 1 : 0;
         if (ap !== bp) return bp - ap;
         return (b.date ?? "").localeCompare(a.date ?? "");
       });
+
+  const searchSuggestions = React.useMemo<SearchSuggestion[]>(() => {
+    const q = query.trim();
+    if (!q) return [];
+    const seen = new Set<string>();
+    const suggestions: SearchSuggestion[] = [];
+    const push = (title: string, description?: string) => {
+      const clean = title.trim();
+      const key = clean.toLowerCase();
+      if (!clean || seen.has(key)) return;
+      if (!matchesQuery(q, [clean, description ?? ""])) return;
+      suggestions.push({ id: key, title: clean, description });
+      seen.add(key);
+    };
+    combined.forEach((it) => {
+      const sourceTitle = it.sourceId ? OFFICIAL_SOURCES.find(s => s.id === it.sourceId)?.title : it.sourceTitle;
+      push(it.title, it.kind === "law" ? "Закон-апдейт" : "Новость");
+      if (it.summary) push(it.summary, it.title);
+      if (sourceTitle) push(sourceTitle, "Источник");
+      if (it.kind === "news") it.tags.forEach(tag => push(tag, "Тег публикации"));
+      if (it.kind === "law") push(it.whatChanged, "Что изменилось");
+    });
+    return suggestions.slice(0, 10);
+  }, [combined, query]);
 
   const filterCounts = {
     all: newsWithSource.length + lawWithSource.length,
@@ -1148,7 +1354,7 @@ export function NewsPage() {
     </div>
   );
 
-  const empty = combined.length === 0 && (
+  const empty = sorted.length === 0 && (
     <div className="grid place-items-center rounded-3xl border border-dashed border-black/10 p-12 text-center dark:border-white/12">
       <div>
         <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]"><Newspaper size={20} /></div>
@@ -1164,6 +1370,12 @@ export function NewsPage() {
         <MobileTopBar title="Новости" onBack={() => navigate(-1)} />
         <div className="space-y-4 px-5">
           <ProposeButton kind="news" className="w-full justify-center" />
+          <SuggestionSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Поиск по новостям, законам, источникам"
+            suggestions={searchSuggestions}
+          />
           {sourcesSection}
           <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
             {filterChips}
@@ -1195,6 +1407,14 @@ export function NewsPage() {
       <p className="mt-2 max-w-[560px] tracking-tight text-black/60 dark:text-white/60">Редакционные материалы и релевантные изменения в законодательстве, подобранные под профиль.</p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <ProposeButton kind="news" />
+        <div className="min-w-[320px] max-w-[520px] flex-1">
+          <SuggestionSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Найти новость, закон-апдейт или источник"
+            suggestions={searchSuggestions}
+          />
+        </div>
         <div className="flex flex-wrap gap-2">
           {filterChips}
           {extremistChip}
@@ -1222,20 +1442,24 @@ export function NewsPage() {
 function NewsCard({
   item, navigate, source, onTogglePreferred, isPreferred,
 }: {
-  item:
-    | { kind: "news"; id: string; title: string; summary: string; date: string; sourceId: string | null }
-    | { kind: "law"; id: string; title: string; summary: string; date: string; sourceUrl?: string; priority?: boolean; sourceId: string | null; sourceTitle?: string };
+  item: PublicFeedItem;
   navigate: (path: string) => void;
   source?: { id: string; title: string; url: string; type: string };
   onTogglePreferred?: () => void;
   isPreferred?: boolean;
 }) {
   const isLaw = item.kind === "law";
+  const image = item.kind === "news" ? firstImageUrl([item.cover, ...(item.gallery ?? [])]) : "";
+  const dateLabel = displayDate(item.date);
+  const description = textPreview(item.summary, item.bodyHtml, item.kind === "law" ? item.whatChanged : "");
+  const metaLabel = item.kind === "news"
+    ? `Автор: ${item.authorName || "Редакция"}${dateLabel ? ` · ${dateLabel}` : ""}`
+    : `${item.sourceTitle || source?.title || "Официальный источник"}${dateLabel ? ` · ${dateLabel}` : ""}`;
   // Карточка должна быть «кликабельной» (навигация на детальную), но внутри неё
   // живут настоящие <button> (звезда) и <a target="_blank"> (источник) — это
   // interactive content, который запрещено вкладывать в <button>. Используем
   // <div role="button"> + Enter/Space на keyDown для клавиатурной доступности.
-  const go = () => navigate(isLaw ? `/law-detail/${item.id}` : "/news");
+  const go = () => navigate(isLaw ? `/law-detail/${item.id}` : `/news/${item.id}`);
   return (
     <div
       role="button"
@@ -1244,15 +1468,44 @@ function NewsCard({
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }}
       className="block w-full text-left cursor-pointer"
     >
-      <Card className="flex h-full w-full flex-col p-5">
-        <div className="flex items-center gap-2">
-          <Pill tone={isLaw ? "warn" : "lavender"}>
-            {isLaw ? "Закон-апдейт" : "Новость"}
-          </Pill>
-          {isLaw && item.priority && <Pill tone="warn"><AlertCircle size={11} /> Важное</Pill>}
-        </div>
-        <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 16, lineHeight: 1.25 }}>{item.title}</div>
-        {item.summary && <div className="mt-1 line-clamp-3 text-[13px] tracking-tight text-black/55 dark:text-white/55">{item.summary}</div>}
+      <Card className="group flex h-full w-full flex-col overflow-hidden !p-0 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_70px_-48px_rgba(15,23,42,0.6)]">
+        {image ? (
+          <div className="h-44 w-full overflow-hidden bg-black/[0.04] dark:bg-white/[0.04]">
+            <img src={image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" />
+          </div>
+        ) : (
+          <div className={`flex h-32 w-full items-end justify-between overflow-hidden px-5 py-4 ${isLaw ? "bg-gradient-to-br from-amber-50 via-white to-blue-50 dark:from-amber-500/15 dark:via-white/[0.04] dark:to-blue-500/10" : "bg-gradient-to-br from-[#E3E7FC] via-white to-[#F6F7FB] dark:from-[#0E1A3A] dark:via-white/[0.035] dark:to-white/[0.02]"}`}>
+            <div className={`grid h-12 w-12 place-items-center rounded-2xl ${isLaw ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200" : "bg-white text-[#0056FF] shadow-sm dark:bg-white/[0.08] dark:text-[#7FA8FF]"}`}>
+              {isLaw ? <BookOpen size={22} /> : <Newspaper size={22} />}
+            </div>
+            <div className="text-right text-[11px] uppercase tracking-[0.16em] text-black/35 dark:text-white/35">
+              {isLaw ? "правовое\nизменение" : "новости\nпортала"}
+            </div>
+          </div>
+        )}
+        <div className="flex flex-1 flex-col p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill tone={isLaw ? "warn" : "lavender"}>
+              {isLaw ? "Закон-апдейт" : (item.category || "Новости портала")}
+            </Pill>
+            {isLaw && item.priority && <Pill tone="warn"><AlertCircle size={11} /> Важное</Pill>}
+          </div>
+          <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 19, lineHeight: 1.16 }}>{item.title}</div>
+          <div className="mt-2 text-[12px] tracking-tight text-black/42 dark:text-white/42">{metaLabel}</div>
+          {description && (
+            <div className="mt-4 line-clamp-4 text-[14px] leading-relaxed tracking-tight text-black/62 dark:text-white/62">
+              {description}
+            </div>
+          )}
+          {item.kind === "news" && item.tags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {item.tags.slice(0, 3).map((tag) => (
+                <span key={tag} className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] tracking-tight text-black/52 dark:bg-white/[0.06] dark:text-white/52">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
         {/* P6: плашка источника */}
         {source && (
           <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-[#F6F7FB] px-2.5 py-1.5 text-[11px] tracking-tight text-black/60 dark:bg-white/[0.04] dark:text-white/60">
@@ -1280,13 +1533,227 @@ function NewsCard({
             </a>
           </div>
         )}
-        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
-          {item.date && <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">{item.date}</div>}
+        <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+          <div className="text-[11px] tracking-tight text-black/40 dark:text-white/40">
+            {item.kind === "news" && item.views > 0 ? `${item.views.toLocaleString("ru-RU")} просмотров` : dateLabel}
+          </div>
           <span className="inline-flex items-center gap-1 text-[11px] tracking-tight text-[#0056FF]">
             Подробнее <ExternalLink size={11} />
           </span>
         </div>
+        </div>
       </Card>
+    </div>
+  );
+}
+
+export function ArticleDetailPage() {
+  const { isMobile } = useContext(ShellContext);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { articles, publicContentStatus, publicContentError, loadArticles, registerView } = useStore();
+  const article = articles.find((item) => item.id === id && item.kind === "news" && item.status === "published");
+  const [retryNonce, setRetryNonce] = useState(0);
+  const viewRegistered = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (article || publicContentStatus === "loading") return;
+    const ctrl = new AbortController();
+    loadArticles(ctrl.signal).catch(() => undefined);
+    return () => ctrl.abort();
+  }, [article, loadArticles, publicContentStatus, retryNonce]);
+
+  useEffect(() => {
+    if (!article || viewRegistered.current === article.id) return;
+    viewRegistered.current = article.id;
+    registerView(article.id);
+  }, [article, registerView]);
+
+  const isLoading = !article && publicContentStatus === "loading";
+  const sourceId = article ? resolveOfficialSourceId({ sourceIds: article.sourceIds, sourceUrl: article.sourceUrl }) : null;
+  const source = sourceId ? OFFICIAL_SOURCES.find((item) => item.id === sourceId) : undefined;
+  const media = article ? Array.from(new Set([article.cover, ...(article.gallery ?? [])].filter(Boolean))) : [];
+  const mainImage = media[0] ?? "";
+  const body = article?.bodyHtml?.trim();
+  const summary = article ? textPreview(article.summary) : "";
+
+  const loadingBlock = (
+    <div className="grid min-h-[340px] place-items-center rounded-[28px] border border-black/[0.06] bg-white p-8 text-center dark:border-white/[0.08] dark:bg-white/[0.04]">
+      <div>
+        <RefreshCw size={22} className="mx-auto animate-spin text-[#0056FF]" />
+        <div className="mt-3 text-[14px] tracking-tight text-black/55 dark:text-white/55">Загружаем публикацию…</div>
+      </div>
+    </div>
+  );
+
+  const missingBlock = (
+    <div className="grid min-h-[340px] place-items-center rounded-[28px] border border-dashed border-black/10 bg-white p-8 text-center dark:border-white/12 dark:bg-white/[0.04]">
+      <div>
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+          <Newspaper size={22} />
+        </div>
+        <div className="mt-4 tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>
+          Публикация не найдена
+        </div>
+        <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-black/55 dark:text-white/55">
+          {publicContentError
+            ? "Не удалось загрузить публикации с сервера. Проверьте подключение и попробуйте снова."
+            : "Материал может быть снят с публикации или ещё не загружен."}
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/news")}
+            className="rounded-2xl border border-black/10 bg-white px-4 py-2.5 text-[13px] tracking-tight text-black/65 dark:border-white/12 dark:bg-white/[0.05] dark:text-white/65"
+          >
+            К новостям
+          </button>
+          <button
+            type="button"
+            onClick={() => setRetryNonce((value) => value + 1)}
+            className="rounded-2xl bg-[#0056FF] px-4 py-2.5 text-[13px] tracking-tight text-white"
+          >
+            Повторить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const content = article && (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="hidden items-center gap-2 text-[13px] tracking-tight text-black/45 hover:text-[#0056FF] dark:text-white/45 md:inline-flex"
+      >
+        <ChevronLeft size={15} /> Назад
+      </button>
+
+      <article className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white shadow-[0_24px_80px_-56px_rgba(15,23,42,0.55)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+        {mainImage && (
+          <div className="h-[240px] w-full overflow-hidden bg-black/[0.04] dark:bg-white/[0.04] md:h-[360px]">
+            <img src={mainImage} alt="" className="h-full w-full object-cover" />
+          </div>
+        )}
+        <div className="p-5 md:p-8">
+          <div className="text-[12px] uppercase tracking-[0.12em] text-[#0056FF]">
+            {article.category || "Новости портала"}
+          </div>
+          <h1 className="mt-3 max-w-[900px] tracking-tight text-black dark:text-white" style={{ fontSize: isMobile ? 32 : 48, lineHeight: 1.03 }}>
+            {article.title}
+          </h1>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] tracking-tight text-black/45 dark:text-white/45">
+            <span>Автор: {articleAuthorLabel(article)}</span>
+            {article.date && <span>{displayDate(article.date)}</span>}
+            <span>{(article.views ?? 0).toLocaleString("ru-RU")} просмотров</span>
+          </div>
+          {summary && (
+            <p className="mt-6 max-w-[780px] text-[17px] leading-relaxed tracking-tight text-black/62 dark:text-white/62">
+              {summary}
+            </p>
+          )}
+        </div>
+      </article>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-5">
+          <Card>
+            {body ? (
+              <div
+                className="prose max-w-none text-[15px] leading-relaxed tracking-tight text-black/78 [&_a]:text-[#0056FF] [&_a]:underline [&_h2]:mt-7 [&_h2]:text-[22px] [&_h2]:font-medium [&_h2]:text-black [&_h3]:mt-5 [&_h3]:text-[18px] [&_h3]:font-medium [&_h3]:text-black [&_li]:my-1 [&_ol]:pl-5 [&_p]:my-3 [&_ul]:pl-5 dark:text-white/78 dark:[&_h2]:text-white dark:[&_h3]:text-white"
+                dangerouslySetInnerHTML={{ __html: body }}
+              />
+            ) : (
+              <div className="text-[14px] leading-relaxed tracking-tight text-black/60 dark:text-white/60">
+                Подробный текст публикации пока не заполнен. Используйте краткое описание и официальный источник.
+              </div>
+            )}
+          </Card>
+
+          {media.length > 1 && (
+            <Card>
+              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>Фотографии к публикации</div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {media.slice(1).map((url, index) => (
+                  <a
+                    key={`${url}-${index}`}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group overflow-hidden rounded-2xl border border-black/[0.06] bg-black/[0.02] transition hover:border-[#0056FF]/35 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                  >
+                    <img src={url} alt="" className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {article.video && (
+            <Card>
+              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 20 }}>Видео</div>
+              <a href={article.video} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-[13px] tracking-tight text-[#0056FF]">
+                Открыть видео <ArrowUpRight size={14} />
+              </a>
+            </Card>
+          )}
+        </div>
+
+        <aside className="space-y-5">
+          {(source || article.source || article.sourceUrl) && (
+            <Card>
+              <div className="flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">
+                <Shield size={14} /> Источник
+              </div>
+              <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+                {source?.title || article.source || sourceHost(article.sourceUrl || "")}
+              </div>
+              {(source?.description) && (
+                <p className="mt-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+                  {source.description}
+                </p>
+              )}
+              {(article.sourceUrl || source?.url) && (
+                <a
+                  href={article.sourceUrl || source?.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0056FF] px-4 py-3 text-[13px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
+                >
+                  Открыть источник <ArrowUpRight size={14} />
+                </a>
+              )}
+            </Card>
+          )}
+
+          {article.tags.length > 0 && (
+            <Card>
+              <div className="tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>Теги</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {article.tags.map((tag) => (
+                  <span key={tag} className="rounded-full bg-[#E3E7FC] px-3 py-1.5 text-[12px] tracking-tight text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <div className="rounded-2xl border border-amber-200/60 bg-amber-50 p-4 text-[13px] leading-relaxed tracking-tight text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+            Материал опубликован в информационных целях. Перед подачей документов или принятием решения сверяйте актуальные требования на официальном ресурсе.
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "mx-auto w-full max-w-[1180px] p-8"}>
+      {isMobile && <MobileTopBar title="Публикация" onBack={() => navigate(-1)} />}
+      <div className={isMobile ? "px-5" : ""}>
+        {isLoading ? loadingBlock : article ? content : missingBlock}
+      </div>
     </div>
   );
 }
@@ -1431,6 +1898,8 @@ export function LawDetailPage() {
   }
 
   const lawBodyHtml = item?.bodyHtml?.trim();
+  const lawSourceId = item ? resolveOfficialSourceId({ sourceIds: item.sourceIds, sourceUrl: item.source.url }) : null;
+  const lawSource = lawSourceId ? OFFICIAL_SOURCES.find((source) => source.id === lawSourceId) : undefined;
 
   return (
     <div className={`${isMobile ? "h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" : "p-8 max-w-[800px]"} space-y-6`}>
@@ -1447,7 +1916,7 @@ export function LawDetailPage() {
           <Pill tone="lavender">{catLabel(item!.category)}</Pill>
           <h1 className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: isMobile ? 26 : 32, lineHeight: 1.1 }}>{item!.title}</h1>
           <div className="mt-3 flex gap-4 text-[13px] text-black/55 dark:text-white/55">
-            <span className="flex items-center gap-1.5"><Clock size={14} /> с {item!.effectiveDate}</span>
+            <span className="flex items-center gap-1.5"><Clock size={14} /> с {displayDate(item!.effectiveDate)}</span>
           </div>
         </div>
 
@@ -1457,6 +1926,15 @@ export function LawDetailPage() {
               className="prose max-w-none text-[14px] leading-relaxed tracking-tight text-black/75 [&_h3]:mt-5 [&_h3]:text-[16px] [&_h3]:font-medium [&_h3]:text-black [&_li]:my-1 [&_ul]:pl-5 dark:text-white/75 dark:[&_h3]:text-white"
               dangerouslySetInnerHTML={{ __html: lawBodyHtml }}
             />
+          </Card>
+        )}
+
+        {!lawBodyHtml && item!.summary && (
+          <Card className="mt-6 p-5">
+            <div className="text-[12px] uppercase tracking-[0.12em] text-[#0056FF]">Кратко</div>
+            <p className="mt-3 text-[15px] leading-relaxed tracking-tight text-black/70 dark:text-white/70">
+              {item!.summary}
+            </p>
           </Card>
         )}
 
@@ -1471,6 +1949,28 @@ export function LawDetailPage() {
           <p className="text-[14px] text-black/70 dark:text-white/70 leading-relaxed whitespace-pre-wrap">{item!.whatToDo}</p>
         </Card>
 
+        <Card className="mt-6 p-5">
+          <div className="flex items-center gap-2 text-[12px] uppercase tracking-[0.14em] text-[#0056FF]">
+            <Shield size={14} /> Официальный источник
+          </div>
+          <div className="mt-3 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+            {lawSource?.title || item!.source.title || sourceHost(item!.source.url)}
+          </div>
+          {lawSource?.description && (
+            <p className="mt-2 text-[13px] leading-relaxed tracking-tight text-black/55 dark:text-white/55">
+              {lawSource.description}
+            </p>
+          )}
+          <a
+            href={item!.source.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0056FF] px-4 py-3 text-[13px] font-medium tracking-tight text-white shadow-[0_16px_34px_-22px_rgba(0,86,255,0.75)]"
+          >
+            Открыть источник <ArrowUpRight size={14} />
+          </a>
+        </Card>
+
         <div className="mt-6 rounded-2xl border border-amber-200/60 bg-amber-50 p-4 text-[13px] tracking-tight text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
           Материал основан на официальных источниках. Перед подачей документов сверяйте актуальную редакцию и требования на сайте первоисточника.
         </div>
@@ -1481,8 +1981,138 @@ export function LawDetailPage() {
 
 export function NotificationsPage() {
   const { isMobile } = useContext(ShellContext);
-  const { notifications, markAllRead, markRead } = useStore();
+  const {
+    notifications, markAllRead, markRead, refreshNotifications,
+    settings, updateSettings, authSession,
+  } = useStore();
   const navigate = useNavigate();
+  const [channelStatus, setChannelStatus] = useState({
+    local: "unavailable" as string,
+    push: "unavailable" as string,
+    browser: "unavailable" as string,
+    tokenRegistered: false,
+    nativeReady: false,
+  });
+  const [channelBusy, setChannelBusy] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+
+  const loadChannelStatus = useCallback(async () => {
+    const token = authSession?.access_token;
+    const native = isNativeNotificationApp();
+    const [localPermission, pushPermission] = native
+      ? await Promise.all([checkNativeNotificationPermission(), checkPushPermission()])
+      : ["unavailable", "unavailable"];
+    const browserPermission = isDesktopBrowserNotificationAvailable()
+      ? checkWebNotificationPermission()
+      : "unavailable";
+    let tokenRegistered = false;
+    let nativeReady = false;
+    if (token) {
+      try {
+        const status = await apiClient.getNativePushStatus<{ registered: boolean; native_push_ready: boolean }>(token);
+        tokenRegistered = status.registered;
+        nativeReady = status.native_push_ready;
+      } catch {
+        // In-app центр остаётся рабочим, даже если push status временно недоступен.
+      }
+    }
+    setChannelStatus({
+      local: String(localPermission),
+      push: String(pushPermission),
+      browser: String(browserPermission),
+      tokenRegistered,
+      nativeReady,
+    });
+  }, [authSession?.access_token]);
+
+  useEffect(() => { void loadChannelStatus(); }, [loadChannelStatus]);
+
+  const patchNotificationSettings = (patch: Partial<typeof settings.notifications>) => {
+    updateSettings({ notifications: { ...settings.notifications, ...patch } });
+  };
+
+  const enableSystemNotifications = async () => {
+    setChannelBusy(true);
+    setTestMessage("");
+    try {
+      if (isNativeNotificationApp()) {
+        const local = await requestNativeNotificationPermission();
+        const push = await requestNativePushPermission();
+        const localGranted = local === "granted";
+        const pushGranted = push === "granted";
+        if (pushGranted && authSession?.access_token) await registerNativePush(authSession.access_token);
+        if (localGranted) await syncNativeNotificationSchedule(notifications);
+        patchNotificationSettings({
+          push: localGranted || pushGranted,
+          system_notifications_enabled: localGranted || pushGranted,
+          local_notifications_enabled: localGranted,
+          native_push_enabled: pushGranted,
+          browser_notifications_enabled: false,
+        });
+        setTestMessage(localGranted || pushGranted
+          ? "Системные уведомления включены на этом устройстве."
+          : "Разрешение не выдано. Уведомления продолжат сохраняться внутри приложения.");
+      } else if (isDesktopBrowserNotificationAvailable()) {
+        const permission = await requestWebNotificationPermission();
+        const granted = permission === "granted";
+        patchNotificationSettings({
+          push: granted,
+          system_notifications_enabled: granted,
+          browser_notifications_enabled: granted,
+          local_notifications_enabled: false,
+          native_push_enabled: false,
+        });
+        setTestMessage(granted
+          ? "Уведомления браузера включены."
+          : "Разрешение не выдано. Уведомления останутся во внутреннем центре.");
+      } else {
+        setTestMessage("Системные уведомления недоступны в этом браузере. Внутренний центр работает всегда.");
+      }
+      await loadChannelStatus();
+    } finally {
+      setChannelBusy(false);
+    }
+  };
+
+  const sendTest = async () => {
+    if (!authSession?.access_token) {
+      setTestMessage("Войдите в аккаунт, чтобы создать тестовое уведомление.");
+      return;
+    }
+    setChannelBusy(true);
+    try {
+      const result = await apiClient.sendTestPushNotification<{
+        in_app_created: boolean;
+        system_delivered: boolean;
+        reason: string;
+      }>(authSession.access_token);
+      let delivered = result.system_delivered;
+      if (!isNativeNotificationApp() && settings.notifications.browser_notifications_enabled) {
+        delivered = showWebNotification("Белпомощник", "Тестовое уведомление", "/notifications") || delivered;
+      }
+      if (isNativeNotificationApp() && settings.notifications.local_notifications_enabled) {
+        const localId = await scheduleLocalNotification({
+          id: `test-${Date.now()}`,
+          kind: "step_done",
+          title: "Белпомощник",
+          body: "Тестовое уведомление",
+          createdAt: new Date(Date.now() + 3000).toISOString(),
+          read: false,
+          link: { page: "notifications" },
+        });
+        delivered = localId !== null || delivered;
+      }
+      await refreshNotifications();
+      setTestMessage(delivered
+        ? "Тестовое системное уведомление отправлено и сохранено внутри приложения."
+        : "Тестовое уведомление сохранено внутри приложения. Системная доставка сейчас недоступна или не разрешена.");
+    } catch {
+      setTestMessage("Не удалось создать тестовое уведомление. Проверьте соединение с сервером.");
+    } finally {
+      setChannelBusy(false);
+      await loadChannelStatus();
+    }
+  };
 
   const targetFor = (it: { kind: string; link?: { page: string; id?: string | number } }): string => {
     if (it.link?.page) {
@@ -1503,6 +2133,77 @@ export function NotificationsPage() {
     navigate(targetFor(it));
   };
 
+  const statusLabel = (value: string) => value === "granted" ? "Включены" : value === "denied" ? "Запрещены" : value === "prompt" ? "Не настроены" : "Недоступны";
+  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={onChange}
+      className={`relative h-7 w-12 rounded-full transition-colors ${value ? "bg-[#0056FF]" : "bg-black/10 dark:bg-white/15"}`}
+    >
+      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+
+  const settingsPanel = (
+    <div className="space-y-3">
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[15px] font-medium tracking-tight text-black dark:text-white">Способы уведомлений</div>
+            <p className="mt-1 text-[12px] leading-relaxed text-black/50 dark:text-white/50">
+              Если системные уведомления выключены, сообщения всё равно сохраняются внутри приложения.
+            </p>
+          </div>
+          <Bell size={18} className="shrink-0 text-[#0056FF]" />
+        </div>
+        <div className="mt-4 divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+          <div className="flex items-center justify-between py-3 text-[13px]"><span>В приложении</span><Pill tone="green">Всегда включено</Pill></div>
+          {isNativeNotificationApp() ? (
+            <>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Локальные уведомления</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.local)}</span></div>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Native push</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.push)}</span></div>
+              <div className="flex items-center justify-between py-3 text-[13px]"><span>Push-токен приложения</span><span className="text-black/50 dark:text-white/50">{channelStatus.tokenRegistered ? "Зарегистрирован" : "Не зарегистрирован"}</span></div>
+              {!channelStatus.nativeReady && <div className="py-3 text-[12px] text-amber-700 dark:text-amber-300">Серверная доставка потребует настройки FCM/APNs. Напоминания по срокам работают локально.</div>}
+            </>
+          ) : (
+            <div className="flex items-center justify-between py-3 text-[13px]"><span>Desktop browser</span><span className="text-black/50 dark:text-white/50">{statusLabel(channelStatus.browser)}</span></div>
+          )}
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <PrimaryButton onClick={enableSystemNotifications} disabled={channelBusy}>
+            {channelBusy ? "Проверяем…" : isNativeNotificationApp() ? "Включить на устройстве" : "Включить в браузере"}
+          </PrimaryButton>
+          <GhostButton onClick={sendTest} disabled={channelBusy}>Отправить тестовое</GhostButton>
+        </div>
+        {testMessage && <div className="mt-3 rounded-xl bg-black/[0.035] px-3 py-2 text-[12px] leading-relaxed text-black/65 dark:bg-white/[0.06] dark:text-white/65">{testMessage}</div>}
+      </Card>
+
+      <Card className="p-5">
+        <div className="text-[15px] font-medium tracking-tight text-black dark:text-white">Типы уведомлений</div>
+        <div className="mt-3 divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+          {[
+            ["Документы", "doc_expiry_enabled"],
+            ["Задачи", "task_deadline_enabled"],
+            ["ЖКХ", "utility_enabled"],
+            ["Налоги", "tax_enabled"],
+            ["Новости и закон-апдейты", "law_updates_enabled"],
+            ["Безопасность", "security_enabled"],
+          ].map(([label, key]) => (
+            <div key={key} className="flex min-h-12 items-center justify-between gap-3 py-2 text-[13px] text-black dark:text-white">
+              <span>{label}</span>
+              <Toggle
+                value={Boolean(settings.notifications[key as keyof typeof settings.notifications])}
+                onChange={() => patchNotificationSettings({ [key]: !settings.notifications[key as keyof typeof settings.notifications] })}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
@@ -1510,6 +2211,7 @@ export function NotificationsPage() {
           <button onClick={markAllRead} className="grid h-10 w-10 place-items-center rounded-full bg-white shadow-sm dark:bg-white/[0.06]"><Check size={15} className="text-black dark:text-white" /></button>
         } />
         <div className="px-5 space-y-3">
+          {settingsPanel}
           {notifications.map((it) => (
             <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
               <Card className={`flex items-start gap-3 p-4 ${it.read ? 'opacity-60' : ''}`}>
@@ -1541,7 +2243,8 @@ export function NotificationsPage() {
         <GhostButton onClick={markAllRead}>Прочитать все</GhostButton>
       </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-3">
         {notifications.map((it) => (
           <button key={it.id} onClick={() => onClickNotif(it)} className="block w-full text-left">
             <Card className={`flex items-start gap-4 p-5 ${it.read ? 'opacity-60' : ''}`}>
@@ -1558,6 +2261,9 @@ export function NotificationsPage() {
             </Card>
           </button>
         ))}
+        {notifications.length === 0 && <Card className="p-8 text-center text-[13px] text-black/55 dark:text-white/55">Уведомлений пока нет.</Card>}
+        </div>
+        {settingsPanel}
       </div>
     </div>
   );
@@ -2974,8 +3680,9 @@ function FinanceBody() {
   }
   for (const t of taxes) {
     if (t.status === "Оплачено") continue;
-    const overdue = !!t.dueDate && t.dueDate < today;
-    allUpcoming.push({ title: t.title, date: t.dueDate || "", amount: typeof t.amount === "number" ? t.amount : undefined, overdue });
+    // Промпт 2: bug-fix — TaxObligation использует `deadline`, не `dueDate`.
+    const overdue = !!t.deadline && t.deadline < today;
+    allUpcoming.push({ title: t.title, date: t.deadline || "", amount: typeof t.amount === "number" ? t.amount : undefined, overdue });
   }
   allUpcoming.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const overdueCount = allUpcoming.filter(x => x.overdue).length;
@@ -3331,7 +4038,188 @@ function FinanceBody() {
           )}
         </div>
       </section>
+
+      {/* Промпт 2: умные подсказки по профилю + Заявки 115 */}
+      <FinanceSmartHints />
+      <FinanceRequests115Section />
     </div>
+  );
+}
+
+/** Промпт 2: подсказки на основе профиля пользователя. */
+function FinanceSmartHints() {
+  const { profile } = useStore();
+  const hints: { icon: string; text: string }[] = [];
+  if (profile.ownsProperty) {
+    hints.push({ icon: "🏠", text: "Проверьте имущественные и земельные налоги в личном кабинете МНС — если они не отображаются здесь, их нужно добавить вручную." });
+  }
+  if (profile.hasCar) {
+    hints.push({ icon: "🚗", text: "У вас есть авто — следите за транспортным налогом и сроком ТО. Документы можно отсканировать в разделе «Документы»." });
+  }
+  if (profile.isRenter) {
+    hints.push({ icon: "🔑", text: "Как арендатор, вы можете отдельно вести лицевой счёт для оплаты коммуналки. Договор найма — в разделе «Документы»." });
+  }
+  if (Array.isArray(profile.addresses) && profile.addresses.length > 1) {
+    hints.push({ icon: "📍", text: `У вас сохранено несколько адресов (${profile.addresses.length}). Заведите отдельный лицевой счёт ЖКХ для каждого, чтобы видеть сроки.` });
+  }
+  if (hints.length === 0) return null;
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+        <Sparkles size={18} className="text-[#0056FF]" /> Подсказки по вашему профилю
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {hints.map((h, i) => (
+          <Card key={i} className="flex items-start gap-2 p-3.5 text-[13px] tracking-tight text-black/70 dark:text-white/70">
+            <span className="text-[16px] leading-none">{h.icon}</span>
+            <span>{h.text}</span>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const UTILITY_REQUEST_CATEGORY_LABEL: Record<string, string> = {
+  water: "Вода",
+  heating: "Отопление",
+  electricity: "Электричество",
+  waste_yard: "Мусор / двор",
+  entrance: "Подъезд",
+  elevator: "Лифт",
+  other: "Другое",
+};
+
+const UTILITY_REQUEST_STATUS_LABEL: Record<string, { label: string; tone: "ok" | "warn" | "ghost" | "lavender" }> = {
+  draft: { label: "Черновик", tone: "ghost" },
+  sent: { label: "Отправлено", tone: "lavender" },
+  in_progress: { label: "В работе", tone: "warn" },
+  resolved: { label: "Решено", tone: "ok" },
+  rejected: { label: "Отклонено", tone: "ghost" },
+};
+
+/** Промпт 2: вкладка «Заявки 115» — локальный органайзер. */
+function FinanceRequests115Section() {
+  const { utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest, role } = useStore();
+  const canEdit = role !== "guest";
+  const [creating, setCreating] = useState(false);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<"water" | "heating" | "electricity" | "waste_yard" | "entrance" | "elevator" | "other">("other");
+  const [description, setDescription] = useState("");
+
+  const resetForm = () => {
+    setTitle("");
+    setCategory("other");
+    setDescription("");
+    setCreating(false);
+  };
+
+  const submit = () => {
+    if (!title.trim()) return;
+    addUtilityRequest({
+      title: title.trim(),
+      category,
+      description: description.trim() || undefined,
+      status: "draft",
+    });
+    resetForm();
+  };
+
+  return (
+    <section>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>
+          <Wrench size={18} className="text-[#0056FF]" /> Заявки 115
+        </div>
+        {canEdit && !creating && (
+          <GhostButton className="gap-1.5 px-3 text-[13px]" onClick={() => setCreating(true)}>
+            <Plus size={14} /> Создать заявку
+          </GhostButton>
+        )}
+      </div>
+
+      <div className="mt-2 rounded-2xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+        Это локальный черновик. Для реальной отправки используйте официальный портал/приложение 115.бел.
+      </div>
+
+      {creating && (
+        <Card className="mt-3 space-y-3 p-4">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Кратко: что случилось"
+            className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+          />
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as typeof category)}
+            className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+          >
+            {Object.entries(UTILITY_REQUEST_CATEGORY_LABEL).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Описание проблемы (опционально)"
+            rows={3}
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[14px] tracking-tight outline-none focus:border-[#0056FF] dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+          />
+          <div className="flex justify-end gap-2">
+            <GhostButton className="px-3 text-[13px]" onClick={resetForm}>Отмена</GhostButton>
+            <PrimaryButton className="px-3 text-[13px]" onClick={submit}>Создать</PrimaryButton>
+          </div>
+        </Card>
+      )}
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {utilityRequests.map((r) => {
+          const meta = UTILITY_REQUEST_STATUS_LABEL[r.status] ?? UTILITY_REQUEST_STATUS_LABEL.draft;
+          return (
+            <Card key={r.id} className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[12px] tracking-tight text-[#0056FF]">{UTILITY_REQUEST_CATEGORY_LABEL[r.category] || "Другое"}</div>
+                  <div className="mt-1 truncate tracking-tight text-black dark:text-white" style={{ fontSize: 15 }}>{r.title}</div>
+                  {r.description && (
+                    <div className="mt-1 text-[12px] tracking-tight text-black/55 dark:text-white/55 line-clamp-3">{r.description}</div>
+                  )}
+                </div>
+                <Pill tone={meta.tone}>{meta.label}</Pill>
+              </div>
+              {canEdit && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {r.status === "draft" && (
+                    <button onClick={() => updateUtilityRequest(r.id, { status: "sent" })} className="rounded-lg bg-[#0056FF] px-3 py-1.5 text-[12px] tracking-tight text-white">
+                      Отметить отправленной
+                    </button>
+                  )}
+                  {r.status === "sent" && (
+                    <button onClick={() => updateUtilityRequest(r.id, { status: "in_progress" })} className="rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] tracking-tight text-white">
+                      В работе
+                    </button>
+                  )}
+                  {r.status === "in_progress" && (
+                    <button onClick={() => updateUtilityRequest(r.id, { status: "resolved" })} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[12px] tracking-tight text-white">
+                      Решена
+                    </button>
+                  )}
+                  <button onClick={() => deleteUtilityRequest(r.id)} className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-black/35 hover:text-red-500 dark:text-white/35">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+        {utilityRequests.length === 0 && !creating && (
+          <Card className="p-6 text-center text-[13px] tracking-tight text-black/55 dark:text-white/55 sm:col-span-2">
+            Заявок нет. Создайте черновик, чтобы зафиксировать обращение в 115 — а отправите его через официальный портал.
+          </Card>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -3479,7 +4367,10 @@ function sourceHost(value: string): string {
 }
 
 function isImageUrl(value: string): boolean {
-  return /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i.test(value);
+  if (!value) return false;
+  if (/^data:image\//i.test(value)) return true;
+  if (/\.(png|jpe?g|webp|gif|avif|bmp|heic)(\?.*)?$/i.test(value)) return true;
+  return /(image|photo|foto|picture|media|upload|uploads|img|thumbnail|preview|cover)/i.test(value);
 }
 
 function ExtremistEntryCard({
@@ -3492,7 +4383,7 @@ function ExtremistEntryCard({
   const mediaCount = (entry.mediaUrls?.length ?? 0) + (entry.attachmentUrls?.length ?? 0);
   const checkedLabel = entry.lastCheckedAt ? formatExtremistDate(entry.lastCheckedAt) : "требуется проверка";
   return (
-    <Card className="group overflow-hidden p-0 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-46px_rgba(15,23,42,0.55)]">
+    <Card className="group overflow-hidden !p-0 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_-46px_rgba(15,23,42,0.55)]">
       {entry.coverUrl ? (
         <button type="button" onClick={onOpen} className="block h-44 w-full overflow-hidden text-left">
           <img src={entry.coverUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
@@ -3585,6 +4476,7 @@ export function ExtremistPage() {
   const [entries, setEntries] = useState<ExtremistEntry[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | ExtremistStatus>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | ExtremistContentType>("all");
+  const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ExtremistForm>(emptyExtremistForm);
   const [formError, setFormError] = useState("");
@@ -3612,8 +4504,44 @@ export function ExtremistPage() {
   const filtered = entries.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
     if (typeFilter !== "all" && !e.contentTypes.includes(typeFilter)) return false;
+    if (query.trim()) {
+      const typeLabels = e.contentTypes.map((type) => EXTREMIST_CONTENT_TYPE_LABEL[type]);
+      if (!matchesQuery(query, [
+        e.title,
+        e.shortDescription,
+        e.sourceName,
+        e.sourceUrl,
+        e.category,
+        EXTREMIST_CATEGORY_LABEL[e.category],
+        e.includedAt,
+        e.lastCheckedAt,
+        ...typeLabels,
+      ])) return false;
+    }
     return true;
   });
+
+  const extremistSuggestions = React.useMemo<SearchSuggestion[]>(() => {
+    const q = query.trim();
+    if (!q) return [];
+    const seen = new Set<string>();
+    const suggestions: SearchSuggestion[] = [];
+    const push = (title: string, description?: string) => {
+      const clean = title.trim();
+      const key = clean.toLowerCase();
+      if (!clean || seen.has(key)) return;
+      if (!matchesQuery(q, [clean, description ?? ""])) return;
+      suggestions.push({ id: key, title: clean, description });
+      seen.add(key);
+    };
+    entries.forEach((entry) => {
+      push(entry.title, EXTREMIST_CATEGORY_LABEL[entry.category]);
+      if (entry.shortDescription) push(entry.shortDescription, entry.title);
+      if (entry.sourceName) push(entry.sourceName, "Источник");
+      entry.contentTypes.forEach((type) => push(EXTREMIST_CONTENT_TYPE_LABEL[type], "Тип материала"));
+    });
+    return suggestions.slice(0, 10);
+  }, [entries, query]);
 
   const closeForm = () => {
     setFormOpen(false);
@@ -3714,6 +4642,12 @@ export function ExtremistPage() {
 
   const filtersBlock = (
     <div className="space-y-3">
+      <SuggestionSearch
+        value={query}
+        onChange={setQuery}
+        placeholder="Поиск по материалам, источникам, типам"
+        suggestions={extremistSuggestions}
+      />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setStatusFilter("all")}

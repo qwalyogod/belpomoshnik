@@ -56,6 +56,14 @@
   }
 }
 
+/* Полноэкранные редакторы предложений сами рисуют свой header.
+   Скрываем mobile shell chrome, чтобы он не оставался поверх формы. */
+body.belp-propose-open .belp-mobile-header,
+body.belp-propose-open .belp-mobile-bottom-nav,
+body.belp-propose-open .belp-mobile-bottom-fade {
+  display: none;
+}
+
 /* iOS: убрать серый "автозаполнитель" подсветку паролей в WebView. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

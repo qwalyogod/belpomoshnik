@@ -207,6 +207,10 @@ function authHeaders(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
+function controlHeaders(controlToken: string) {
+  return { "X-Control-Center-Token": controlToken };
+}
+
 export const apiClient = {
   login: <T = AuthTokens>(email: string, password: string, options?: ApiRequestOptions) => {
     const body = new URLSearchParams();
@@ -249,6 +253,73 @@ export const apiClient = {
         role: payload.role ?? "citizen",
         is_guest: payload.is_guest ?? false,
       }),
+      ...options,
+    }),
+
+  // Промпт 3+4: история чатов + structured response + actions.
+  listAssistantSessions: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/chat/sessions", { headers: authHeaders(accessToken), ...options }),
+  createAssistantSession: <T>(accessToken: string, payload: { title?: string; mode?: string } = {}, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/chat/sessions", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ title: payload.title ?? "", mode: payload.mode ?? "citizen" }),
+      ...options,
+    }),
+  patchAssistantSession: <T>(accessToken: string, sessionId: string, patch: { title?: string; archived?: boolean }, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "PATCH",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(patch),
+      ...options,
+    }),
+  deleteAssistantSession: (accessToken: string, sessionId: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  listAssistantMessages: <T>(accessToken: string, sessionId: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}/messages`, {
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  sendAssistantMessage: <T>(accessToken: string, sessionId: string, content: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/assistant/chat/sessions/${encodeURIComponent(sessionId)}/messages`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ content }),
+      ...options,
+    }),
+  /** Промпт 3: action из чата — добавить сценарий в «Мои ситуации». */
+  createSituationFromAssistant: <T>(accessToken: string, scenarioId: string, sessionId?: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/assistant/actions/create-situation", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ scenario_id: scenarioId, session_id: sessionId ?? null }),
+      ...options,
+    }),
+
+  /** Промпт 3/4 (п.7): статус AI и управление личным Groq-ключом. */
+  getAiSettings: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings", { headers: authHeaders(accessToken), ...options }),
+  putGroqKey: <T>(accessToken: string, apiKey: string, model: string, verify: boolean, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/groq-key", {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ api_key: apiKey, model, verify }),
+      ...options,
+    }),
+  deleteGroqKey: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/groq-key", {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  testAiSettings: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/ai-settings/test", {
+      method: "POST",
+      headers: authHeaders(accessToken),
       ...options,
     }),
 
@@ -350,7 +421,7 @@ export const apiClient = {
     requestJson<T>("/api/user/notifications", { headers: authHeaders(accessToken), ...options }),
   createUserNotification: <T>(
     accessToken: string,
-    payload: { title: string; description?: string; notification_type?: string; due_date?: string | null; send_email?: boolean },
+    payload: { title: string; description?: string; notification_type?: string; due_date?: string | null; send_email?: boolean; route?: string; dedupe_key?: string },
     options?: ApiRequestOptions,
   ) =>
     requestJson<T>("/api/user/notifications", {
@@ -374,6 +445,31 @@ export const apiClient = {
   deleteUserNotification: (accessToken: string, id: string, options?: ApiRequestOptions) =>
     requestJson<void>(`/api/user/notifications/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  getNativePushStatus: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/status", { headers: authHeaders(accessToken), ...options }),
+  registerNativePushToken: <T = unknown>(
+    accessToken: string,
+    payload: { token: string; platform: "ios" | "android"; device_label?: string },
+    options?: ApiRequestOptions,
+  ) => requestJson<T>("/api/user/push/native-token", {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(payload),
+    ...options,
+  }),
+  unregisterNativePushToken: <T = unknown>(accessToken: string, token?: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/native-token", {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(token ? { token } : {}),
+      ...options,
+    }),
+  sendTestPushNotification: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/push/test", {
+      method: "POST",
       headers: authHeaders(accessToken),
       ...options,
     }),
@@ -432,12 +528,23 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+  /** Промпт 1: загрузка скана (PDF/JPG/PNG/WEBP). Файл шифруется на сервере. */
   uploadDocumentScan: async (
     accessToken: string,
     docId: string,
     file: File,
     options?: ApiRequestOptions,
-  ): Promise<{ doc_id: number; scan_url: string; scan_size: number; updated_at: string | null }> => {
+  ): Promise<{
+    doc_id: number;
+    scan: {
+      has_scan: boolean;
+      mime_type: string;
+      size: number;
+      original_filename: string;
+      uploaded_at: string;
+      download_url: string;
+    };
+  }> => {
     const form = new FormData();
     form.append("file", file);
     const res = await fetch(`${API_BASE_URL}/api/user/documents/${encodeURIComponent(docId)}/scan`, {
@@ -451,6 +558,29 @@ export const apiClient = {
       throw new Error(message || `Upload failed: ${res.status}`);
     }
     return res.json();
+  },
+  /** Промпт 1: безопасное скачивание скана. Возвращает Blob, который UI
+   * превращает в ObjectURL для предпросмотра. */
+  downloadDocumentScan: async (
+    accessToken: string,
+    docId: string,
+    options?: ApiRequestOptions,
+  ): Promise<{ blob: Blob; mimeType: string; filename: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/user/documents/${encodeURIComponent(docId)}/scan`, {
+      method: "GET",
+      headers: authHeaders(accessToken),
+      ...options,
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => "");
+      throw new Error(message || `Download failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const mimeType = res.headers.get("Content-Type") || blob.type || "application/octet-stream";
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename="?([^"]+)"?/i.exec(disposition);
+    const filename = match?.[1] || `document-${docId}`;
+    return { blob, mimeType, filename };
   },
   deleteDocumentScan: (accessToken: string, id: string, options?: ApiRequestOptions) =>
     requestJson<void>(`/api/user/documents/${encodeURIComponent(id)}/scan`, {
@@ -568,8 +698,36 @@ export const apiClient = {
       ...options,
     }),
 
+  // Промпт 2: заявки 115.
+  getUtilityRequests: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/utility/requests", { headers: authHeaders(accessToken), ...options }),
+  createUtilityRequest: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/user/utility/requests", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateUtilityRequest: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/user/utility/requests/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  deleteUtilityRequest: (accessToken: string, id: string, options?: ApiRequestOptions) =>
+    requestJson<void>(`/api/user/utility/requests/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+
   getAdminScenarios: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/scenarios", { headers: authHeaders(accessToken), ...options }),
+  getAdminDashboardStats: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/dashboard/stats", { headers: authHeaders(accessToken), ...options }),
+  checkAdminScenarioIntegrity: <T>(accessToken: string, scenarioId: string | number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/scenarios/${encodeURIComponent(String(scenarioId))}/integrity`, { headers: authHeaders(accessToken), ...options }),
   getAdminUsers: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/users", { headers: authHeaders(accessToken), ...options }),
   getAdminUser: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
@@ -592,6 +750,19 @@ export const apiClient = {
     requestJson<T>(`/api/admin/users/${userId}`, {
       method: "DELETE",
       headers: authHeaders(accessToken),
+      ...options,
+    }),
+  revokeAdminUserSessions: <T>(accessToken: string, userId: number, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/sessions/revoke`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      ...options,
+    }),
+  createAdminUserNotification: <T>(accessToken: string, userId: number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/users/${userId}/notifications`, {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
       ...options,
     }),
   getAuditLogs: <T>(accessToken: string, options?: ApiRequestOptions) =>
@@ -618,13 +789,116 @@ export const apiClient = {
       headers: authHeaders(accessToken),
       ...options,
     }),
+  getAdminRegions: <T>(accessToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/regions", { headers: authHeaders(accessToken), ...options }),
+  saveAdminRegions: <T>(accessToken: string, regions: unknown[], options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/regions", {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify({ regions }),
+      ...options,
+    }),
   getAdminProblems: <T>(accessToken: string, options?: ApiRequestOptions) =>
     requestJson<T>("/api/admin/problems", { headers: authHeaders(accessToken), ...options }),
+  createAdminProblem: <T>(accessToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/admin/problems", {
+      method: "POST",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateAdminProblem: <T>(accessToken: string, id: string | number, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/admin/problems/${encodeURIComponent(String(id))}`, {
+      method: "PUT",
+      headers: authHeaders(accessToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
   updateAdminScenario: <T>(accessToken: string, id: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
     requestJson<T>(`/api/admin/scenarios/${encodeURIComponent(id)}`, {
       method: "PUT",
       headers: authHeaders(accessToken),
       body: JSON.stringify(payload),
+      ...options,
+    }),
+
+  getSystemState: <T>(options?: ApiRequestOptions) =>
+    requestJson<T>("/api/public/system-state", { ...options }),
+  unlockControlCenter: <T>(password: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/unlock", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+      ...options,
+    }),
+  lockControlCenter: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/lock", {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  getControlCenterStatus: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/status", {
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  updateControlMaintenance: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/maintenance", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlReadonly: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/readonly", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlBanner: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/banner", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlFeatureFlags: <T>(controlToken: string, flags: Record<string, boolean>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/feature-flags", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify({ flags }),
+      ...options,
+    }),
+  updateControlBranding: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/branding", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  updateControlNavigationLayout: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/navigation-layout", {
+      method: "PUT",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  sendControlBroadcast: <T>(controlToken: string, payload: Record<string, unknown>, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/broadcast-notification", {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      body: JSON.stringify(payload),
+      ...options,
+    }),
+  runControlAction: <T>(controlToken: string, action: string, options?: ApiRequestOptions) =>
+    requestJson<T>(`/api/control-center/service-actions/${encodeURIComponent(action)}`, {
+      method: "POST",
+      headers: controlHeaders(controlToken),
+      ...options,
+    }),
+  getControlAuditLog: <T>(controlToken: string, options?: ApiRequestOptions) =>
+    requestJson<T>("/api/control-center/audit-log", {
+      headers: controlHeaders(controlToken),
       ...options,
     }),
 
@@ -717,15 +991,26 @@ export const apiClient = {
 
   // --- Auth helpers (хранилище токенов и выход) ---
 
+  /** Промпт 5: редакторский AI с расширенными режимами и тоном/длиной. */
   aiAssistContent: <T>(
     accessToken: string,
     payload: {
-      mode: "generate" | "rewrite" | "expand" | "summarize";
-      kind?: "news" | "scenario" | "problem" | "law";
+      mode:
+        | "generate" | "rewrite" | "expand" | "summarize" | "translate"
+        | "headline" | "outline" | "simplify" | "proofread" | "fact_check"
+        | "seo" | "social" | "neutralize";
+      kind?: "news" | "scenario" | "problem" | "law" | "guide";
       current_title?: string;
       current_summary?: string;
       current_body_html?: string;
       hint?: string;
+      tone?: "official" | "simple" | "newsworthy" | "neutral";
+      length?: "short" | "medium" | "long";
+      category?: string;
+      tags?: string[];
+      audience?: string;
+      source_label?: string;
+      source_url?: string;
     },
     options?: ApiRequestOptions,
   ) =>
@@ -739,6 +1024,13 @@ export const apiClient = {
         current_summary: payload.current_summary ?? "",
         current_body_html: payload.current_body_html ?? "",
         hint: payload.hint ?? "",
+        tone: payload.tone ?? null,
+        length: payload.length ?? null,
+        category: payload.category ?? "",
+        tags: payload.tags ?? [],
+        audience: payload.audience ?? "",
+        source_label: payload.source_label ?? "",
+        source_url: payload.source_url ?? "",
       }),
       ...options,
     }),

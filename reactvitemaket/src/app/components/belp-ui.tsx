@@ -194,6 +194,21 @@ export function Logo({ size = 28, white = false }: { size?: number; white?: bool
   );
 }
 
+export function LogoMark({ size = 28 }: { size?: number }) {
+  return (
+    <motion.div
+      initial={{ rotate: -8, scale: 0.9 }}
+      animate={{ rotate: 0, scale: 1 }}
+      transition={{ type: "spring", stiffness: 220, damping: 18 }}
+      className="relative grid place-items-center rounded-[10px]"
+      style={{ width: size, height: size, background: "linear-gradient(135deg,#0056FF 0%,#2277FF 60%,#9BB8FF 100%)" }}
+    >
+      <span className="tracking-tight text-white" style={{ fontSize: size * 0.5 }}>Б</span>
+      <span className="absolute inset-0 rounded-[10px] ring-1 ring-inset ring-white/30" />
+    </motion.div>
+  );
+}
+
 /**
  * Бэйдж "Backend" / "Mock-данные" — показывает, откуда UI получает контент.
  * Помогает на защите: сразу видно, идёт ли запрос в FastAPI или показываются

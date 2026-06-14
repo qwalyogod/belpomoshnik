@@ -148,11 +148,23 @@ export interface CustomField {
   value: string;
 }
 
+/** Промпт 1: metadata зашифрованного скана. Передаётся в UI вместо raw URL.
+ * Сам файл скачивается через `GET /api/user/documents/{id}/scan` (JWT). */
+export interface UserDocumentScan {
+  hasScan: boolean;
+  mimeType?: string;
+  size?: number;
+  originalFilename?: string;
+  uploadedAt?: string;
+  /** Серверный путь, который надо запросить с Authorization. */
+  downloadUrl?: string;
+}
+
 export interface UserDocument {
   id: string;
   type: UserDocumentType;
   title: string;
-  number: string;             // raw — UI masks it
+  number: string;             // raw — UI masks it (decrypted only for owner)
   issuedAt?: string;
   issuedBy?: string;
   comment?: string;
@@ -160,6 +172,20 @@ export interface UserDocument {
   status: UserDocumentStatus;
   /** v0.4: только для type='other'. Хранится в БД как JSON-строка. */
   customFields?: CustomField[];
+  /** Промпт 1: helper-флаг для UI («Зашифровано на сервере»). */
+  encryptedAtRest?: boolean;
+  /** Промпт 1: metadata скана. Если undefined — скан не загружен. */
+  scan?: UserDocumentScan;
+}
+
+/** Промпт 2: одна позиция в детализации платежа («вода 3.20 м³ × тариф = 12.40»). */
+export interface UtilityBreakdownItem {
+  service: "electricity" | "cold_water" | "hot_water" | "gas" | "heating" | "maintenance" | "capital_repair" | "waste" | "other";
+  amount?: number;
+  previousReading?: number;
+  currentReading?: number;
+  consumption?: number;
+  tariffLabel?: string;
 }
 
 export interface UtilityPayment {
@@ -173,7 +199,15 @@ export interface UtilityPayment {
   readingsDeadline?: string;
   paymentDeadline?: string;
   comment?: string;
+  /** Промпт 2: разбивка начислений (вода, свет, газ и т.д.). */
+  breakdown?: UtilityBreakdownItem[];
+  /** Промпт 2: источник записи. manual = пользователь ввёл вручную. */
+  source?: "manual" | "erip" | "receipt";
+  /** Промпт 2: путь к зашифрованной квитанции (или URL preview). */
+  receiptPath?: string;
 }
+
+export type UtilityServiceType = UtilityBreakdownItem["service"];
 
 export interface UtilityAccount {
   id: string;
@@ -181,7 +215,20 @@ export interface UtilityAccount {
   accountNumber: string;
   provider: string;
   payments: UtilityPayment[];
+  /** Промпт 2: пользовательская подпись («Квартира», «Дача»). */
+  label?: string;
+  /** Промпт 2: какие услуги учитываются по этому счёту. */
+  serviceTypes?: UtilityServiceType[];
+  /** Промпт 2: владелец / плательщик. */
+  payerName?: string;
+  /** Промпт 2: «ручной» режим — не имитируем интеграции. */
+  manualMode?: boolean;
+  /** Промпт 2: примечание про синхронизацию (последняя ручная сверка). */
+  lastSyncNote?: string;
 }
+
+/** Промпт 2: тип налогового обязательства. */
+export type TaxType = "property" | "land" | "transport" | "income" | "single_property_payment" | "ip" | "other";
 
 export interface TaxObligation {
   id: string;
@@ -193,14 +240,85 @@ export interface TaxObligation {
   period?: string;
   comment?: string;
   receiptPath?: string;
+  /** Промпт 2: тип налога — определяет иконку, hint и фильтрацию. */
+  taxType?: TaxType;
+  /** Промпт 2: откуда пришла запись. */
+  source?: "manual" | "mns_notice" | "demo";
+  /** Получатель платежа (ИМНС/название). */
+  recipient?: string;
+  /** УНП плательщика (для оплаты через ЕРИП). */
+  unp?: string;
+  /** Номер извещения МНС. */
+  noticeNumber?: string;
+  /** Код назначения платежа в ЕРИП. */
+  paymentCode?: string;
+  /** Дата фактической оплаты. */
+  paidAt?: string;
+  /** Внешняя ссылка («открыть инструкцию», «личный кабинет МНС»). */
+  externalUrl?: string;
+  /** Короткое объяснение для гражданина. */
+  helpText?: string;
+}
+
+/** Промпт 2: пользовательская заявка в 115 (ЖКХ-портал). Это локальный
+ * органайзер — никакой реальной отправки в 115.бел нет. */
+export type UtilityRequestStatus = "draft" | "sent" | "in_progress" | "resolved" | "rejected";
+export type UtilityRequestCategory =
+  | "water"
+  | "heating"
+  | "electricity"
+  | "waste_yard"
+  | "entrance"
+  | "elevator"
+  | "other";
+
+export interface UtilityRequest {
+  id: string;
+  /** К какому лицевому счёту/адресу относится. */
+  accountId?: string;
+  address?: string;
+  title: string;
+  category: UtilityRequestCategory;
+  description?: string;
+  status: UtilityRequestStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  /** Номер обращения, если был получен. */
+  externalNumber?: string;
+  /** Ссылка на статус во внешней системе. */
+  externalUrl?: string;
 }
 
 export interface AdminScenarioRow {
   id: string;
   title: string;
   category: CategoryId;
-  status: "published" | "review" | "draft";
+  status: "published" | "review" | "draft" | "archived";
   taskCount: number;
+  stageCount?: number;
+  verifiedAt?: string;
+}
+
+export interface AdminProblemRow {
+  id: string;
+  slug: string;
+  title: string;
+  category: CategoryId;
+  status: "published" | "draft" | "archived";
+  shortDescription?: string;
+}
+
+export interface AdminDashboardStats {
+  usersTotal: number;
+  usersActive: number;
+  usersBlocked: number;
+  publicationsTotal: number;
+  publicationsReview: number;
+  problemsTotal: number;
+  scenariosTotal: number;
+  authoritiesTotal: number;
+  regionsTotal: number;
+  notificationsTotal: number;
 }
 
 export interface AppNotification {
@@ -292,6 +410,19 @@ export interface Settings {
     documents: boolean;
     legal: boolean;
     push: boolean;
+    system_notifications_enabled: boolean;
+    local_notifications_enabled: boolean;
+    native_push_enabled: boolean;
+    browser_notifications_enabled: boolean;
+    doc_expiry_enabled: boolean;
+    task_deadline_enabled: boolean;
+    utility_enabled: boolean;
+    tax_enabled: boolean;
+    law_updates_enabled: boolean;
+    security_enabled: boolean;
+    quiet_hours_enabled: boolean;
+    quiet_hours_from: string;
+    quiet_hours_to: string;
   };
   privacy: {
     maskDocuments: boolean;
@@ -301,6 +432,79 @@ export interface Settings {
     largeFont: boolean;
     highContrast: boolean;
   };
+}
+
+export interface SystemState {
+  maintenance: {
+    enabled: boolean;
+    level: string;
+    title: string;
+    message: string;
+    until: string;
+    allowAdminAccess: boolean;
+  };
+  readonly: {
+    enabled: boolean;
+    message: string;
+  };
+  banner: {
+    enabled: boolean;
+    type: string;
+    text: string;
+    linkLabel: string;
+    linkUrl: string;
+    dismissible: boolean;
+    audience: string;
+    version: number;
+  };
+  featureFlags: Record<string, boolean>;
+  branding: {
+    appName: string;
+    shortName: string;
+    logoText: string;
+    logoUrl: string;
+    accentColor: string;
+    homeTitle: string;
+    homeSubtitle: string;
+  };
+  navigationLayout: {
+    desktop: string[];
+    tablet: string[];
+    mobile: string[];
+  };
+}
+
+export interface ControlCenterStatus {
+  backend_online: boolean;
+  database_connected: boolean;
+  total_users: number;
+  active_users: number;
+  blocked_users: number;
+  notifications_today: number;
+  publications_count: number;
+  problems_count: number;
+  scenarios_count: number;
+  authorities_count: number;
+  regions_count: number;
+  maintenance_mode: boolean;
+  readonly_mode: boolean;
+  banner_enabled: boolean;
+  ai_status: string;
+  push_status: string;
+  scheduler_status: string;
+  frontend_version: string;
+  backend_version: string;
+}
+
+export interface ControlCenterAuditLog {
+  id: number | string;
+  session_id?: number | string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  status: string;
+  ip_address: string;
+  created_at: string;
 }
 
 export interface Problem {

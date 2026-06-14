@@ -1,5 +1,7 @@
 import type {
   AdminScenarioRow,
+  AdminProblemRow,
+  AdminDashboardStats,
   AppNotification,
   CategoryId,
   ContentTag,
@@ -24,6 +26,7 @@ import type {
   TaxObligation,
   UtilityAccount,
   UtilityPayment,
+  UtilityServiceType,
   Article,
   ArticleKind,
   ArticleStatus,
@@ -325,6 +328,20 @@ export function adaptUserDocument(input: LooseRecord): UserDocument {
       customFields = undefined;
     }
   }
+  // Промпт 1: scan metadata. Поддерживаем оба формата (snake_case от FastAPI и
+  // camelCase для будущих изменений).
+  let scan: UserDocument["scan"];
+  const rawScan = (input.scan ?? null) as LooseRecord | null;
+  if (rawScan && typeof rawScan === "object" && (rawScan.has_scan || rawScan.hasScan)) {
+    scan = {
+      hasScan: true,
+      mimeType: text(rawScan.mime_type || rawScan.mimeType, "") || undefined,
+      size: typeof rawScan.size === "number" ? rawScan.size : undefined,
+      originalFilename: text(rawScan.original_filename || rawScan.originalFilename, "") || undefined,
+      uploadedAt: text(rawScan.uploaded_at || rawScan.uploadedAt, "") || undefined,
+      downloadUrl: text(rawScan.download_url || rawScan.downloadUrl, "") || undefined,
+    };
+  }
   return {
     id: identifier(input.id, "document"),
     type: documentType(input.type || input.doc_type || input.document_type),
@@ -336,6 +353,8 @@ export function adaptUserDocument(input: LooseRecord): UserDocument {
     expiresAt,
     status: computedDocumentStatus(expiresAt ?? "", input.status),
     customFields: customFields && customFields.length > 0 ? customFields : undefined,
+    encryptedAtRest: Boolean(input.encrypted_at_rest ?? input.encryptedAtRest ?? true),
+    scan,
   };
 }
 
@@ -417,6 +436,16 @@ export function adaptTax(input: LooseRecord): TaxObligation {
     period: text(input.period, "") || undefined,
     comment: text(input.comment, "") || undefined,
     receiptPath: text(input.receipt_path || input.receiptPath, "") || undefined,
+    // Промпт 2: расширенные поля.
+    taxType: (text(input.tax_type || input.taxType, "other") as TaxObligation["taxType"]) || undefined,
+    source: (text(input.source, "") as TaxObligation["source"]) || undefined,
+    recipient: text(input.recipient, "") || undefined,
+    unp: text(input.unp, "") || undefined,
+    noticeNumber: text(input.notice_number || input.noticeNumber, "") || undefined,
+    paymentCode: text(input.payment_code || input.paymentCode, "") || undefined,
+    paidAt: text(input.paid_at || input.paidAt, "") || undefined,
+    externalUrl: text(input.external_url || input.externalUrl, "") || undefined,
+    helpText: text(input.help_text || input.helpText, "") || undefined,
   };
 }
 
@@ -430,10 +459,32 @@ export function taxPayload(tax: Partial<TaxObligation>): Record<string, unknown>
     status: tax.status ?? "Предстоит",
     period: tax.period ?? "",
     comment: tax.comment ?? "",
+    tax_type: tax.taxType ?? "other",
+    source: tax.source ?? "manual",
+    recipient: tax.recipient ?? "",
+    unp: tax.unp ?? "",
+    notice_number: tax.noticeNumber ?? "",
+    payment_code: tax.paymentCode ?? "",
+    paid_at: tax.paidAt ?? "",
+    external_url: tax.externalUrl ?? "",
+    help_text: tax.helpText ?? "",
   };
 }
 
 export function adaptUtilityPayment(input: LooseRecord, accountId = ""): UtilityPayment {
+  // Промпт 2: breakdown приходит как JSON-строка (или массив для будущей версии API).
+  let breakdown: UtilityPayment["breakdown"];
+  const rawBreakdown = input.breakdown ?? input.breakdown_json;
+  if (Array.isArray(rawBreakdown)) {
+    breakdown = rawBreakdown as UtilityPayment["breakdown"];
+  } else if (typeof rawBreakdown === "string" && rawBreakdown.trim()) {
+    try {
+      const parsed = JSON.parse(rawBreakdown);
+      if (Array.isArray(parsed)) breakdown = parsed as UtilityPayment["breakdown"];
+    } catch {
+      breakdown = undefined;
+    }
+  }
   return {
     id: identifier(input.id, "upay"),
     accountId: identifier(input.account_id || input.accountId, accountId),
@@ -445,6 +496,9 @@ export function adaptUtilityPayment(input: LooseRecord, accountId = ""): Utility
     readingsDeadline: text(input.readings_deadline || input.readingsDeadline, "") || undefined,
     paymentDeadline: text(input.payment_deadline || input.paymentDeadline, "") || undefined,
     comment: text(input.comment, "") || undefined,
+    breakdown,
+    source: (text(input.source, "") as UtilityPayment["source"]) || undefined,
+    receiptPath: text(input.receipt_path || input.receiptPath, "") || undefined,
   };
 }
 
@@ -458,6 +512,9 @@ export function utilityPaymentPayload(payment: Partial<UtilityPayment>): Record<
     readings_deadline: payment.readingsDeadline ?? "",
     payment_deadline: payment.paymentDeadline ?? "",
     comment: payment.comment ?? "",
+    breakdown_json: payment.breakdown ? JSON.stringify(payment.breakdown) : "[]",
+    source: payment.source ?? "manual",
+    receipt_path: payment.receiptPath ?? "",
   };
 }
 
@@ -471,6 +528,16 @@ export function adaptUtilityAccount(input: LooseRecord): UtilityAccount {
     payments: Array.isArray(input.payments)
       ? (input.payments as LooseRecord[]).map(p => adaptUtilityPayment(p, id))
       : [],
+    // Промпт 2: расширенные поля.
+    label: text(input.label, "") || undefined,
+    serviceTypes: Array.isArray(input.service_types || input.serviceTypes)
+      ? ((input.service_types || input.serviceTypes) as string[]).filter((s): s is UtilityServiceType =>
+          ["electricity", "cold_water", "hot_water", "gas", "heating", "maintenance", "capital_repair", "waste", "other"].includes(s),
+        )
+      : undefined,
+    payerName: text(input.payer_name || input.payerName, "") || undefined,
+    manualMode: input.manual_mode === undefined && input.manualMode === undefined ? undefined : Boolean(input.manual_mode ?? input.manualMode),
+    lastSyncNote: text(input.last_sync_note || input.lastSyncNote, "") || undefined,
   };
 }
 
@@ -479,6 +546,42 @@ export function utilityAccountPayload(account: Partial<UtilityAccount>): Record<
     address: account.address ?? "",
     account_number: account.accountNumber ?? "",
     provider: account.provider ?? "",
+    label: account.label ?? "",
+    service_types: account.serviceTypes ?? [],
+    payer_name: account.payerName ?? "",
+    manual_mode: account.manualMode ?? true,
+    last_sync_note: account.lastSyncNote ?? "",
+  };
+}
+
+// Промпт 2: заявки 115.
+export function adaptUtilityRequest(input: LooseRecord): import("./types").UtilityRequest {
+  return {
+    id: identifier(input.id, "ureq"),
+    accountId: text(input.account_id || input.accountId, "") || undefined,
+    address: text(input.address, "") || undefined,
+    title: text(input.title, "Заявка"),
+    category: (text(input.category, "other") as import("./types").UtilityRequestCategory),
+    description: text(input.description, "") || undefined,
+    status: (text(input.status, "draft") as import("./types").UtilityRequestStatus),
+    createdAt: text(input.created_at || input.createdAt, "") || undefined,
+    updatedAt: text(input.updated_at || input.updatedAt, "") || undefined,
+    externalNumber: text(input.external_number || input.externalNumber, "") || undefined,
+    externalUrl: text(input.external_url || input.externalUrl, "") || undefined,
+  };
+}
+
+export function utilityRequestPayload(req: Partial<import("./types").UtilityRequest>): Record<string, unknown> {
+  return {
+    account_id: req.accountId || null,
+    address: req.address ?? "",
+    title: req.title ?? "",
+    category: req.category ?? "other",
+    description: req.description ?? "",
+    status: req.status ?? "draft",
+    external_number: req.externalNumber ?? "",
+    external_url: req.externalUrl ?? "",
+    target_service: "",
   };
 }
 
@@ -487,6 +590,8 @@ export function adaptAdminScenarioRow(input: LooseRecord): AdminScenarioRow {
   const status: AdminScenarioRow["status"] =
     rawStatus === "published"
       ? "published"
+      : rawStatus === "archived"
+        ? "archived"
       : input.content_verified_at
         ? "review"
         : "draft";
@@ -496,6 +601,35 @@ export function adaptAdminScenarioRow(input: LooseRecord): AdminScenarioRow {
     category: category(input.category),
     status,
     taskCount: numberValue(input.task_count ?? input.taskCount, 0),
+    stageCount: numberValue(input.stage_count ?? input.stageCount, 0),
+    verifiedAt: text(input.content_verified_at ?? input.verifiedAt, "") || undefined,
+  };
+}
+
+export function adaptAdminProblemRow(input: LooseRecord): AdminProblemRow {
+  const rawStatus = text(input.status).toLowerCase();
+  return {
+    id: identifier(input.id, text(input.slug, "problem")),
+    slug: text(input.slug, identifier(input.id, "problem")),
+    title: text(input.title, "Проблема"),
+    category: category(input.category || input.title),
+    status: rawStatus === "published" ? "published" : rawStatus === "archived" ? "archived" : "draft",
+    shortDescription: text(input.short_description ?? input.shortDescription, ""),
+  };
+}
+
+export function adaptAdminDashboardStats(input: LooseRecord): AdminDashboardStats {
+  return {
+    usersTotal: numberValue(input.users_total ?? input.usersTotal, 0),
+    usersActive: numberValue(input.users_active ?? input.usersActive, 0),
+    usersBlocked: numberValue(input.users_blocked ?? input.usersBlocked, 0),
+    publicationsTotal: numberValue(input.publications_total ?? input.publicationsTotal, 0),
+    publicationsReview: numberValue(input.publications_review ?? input.publicationsReview, 0),
+    problemsTotal: numberValue(input.problems_total ?? input.problemsTotal, 0),
+    scenariosTotal: numberValue(input.scenarios_total ?? input.scenariosTotal, 0),
+    authoritiesTotal: numberValue(input.authorities_total ?? input.authoritiesTotal, 0),
+    regionsTotal: numberValue(input.regions_total ?? input.regionsTotal, 0),
+    notificationsTotal: numberValue(input.notifications_total ?? input.notificationsTotal, 0),
   };
 }
 
@@ -581,6 +715,8 @@ function notificationKind(value: unknown): AppNotification["kind"] {
 }
 
 export function adaptNotification(input: LooseRecord): AppNotification {
+  const route = text(input.route);
+  const routeParts = route.replace(/^\//, "").split("/").filter(Boolean);
   return {
     id: identifier(input.id, "notification"),
     kind: notificationKind(input.notification_type || input.kind),
@@ -588,6 +724,7 @@ export function adaptNotification(input: LooseRecord): AppNotification {
     body: text(input.description || input.body, "") || undefined,
     createdAt: text(input.due_date || input.createdAt || input.created_at, ""),
     read: bool(input.is_read ?? input.read, false),
+    link: routeParts.length > 0 ? { page: routeParts[0], id: routeParts[1] } : undefined,
   };
 }
 

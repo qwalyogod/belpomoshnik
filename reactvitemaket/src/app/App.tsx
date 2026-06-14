@@ -8,15 +8,17 @@ import {
   Plus, ScanLine, EyeOff, Building2, Clock, Bookmark, ArrowUpRight, Settings,
   Users, BookOpen, LayoutGrid, Baby, ChevronLeft, X, LogOut, UserPlus, Newspaper,
 } from "lucide-react";
-import { Logo, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "./components/belp-ui";
+import { Logo, LogoMark, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "./components/belp-ui";
 import { AppStoreProvider, useStore, readAvatarForUser } from "./data/store";
 import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
 import { scrollContentToTop } from "./services/scroll";
 import { AdminWindowMount } from "./components/admin-window";
+import { ControlCenter, MaintenanceScreen, SystemBanner } from "./components/control-center/ControlCenter";
 import { GuestGuardBridge } from "./components/GuestGuardBridge";
 import { ConnectionBanner } from "./components/ConnectionBanner";
 import { CATEGORIES } from "./data/mock";
+import type { SystemState } from "./data/types";
 
 const catLabelApp = (id: string) => CATEGORIES.find(c => c.id === id)?.name ?? id;
 import {
@@ -60,8 +62,8 @@ function isAdminRole(role: string | undefined | null): boolean {
 function isTopLevelRoute(pathname: string): boolean {
   // Служебные / auth / скрытые разделы — не top-level.
   if (isAuthPage(pathname) || isNavHidden(pathname)) return false;
-  // Любой /scenarios/:id, /situations/:id, /problem-detail/:id, /law-detail/:id — DETAIL.
-  if (/^\/(scenarios|situations|problem-detail|law-detail)\/[^/]+/.test(pathname)) return false;
+  // Любой /scenarios/:id, /situations/:id, /problem-detail/:id, /law-detail/:id, /news/:id — DETAIL.
+  if (/^\/(scenarios|situations|problem-detail|law-detail|news)\/[^/]+/.test(pathname)) return false;
   // Точное совпадение с top-level маршрутами.
   if (TOP_LEVEL_ROUTES.has(pathname)) return true;
   return false;
@@ -107,17 +109,15 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
     // /login, /register, /welcome — без MobileShell, без MobileNav, без MobileTopBar.
     return (
       <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]">
-        <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+        <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
       </div>
     );
   }
 
   return (
-    // На mobile скроллим страницу нативно (не вложенным overflow-auto) — это
-    // совпадает с поведением iOS-нативных приложений и решает проблему «главная
-    // не скроллится у гостя». overflow-x-hidden защищает от горизонтального
-    // дрейфа при появлении боковых оверлеев. min-h-[100dvh] даёт странице
-    // высоту viewport и плюс естественный overflow.
+    // На mobile оставляем нативный window-scroll: страницы уже содержат свои
+    // внутренние mobile-отступы и на iOS/WKWebView такая модель стабильнее
+    // вложенного scroll-root. Bottom-nav защищён отдельной fade-подложкой.
     <div
       className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]"
       style={{
@@ -125,7 +125,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
         // Сами header и nav переопределят их в своих style (см. MobileBrandBar
         // и MobileNav). Это гарантирует, что контент сразу получит правильный
         // padding, даже если header/nav ещё не замаунтились.
-        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+        ["--belp-mobile-header-h" as string]: "calc(3.5rem + env(safe-area-inset-top))",
         ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
       }}
     >
@@ -138,22 +138,24 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       <MobileBrandBar />
       <div
         style={{
-          paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))",
-          paddingBottom: "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))",
+          paddingTop: "var(--belp-mobile-header-h, calc(3.5rem + env(safe-area-inset-top)))",
+          paddingBottom: showBottomNav
+            ? "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))"
+            : "max(1.5rem, env(safe-area-inset-bottom))",
         }}
       >
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
-            на mobile это давало визуальный «флэш пустоты» при переходе на
+          на mobile это давало визуальный «флэш пустоты» при переходе на
             /settings и /law-detail. Появление мгновенное, y-сдвиг лёгкий. */}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
             initial={{ y: 6 }}
             animate={{ y: 0 }}
-            exit={{ y: -4, opacity: 0 }}
+            exit={{ y: -4 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+            <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -175,10 +177,10 @@ function MobileBottomFade({ color }: { color: string }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-20"
+      className="belp-mobile-bottom-fade pointer-events-none fixed inset-x-0 bottom-0 z-[25]"
       style={{
-        height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 5.5rem)",
-        background: `linear-gradient(to bottom, ${color}00 0%, ${color}26 18%, ${color}a8 48%, ${color}f2 66%, ${color} 100%)`,
+        height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 7.5rem)",
+        background: `linear-gradient(to bottom, ${color}00 0%, ${color}33 16%, ${color}cc 42%, ${color}fa 58%, ${color} 100%)`,
       }}
     />
   );
@@ -244,14 +246,14 @@ export function MobileBrandBar() {
   const title = mobileTitleFromPath(location.pathname);
   return (
     <div
-      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB]/85 px-4 pb-3 backdrop-blur-md dark:border-white/[0.04] dark:bg-[#07080C]/85"
+      className="belp-mobile-header fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB] px-4 pb-2.5 dark:border-white/[0.04] dark:bg-[#07080C]"
       style={{
-        paddingTop: "calc(0.75rem + env(safe-area-inset-top))",
+        paddingTop: "calc(0.45rem + env(safe-area-inset-top))",
         // Высота хедера = padding-top (12px + safe-area) + h-10 (40px)
-        // + pb-3 (12px) + border (1px) = ~3.85rem + safe-area.
+        // + pb-2.5 (10px) + border (1px) = ~3.5rem + safe-area.
         // CSS-переменная для синхронизации padding-top контента
         // в MobileShell (см. ниже).
-        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+        ["--belp-mobile-header-h" as string]: "calc(3.5rem + env(safe-area-inset-top))",
       }}
     >
       {/* Левая зона: back (на detail) ИЛИ логотип (на top-level) */}
@@ -261,7 +263,7 @@ export function MobileBrandBar() {
           aria-label="На главную"
           className="shrink-0"
         >
-          <Logo size={26} />
+          <LogoMark size={26} />
         </button>
       ) : (
         <div className="flex w-10 shrink-0 items-center">
@@ -359,7 +361,7 @@ function MobileUserSwitcher({ open, onClose }: { open: boolean; onClose: () => v
 
 function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
   const { openAssistant } = React.useContext(ShellContext);
-  const { role } = useStore();
+  const { role, systemState } = useStore();
   const isGuest = role === "guest";
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const holdTimer = useRef<number | undefined>(undefined);
@@ -384,13 +386,13 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
       </button>
     );
   };
-  const left: { id: Page; i: React.ReactNode; n: string }[] = [
+  const leftBase: { id: Page; i: React.ReactNode; n: string }[] = [
     { id: "home", i: <Home size={20} />, n: "Главная" },
     { id: "catalog", i: <LayoutGrid size={20} />, n: "Каталог" },
   ];
   // Гость не ведёт «Мои ситуации» (нужен аккаунт) — ему показываем «Новости»;
   // залогиненному — быстрый доступ к ситуациям.
-  const right: { id: Page; i: React.ReactNode; n: string }[] = isGuest
+  const rightBase: { id: Page; i: React.ReactNode; n: string }[] = isGuest
     ? [
         { id: "news", i: <Newspaper size={20} />, n: "Новости" },
         { id: "profile", i: <User size={20} />, n: "Профиль" },
@@ -399,31 +401,41 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
         { id: "situations", i: <FileText size={20} />, n: "Ситуации" },
         { id: "profile", i: <User size={20} />, n: "Профиль" },
       ];
+  const left = orderNavigationItems(
+    leftBase.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.mobile,
+  );
+  const right = orderNavigationItems(
+    rightBase.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.mobile,
+  );
+  const assistantEnabled = systemState.featureFlags.assistant !== false;
   return (
     <>
-      {/* Mobile-nav прибит к viewport через `fixed`, а не к shell через `absolute`,
-          чтобы он оставался на месте при нативном page-scroll (когда shell
-          длиннее viewport, иначе нав повисает посреди контента).
+      {/* Mobile-nav прибит к viewport через `fixed`, а не к scroll-root через
+          `absolute`, чтобы он оставался на месте при прокрутке контента.
           CSS-переменная --belp-mobile-nav-h синхронизирует padding-bottom
           контента в MobileShell, чтобы последние элементы не обрезались. */}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4"
+        className="belp-mobile-bottom-nav pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4"
         style={{
           paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
           ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
         }}
       >
-        <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white/95 px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]/95">
+        <div className="pointer-events-auto relative flex items-stretch rounded-[26px] border border-black/[0.06] bg-white px-2 py-2.5 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#0F1117]">
           {left.map((t) => renderTab(t))}
-          <div className="w-16 shrink-0" />
+          {assistantEnabled && <div className="w-16 shrink-0" />}
           {right.map((t) => renderTab(t, t.id === "profile"))}
-          <button
-            onClick={openAssistant}
-            aria-label="ИИ-помощник"
-            className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
-          >
-            <Sparkles size={24} />
-          </button>
+          {assistantEnabled && (
+            <button
+              onClick={openAssistant}
+              aria-label="ИИ-помощник"
+              className="absolute left-1/2 -top-6 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-full border-4 border-[#F6F7FB] bg-[#0056FF] text-white shadow-[0_16px_34px_-10px_rgba(0,86,255,0.85)] transition-transform active:scale-95 dark:border-[#07080C]"
+            >
+              <Sparkles size={24} />
+            </button>
+          )}
         </div>
       </div>
       <MobileUserSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
@@ -955,14 +967,19 @@ export function DesktopShell({ dark, setDark }: { dark: boolean; setDark: (d: bo
       <div className="flex flex-col overflow-hidden">
         <DesktopTopBar onSearch={() => setSearchOpen(true)} onNotifications={() => navigate("/notifications")} />
         <div data-scroll-root className="flex-1 overflow-y-auto">
+          {/* Входящая страница НЕ стартует с opacity:0. Иначе при mode="wait"
+              потерянный exit-complete callback (гонка ре-рендера при переходе,
+              напр. на /settings) навсегда оставляет страницу невидимой —
+              «виден только фон, помогает только перезагрузка». Анимируем только y.
+              См. тот же фикс в мобильном shell выше. */}
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              initial={{ y: 8 }} animate={{ y: 0 }} exit={{ y: -4 }}
               transition={{ duration: 0.2 }}
               className="px-10 py-8"
             >
-              <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+              <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -999,6 +1016,31 @@ const TOP_NAV: { id: Page; icon: React.ReactNode; label: string; badge?: string 
   { id: "finance", icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
   { id: "news", icon: <Newspaper size={16} />, label: "Новости" },
 ];
+
+const FEATURE_BY_PAGE: Partial<Record<Page, string>> = {
+  situations: "situations",
+  documents: "documents",
+  finance: "finance",
+  news: "news",
+  profile: "profile",
+};
+
+function isPageEnabledBySystemState(page: Page, systemState: SystemState): boolean {
+  const key = FEATURE_BY_PAGE[page];
+  if (!key) return true;
+  return systemState.featureFlags[key] !== false;
+}
+
+function orderNavigationItems<T extends { id: Page }>(items: T[], order: string[] | undefined): T[] {
+  if (!order?.length) return items;
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => {
+    const ar = rank.get(a.id) ?? 999;
+    const br = rank.get(b.id) ?? 999;
+    if (ar !== br) return ar - br;
+    return items.indexOf(a) - items.indexOf(b);
+  });
+}
 
 function HeaderUserMenu() {
   const navigate = useNavigate();
@@ -1053,8 +1095,14 @@ function DesktopHeaderShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [docModal, setDocModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [guardOpen, setGuardOpen] = useState(false);
-  const { role } = useStore();
+  const { role, systemState } = useStore();
   const { openAdmin } = React.useContext(ShellContext);
+  const topNav = orderNavigationItems(
+    TOP_NAV.filter((item) => isPageEnabledBySystemState(item.id, systemState)),
+    systemState.navigationLayout.desktop,
+  );
+  const staffPanelEnabled = isStaffRole(role)
+    && (isAdminRole(role) ? systemState.featureFlags.adminPanel !== false : systemState.featureFlags.editorPanel !== false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1075,7 +1123,7 @@ function DesktopHeaderShell() {
       <header className="relative z-50 flex items-center gap-4 border-b border-black/[0.06] bg-white/80 px-8 py-3 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/80">
         <button onClick={() => go("home")} className="shrink-0"><Logo size={26} /></button>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-          {TOP_NAV.map(t => {
+          {topNav.map(t => {
             const isActive = page === t.id;
             return (
               <button key={t.id} onClick={() => go(t.id)} className={`relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
@@ -1084,7 +1132,7 @@ function DesktopHeaderShell() {
               </button>
             );
           })}
-          {isStaffRole(role) && (
+          {staffPanelEnabled && (
             <button onClick={openAdmin} className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-[14px] tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"><Users size={16} />{isAdminRole(role) ? "Админ" : "Редактор"}</button>
           )}
         </nav>
@@ -1102,9 +1150,11 @@ function DesktopHeaderShell() {
       </header>
 
       <div data-scroll-root className="flex-1 overflow-y-auto">
+        {/* То же, что и выше: без initial opacity:0, чтобы потерянный
+            exit-complete не оставлял страницу невидимой до перезагрузки. */}
         <AnimatePresence mode="wait">
-          <motion.div key={location.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
-            <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); } }} />
+          <motion.div key={location.pathname} initial={{ y: 8 }} animate={{ y: 0 }} exit={{ y: -4 }} transition={{ duration: 0.2 }} className="mx-auto max-w-[1180px] px-10 py-8">
+            <Outlet context={{ openScenario, openMySituation, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1117,7 +1167,7 @@ function DesktopHeaderShell() {
 }
 
 function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page) => void }) {
-  const { currentUser, profile, role, quickAccounts, signInAs, signOut, resetSession } = useStore();
+  const { currentUser, profile, role, quickAccounts, signInAs, signOut, resetSession, systemState } = useStore();
   const { openAdmin } = React.useContext(ShellContext);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1125,13 +1175,32 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
   const item = (id: Page, icon: React.ReactNode, label: string, badge?: string) => {
     const isActive = active === id;
     return (
-      <button onClick={() => onChange(id)} className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
+      <button key={id} onClick={() => onChange(id)} className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight transition-colors ${isActive ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/65 hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]"}`}>
         <span className="grid h-5 w-5 place-items-center">{icon}</span>
         <span className="flex-1 text-[14px]">{label}</span>
         {badge && <span className="rounded-full bg-[#0056FF] px-1.5 text-[10px] tracking-tight text-white">{badge}</span>}
       </button>
     );
   };
+  const personalNav = orderNavigationItems(
+    [
+      { id: "home" as Page, icon: <Home size={16} />, label: "Главная" },
+      { id: "catalog" as Page, icon: <LayoutGrid size={16} />, label: "Каталог" },
+      { id: "situations" as Page, icon: <FileText size={16} />, label: "Мои ситуации", badge: "3" },
+      { id: "documents" as Page, icon: <Shield size={16} />, label: "Документы" },
+      { id: "news" as Page, icon: <Newspaper size={16} />, label: "Новости" },
+    ].filter((entry) => isPageEnabledBySystemState(entry.id, systemState)),
+    systemState.navigationLayout.tablet,
+  );
+  const toolsNav = orderNavigationItems(
+    [
+      { id: "finance" as Page, icon: <Wallet size={16} />, label: "ЖКХ и налоги" },
+      { id: "profile" as Page, icon: <User size={16} />, label: "Профиль" },
+    ].filter((entry) => isPageEnabledBySystemState(entry.id, systemState)),
+    systemState.navigationLayout.tablet,
+  );
+  const staffPanelEnabled = isStaffRole(role)
+    && (isAdminRole(role) ? systemState.featureFlags.adminPanel !== false : systemState.featureFlags.editorPanel !== false);
   const switchTo = (id: string) => { signInAs(id); setMenuOpen(false); navigate("/"); };
   return (
     <aside className="flex h-full flex-col border-r border-black/[0.06] bg-white p-5 dark:border-white/[0.06] dark:bg-[#0B0D13]">
@@ -1178,17 +1247,12 @@ function DesktopSidebar({ active, onChange }: { active: Page; onChange: (p: Page
       </div>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Личный кабинет</div>
-        {item("home", <Home size={16} />, "Главная")}
-        {item("catalog", <LayoutGrid size={16} />, "Каталог")}
-        {item("situations", <FileText size={16} />, "Мои ситуации", "3")}
-        {item("documents", <Shield size={16} />, "Документы")}
-        {item("news", <Newspaper size={16} />, "Новости")}
+        {personalNav.map((entry) => item(entry.id, entry.icon, entry.label, entry.badge))}
       </nav>
       <nav className="mt-6 space-y-1">
         <div className="px-3 pb-1.5 text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/35">Инструменты</div>
-        {item("finance", <Wallet size={16} />, "ЖКХ и налоги")}
-        {item("profile", <User size={16} />, "Профиль")}
-        {isStaffRole(role) && (
+        {toolsNav.map((entry) => item(entry.id, entry.icon, entry.label))}
+        {staffPanelEnabled && (
           <button onClick={openAdmin} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left tracking-tight text-black/65 transition-colors hover:bg-black/[0.03] dark:text-white/65 dark:hover:bg-white/[0.04]">
             <span className="grid h-5 w-5 place-items-center"><Users size={16} /></span>
             <span className="flex-1 text-[14px]">{role === "editor" ? "Редактор контента" : "Админ-панель"}</span>
@@ -2123,6 +2187,8 @@ export function RootLayout() {
         <ScrollResetBridge />
         <GuestGuardBridge />
         <OnboardingGate />
+        <SystemBanner />
+        <MaintenanceScreen />
         <div className={dark ? "dark" : ""}>
           <div className="size-full bg-[#F4F5FA] text-black dark:bg-[#05060A] dark:text-white">
             {layout === "mobile" ? <MobileShell dark={dark} setDark={setDark} />
@@ -2135,6 +2201,7 @@ export function RootLayout() {
             <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
             {!isMobile && <AssistantFab />}
             <AdminWindowMount />
+            <ControlCenter />
           </div>
         </div>
       </ShellContext.Provider>

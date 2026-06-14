@@ -2,17 +2,19 @@ import json
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend import schemas
 from backend.schemas import ReorderPayload, ScenarioVerifyNotesPayload
 from backend.api.auth import get_current_user_email, require_role
 from backend.database import get_db
 from backend.enums import ContentStatus
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from backend.models import (
     Authority,
+    Article,
+    AuditLog,
     ContentTag,
     Deadline,
     Document,
@@ -20,13 +22,19 @@ from backend.models import (
     LawUpdate,
     NotificationRule,
     Problem,
+    RefreshToken,
     RelatedScenario,
+    Role,
     Scenario,
     ScenarioDependency,
     ScenarioStage,
     ScenarioStep,
     SourceReference,
+    SystemSetting,
     User,
+    UserDocument,
+    UserNotification,
+    UserSituation,
 )
 from backend.service import (
     create_entity,
@@ -50,12 +58,166 @@ router = APIRouter(
     dependencies=[Depends(require_role("content_editor"))],
 )
 
+GEO_REGIONS_SETTING_KEY = "geo_regions"
+
 
 def _must_get(db: Session, model, obj_id: int, message: str):
     obj = get_by_id(db, model, obj_id)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message)
     return obj
+
+
+def _count(db: Session, model, *conditions) -> int:
+    stmt = select(func.count()).select_from(model)
+    if conditions:
+        stmt = stmt.where(*conditions)
+    return int(db.scalar(stmt) or 0)
+
+
+def _system_json_setting(db: Session, key: str, default):
+    row = db.scalars(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if row is None:
+        return default
+    try:
+        value = json.loads(row.value_json or "")
+        return value if value is not None else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _set_system_json_setting(db: Session, key: str, value) -> None:
+    row = db.scalars(select(SystemSetting).where(SystemSetting.key == key)).first()
+    if row is None:
+        row = SystemSetting(key=key, value_json=json.dumps(value, ensure_ascii=False))
+        db.add(row)
+    else:
+        row.value_json = json.dumps(value, ensure_ascii=False)
+        row.updated_by = "admin-panel"
+    db.flush()
+
+
+def _user_admin_out(db: Session, user: User) -> schemas.UserAdminOut:
+    return schemas.UserAdminOut(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role_id=user.role_id,
+        is_active=user.is_active,
+        email_verified=user.email_verified,
+        is_test_account=user.is_test_account,
+        city=user.city,
+        region=user.region,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+        situations_count=_count(db, UserSituation, UserSituation.user_id == user.id),
+        documents_count=_count(db, UserDocument, UserDocument.user_id == user.id),
+        notifications_count=_count(db, UserNotification, UserNotification.user_id == user.id),
+        proposals_count=_count(db, Article, Article.proposer_id == user.id),
+    )
+
+
+def _scenario_summary(item: Scenario) -> schemas.ScenarioPublicSummary:
+    return schemas.ScenarioPublicSummary.model_validate(item).model_copy(
+        update={
+            "category": item.problem.category if item.problem else "",
+            "stage_count": len(item.stages),
+            "task_count": sum(len(stage.steps) for stage in item.stages),
+        }
+    )
+
+
+def _actor(db: Session, email: str) -> User:
+    user = db.scalars(select(User).where(User.email == email)).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
+    return user
+
+
+def _admin_audit(
+    db: Session,
+    *,
+    actor_email: str,
+    action: str,
+    event_type: str,
+    entity_type: str = "",
+    entity_id: str | int = "",
+    before_json: str = "",
+    after_json: str = "",
+):
+    actor = _actor(db, actor_email)
+    return log_audit_event(
+        db,
+        actor=actor.email,
+        actor_user_id=actor.id,
+        role_id=actor.role_id,
+        action=action,
+        event_type=event_type,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        before_json=before_json,
+        after_json=after_json,
+    )
+
+
+def _role_exists(db: Session, role_id: str) -> bool:
+    return db.get(Role, role_id) is not None
+
+
+@router.get("/dashboard/stats", response_model=schemas.AdminDashboardStats)
+def admin_dashboard_stats(
+    _: str = Depends(require_role("content_editor")),
+    db: Session = Depends(get_db),
+):
+    return schemas.AdminDashboardStats(
+        users_total=_count(db, User),
+        users_active=_count(db, User, User.is_active == True),  # noqa: E712
+        users_blocked=_count(db, User, User.is_active == False),  # noqa: E712
+        publications_total=_count(db, Article),
+        publications_review=_count(db, Article, Article.status == "review"),
+        problems_total=_count(db, Problem),
+        scenarios_total=_count(db, Scenario),
+        authorities_total=_count(db, Authority),
+        regions_total=int(
+            db.scalar(
+                select(func.count(func.distinct(Authority.region))).where(Authority.region != "")
+            )
+            or 0
+        ),
+        notifications_total=_count(db, UserNotification),
+    )
+
+
+@router.get("/regions", response_model=schemas.GeoRegionsPayload)
+def admin_get_regions(db: Session = Depends(get_db)):
+    """Справочник регионов/районов для редактора карты.
+
+    Хранится в `system_settings.geo_regions` как JSON, чтобы не вводить новую
+    таблицу до финального backend-распила географии.
+    """
+    return {"regions": _system_json_setting(db, GEO_REGIONS_SETTING_KEY, [])}
+
+
+@router.put("/regions", response_model=schemas.GeoRegionsPayload)
+def admin_put_regions(
+    payload: schemas.GeoRegionsPayload,
+    email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db),
+):
+    before = _system_json_setting(db, GEO_REGIONS_SETTING_KEY, [])
+    _set_system_json_setting(db, GEO_REGIONS_SETTING_KEY, payload.regions)
+    _admin_audit(
+        db,
+        actor_email=email,
+        action="Обновлён справочник регионов и городов",
+        event_type="update",
+        entity_type="geo_regions",
+        entity_id=GEO_REGIONS_SETTING_KEY,
+        before_json=json.dumps(before, ensure_ascii=False),
+        after_json=json.dumps(payload.regions, ensure_ascii=False),
+    )
+    db.commit()
+    return {"regions": payload.regions}
 
 
 def _tag_slug(value: str) -> str:
@@ -154,8 +316,24 @@ def admin_delete_content_tag(
 
 
 @router.get("/problems", response_model=list[schemas.ProblemPublicOut])
-def admin_list_problems(db: Session = Depends(get_db)):
-    return [schemas.ProblemPublicOut.model_validate(item) for item in list_problems_admin(db)]
+def admin_list_problems(
+    search: str = Query(default="", max_length=255),
+    category: str = Query(default="", max_length=120),
+    status_filter: ContentStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    stmt = select(Problem).order_by(Problem.updated_at.desc(), Problem.id.desc())
+    if search.strip():
+        pattern = f"%{search.strip()}%"
+        stmt = stmt.where(or_(Problem.title.ilike(pattern), Problem.slug.ilike(pattern)))
+    if category.strip():
+        stmt = stmt.where(Problem.category == category.strip())
+    if status_filter is not None:
+        stmt = stmt.where(Problem.status == status_filter)
+    items = db.scalars(stmt.offset(offset).limit(limit)).all()
+    return [schemas.ProblemPublicOut.model_validate(item) for item in items]
 
 
 @router.post("/problems", response_model=schemas.ProblemPublicOut, status_code=status.HTTP_201_CREATED)
@@ -198,10 +376,75 @@ def admin_delete_problem(
 def admin_list_scenarios(
     problem_id: int | None = Query(default=None),
     status_filter: ContentStatus | None = Query(default=None, alias="status"),
+    search: str = Query(default="", max_length=255),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
-    items = list_scenarios(db, problem_id=problem_id, status=status_filter)
-    return [schemas.ScenarioPublicSummary.model_validate(item) for item in items]
+    stmt = (
+        select(Scenario)
+        .options(
+            selectinload(Scenario.problem),
+            selectinload(Scenario.stages).selectinload(ScenarioStage.steps),
+        )
+        .order_by(Scenario.updated_at.desc(), Scenario.priority.desc(), Scenario.id.desc())
+    )
+    if problem_id is not None:
+        stmt = stmt.where(Scenario.problem_id == problem_id)
+    if status_filter is not None:
+        stmt = stmt.where(Scenario.status == status_filter)
+    if search.strip():
+        pattern = f"%{search.strip()}%"
+        stmt = stmt.where(or_(Scenario.title.ilike(pattern), Scenario.slug.ilike(pattern)))
+    items = db.scalars(stmt.offset(offset).limit(limit)).unique().all()
+    return [_scenario_summary(item) for item in items]
+
+
+@router.get("/scenarios/{scenario_id}/integrity", response_model=schemas.ScenarioIntegrityCheck)
+def admin_check_scenario_integrity(
+    scenario_id: int,
+    db: Session = Depends(get_db),
+):
+    scenario = db.scalar(
+        select(Scenario)
+        .where(Scenario.id == scenario_id)
+        .options(
+            selectinload(Scenario.stages).selectinload(ScenarioStage.steps).selectinload(ScenarioStep.documents),
+        )
+    )
+    if scenario is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сценарий не найден")
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not scenario.title.strip():
+        errors.append("Не указано название сценария.")
+    if not scenario.description.strip():
+        errors.append("Не заполнено подробное описание.")
+    if not scenario.stages:
+        errors.append("Нет ни одного этапа.")
+    steps = [step for stage in scenario.stages for step in stage.steps]
+    if not steps:
+        errors.append("Нет ни одного шага.")
+    if steps and not any(step.documents for step in steps):
+        warnings.append("К шагам не привязаны документы.")
+    source_references = db.scalars(
+        select(SourceReference).where(
+            SourceReference.sourceable_type == "scenario",
+            SourceReference.sourceable_id == scenario.id,
+        )
+    ).all()
+    if not source_references:
+        warnings.append("Не добавлены официальные источники.")
+    for source in source_references:
+        if source.url and not source.url.startswith(("http://", "https://")):
+            errors.append(f"Некорректная ссылка источника: {source.title or source.url}.")
+    return schemas.ScenarioIntegrityCheck(
+        scenario_id=scenario.id,
+        is_valid=not errors,
+        errors=errors,
+        warnings=warnings,
+    )
 
 
 @router.post("/scenarios", response_model=schemas.ScenarioPublicSummary, status_code=status.HTTP_201_CREATED)
@@ -605,11 +848,27 @@ def admin_update_law_update(
 @router.get("/audit-logs", response_model=list[schemas.AuditLogOut])
 def admin_list_audit_logs(
     limit: int = Query(default=200, ge=1, le=1000),
+    actor: str = Query(default="", max_length=255),
+    entity_type: str = Query(default="", max_length=80),
+    event_type: str = Query(default="", max_length=32),
+    status_filter: str = Query(default="", alias="status", max_length=32),
     _: str = Depends(require_role("content_editor")),
     db: Session = Depends(get_db),
 ):
     """H9 — Список последних записей аудита (действия редакторов/админов)."""
-    return [schemas.AuditLogOut.model_validate(item) for item in list_audit_logs(db, limit=limit)]
+    if not any([actor.strip(), entity_type.strip(), event_type.strip(), status_filter.strip()]):
+        return [schemas.AuditLogOut.model_validate(item) for item in list_audit_logs(db, limit=limit)]
+    stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
+    if actor.strip():
+        pattern = f"%{actor.strip()}%"
+        stmt = stmt.where(AuditLog.actor.ilike(pattern))
+    if entity_type.strip():
+        stmt = stmt.where(AuditLog.entity_type == entity_type.strip())
+    if event_type.strip():
+        stmt = stmt.where(AuditLog.event_type == event_type.strip())
+    if status_filter.strip():
+        stmt = stmt.where(AuditLog.status == status_filter.strip())
+    return [schemas.AuditLogOut.model_validate(item) for item in db.scalars(stmt).all()]
 
 
 # ---------------------------------------------------------------------------
@@ -639,18 +898,40 @@ def admin_flush_email_queue(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/users", response_model=list[schemas.UserAdminOut])
-def admin_users(_: str = Depends(require_role("platform_admin")), db: Session = Depends(get_db)):
-    """H5 — Пользователи и роли."""
-    users = db.scalars(select(User).order_by(User.id.asc())).all()
+@router.get("/roles")
+def admin_roles(_: str = Depends(require_role("platform_admin")), db: Session = Depends(get_db)):
+    """H5 — Справочник ролей для панели управления."""
+    roles = db.scalars(select(Role).order_by(Role.id.asc())).all()
     return [
-        schemas.UserAdminOut(
-            id=u.id, email=u.email, name=u.name, role_id=u.role_id,
-            is_active=u.is_active, city=u.city, region=u.region,
-            created_at=u.created_at,
-        )
-        for u in users
+        {"id": role.id, "title": role.title, "description": role.description}
+        for role in roles
     ]
+
+
+@router.get("/users", response_model=list[schemas.UserAdminOut])
+def admin_users(
+    search: str = Query(default="", max_length=255),
+    role: str = Query(default="", max_length=64),
+    active: bool | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    _: str = Depends(require_role("platform_admin")),
+    db: Session = Depends(get_db),
+):
+    """H5 — Пользователи и роли."""
+    stmt = select(User).order_by(User.created_at.desc(), User.id.desc())
+    if search.strip():
+        raw = search.strip()
+        conditions = [User.email.ilike(f"%{raw}%"), User.name.ilike(f"%{raw}%")]
+        if raw.isdigit():
+            conditions.append(User.id == int(raw))
+        stmt = stmt.where(or_(*conditions))
+    if role.strip():
+        stmt = stmt.where(User.role_id == role.strip())
+    if active is not None:
+        stmt = stmt.where(User.is_active == active)
+    users = db.scalars(stmt.offset(offset).limit(limit)).all()
+    return [_user_admin_out(db, u) for u in users]
 
 
 @router.get("/users/{user_id}", response_model=schemas.UserAdminOut)
@@ -662,22 +943,21 @@ def admin_get_user(
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
-    return schemas.UserAdminOut(
-        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
-        is_active=user.is_active, city=user.city, region=user.region,
-        created_at=user.created_at,
-    )
+    return _user_admin_out(db, user)
 
 
 @router.patch("/users/{user_id}/role", response_model=schemas.UserAdminOut)
 def admin_update_user_role(
     user_id: int,
     payload: schemas.UserRoleUpdate,
+    _: str = Depends(require_role("platform_admin")),
     db: Session = Depends(get_db),
     actor: str = Depends(get_current_user_email),
 ):
     """P11 — Изменить роль пользователя. Admin не может снять admin с самого себя."""
     user = _must_get(db, User, user_id, "Пользователь не найден")
+    if not _role_exists(db, payload.role):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Роль не найдена.")
     if actor == user.email and payload.role != "platform_admin":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -687,23 +967,24 @@ def admin_update_user_role(
     user.role_id = payload.role
     db.commit()
     db.refresh(user)
-    log_audit_event(
+    _admin_audit(
         db,
-        actor=actor,
+        actor_email=actor,
         action=f"Роль пользователя {user.email}: {previous} → {payload.role}",
         event_type="role_change",
+        entity_type="user",
+        entity_id=user.id,
+        before_json=json.dumps({"role_id": previous}, ensure_ascii=False),
+        after_json=json.dumps({"role_id": payload.role}, ensure_ascii=False),
     )
-    return schemas.UserAdminOut(
-        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
-        is_active=user.is_active, city=user.city, region=user.region,
-        created_at=user.created_at,
-    )
+    return _user_admin_out(db, user)
 
 
 @router.patch("/users/{user_id}/active", response_model=schemas.UserAdminOut)
 def admin_update_user_active(
     user_id: int,
     payload: schemas.UserActiveUpdate,
+    _: str = Depends(require_role("platform_admin")),
     db: Session = Depends(get_db),
     actor: str = Depends(get_current_user_email),
 ):
@@ -714,43 +995,113 @@ def admin_update_user_active(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Нельзя заблокировать самого себя.",
         )
+    previous = user.is_active
     user.is_active = payload.is_active
+    if not payload.is_active:
+        db.query(RefreshToken).filter(RefreshToken.user_id == user.id).update({"revoked": True})
     db.commit()
     db.refresh(user)
-    log_audit_event(
+    _admin_audit(
         db,
-        actor=actor,
+        actor_email=actor,
         action=f"{'Разблокирован' if payload.is_active else 'Заблокирован'}: {user.email}",
         event_type="user_active_change",
+        entity_type="user",
+        entity_id=user.id,
+        before_json=json.dumps({"is_active": previous}, ensure_ascii=False),
+        after_json=json.dumps({"is_active": payload.is_active}, ensure_ascii=False),
     )
-    return schemas.UserAdminOut(
-        id=user.id, email=user.email, name=user.name, role_id=user.role_id,
-        is_active=user.is_active, city=user.city, region=user.region,
-        created_at=user.created_at,
+    return _user_admin_out(db, user)
+
+
+@router.post("/users/{user_id}/notifications", response_model=schemas.UserAdminOut)
+def admin_create_user_notification(
+    user_id: int,
+    payload: schemas.AdminUserNotificationCreate,
+    _: str = Depends(require_role("platform_admin")),
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    """P7 — Создать системное уведомление конкретному пользователю."""
+    user = _must_get(db, User, user_id, "Пользователь не найден")
+    from backend.notifications.delivery import deliver_notification
+    from backend.notifications.service import create_in_app_notification
+
+    notification, created = create_in_app_notification(
+        db,
+        user_id=user.id,
+        title=payload.title,
+        description=payload.description,
+        notification_type=payload.notification_type,
+        route=payload.route,
+        source="Админ-панель",
+        dedupe_key="",
     )
+    db.commit()
+    if created:
+        deliver_notification(db, notification)
+    _admin_audit(
+        db,
+        actor_email=actor,
+        action=f"Создано уведомление пользователю {user.email}: «{payload.title}»",
+        event_type="create",
+        entity_type="user_notification",
+        entity_id=notification.id,
+        after_json=json.dumps({"user_id": user.id, "title": payload.title}, ensure_ascii=False),
+    )
+    return _user_admin_out(db, user)
+
+
+@router.post("/users/{user_id}/sessions/revoke", response_model=schemas.UserAdminOut)
+def admin_revoke_user_sessions(
+    user_id: int,
+    _: str = Depends(require_role("platform_admin")),
+    db: Session = Depends(get_db),
+    actor: str = Depends(get_current_user_email),
+):
+    user = _must_get(db, User, user_id, "Пользователь не найден")
+    if actor == user.email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нельзя завершить собственную текущую сессию через админку.")
+    revoked = db.query(RefreshToken).filter(RefreshToken.user_id == user.id, RefreshToken.revoked == False).update({"revoked": True})  # noqa: E712
+    db.commit()
+    _admin_audit(
+        db,
+        actor_email=actor,
+        action=f"Завершены активные сессии пользователя {user.email}: {revoked}",
+        event_type="session_revoke",
+        entity_type="user",
+        entity_id=user.id,
+    )
+    return _user_admin_out(db, user)
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def admin_delete_user(
     user_id: int,
+    _: str = Depends(require_role("platform_admin")),
     db: Session = Depends(get_db),
     actor: str = Depends(get_current_user_email),
 ):
-    """P11 — Удалить пользователя. Admin не может удалить сам себя."""
+    """P11 — Безопасное удаление: soft-delete через деактивацию и отзыв сессий."""
     user = _must_get(db, User, user_id, "Пользователь не найден")
     if actor == user.email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Нельзя удалить самого себя.",
         )
-    email = user.email
-    db.delete(user)
+    previous = user.is_active
+    user.is_active = False
+    db.query(RefreshToken).filter(RefreshToken.user_id == user.id).update({"revoked": True})
     db.commit()
-    log_audit_event(
+    _admin_audit(
         db,
-        actor=actor,
-        action=f"Удалён пользователь: {email}",
+        actor_email=actor,
+        action=f"Деактивирован пользователь: {user.email}",
         event_type="delete",
+        entity_type="user",
+        entity_id=user.id,
+        before_json=json.dumps({"is_active": previous}, ensure_ascii=False),
+        after_json=json.dumps({"is_active": False}, ensure_ascii=False),
     )
 
 

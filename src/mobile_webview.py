@@ -163,6 +163,7 @@ def main(page: ft.Page) -> None:
     page.title = "Белпомощник"
     page.padding = 0
     page.spacing = 0
+    page.scroll = ft.ScrollMode.HIDDEN
     page.theme_mode = ft.ThemeMode.SYSTEM
 
     last_url = {"value": APP_URL}
@@ -182,11 +183,22 @@ def main(page: ft.Page) -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"[shell] orientation lock unavailable: {exc}")
 
-    def root(control: ft.Control) -> ft.SafeArea:
-        return ft.SafeArea(
+    def root(control: ft.Control) -> ft.Control:
+        colors = _palette(page)
+        return ft.Container(
             expand=True,
-            minimum_padding=ft.padding.only(left=16, top=12, right=16, bottom=16),
-            content=control,
+            bgcolor=colors["bg"],
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            content=ft.SafeArea(
+                expand=True,
+                minimum_padding=ft.padding.only(left=16, top=12, right=16, bottom=16),
+                content=ft.Container(
+                    expand=True,
+                    bgcolor=colors["bg"],
+                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                    content=control,
+                ),
+            ),
         )
 
     def brand_mark(size: int = 48) -> ft.Container:
@@ -288,6 +300,7 @@ def main(page: ft.Page) -> None:
     def replace(control: ft.Control, screen_name: str = "form") -> None:
         apply_shell_theme()
         lock_phone_orientation_if_needed()
+        page.scroll = ft.ScrollMode.HIDDEN
         page.clean()
         page.add(root(control))
         page.update()
@@ -528,6 +541,7 @@ def main(page: ft.Page) -> None:
             return
 
         print(f"[shell] server reachable: {server_info}")
+        page.scroll = ft.ScrollMode.HIDDEN
         page.clean()
         page.add(webview)
         page.update()
@@ -539,6 +553,7 @@ def main(page: ft.Page) -> None:
         await open_url()
 
     async def test_shell(_=None) -> None:
+        page.scroll = ft.ScrollMode.HIDDEN
         page.clean()
         page.add(webview)
         page.update()

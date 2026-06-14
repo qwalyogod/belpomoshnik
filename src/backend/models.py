@@ -18,7 +18,13 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import DATETIME as _MySQLDateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# Точное время с долями секунды (на MySQL — DATETIME(6)). Нужно там, где важен
+# строгий порядок записей, созданных в пределах одной секунды (напр. user- и
+# assistant-сообщения AI-чата при мгновенном ответе).
+_PRECISE_DT = DateTime(timezone=True).with_variant(_MySQLDateTime(fsp=6), "mysql")
 
 from backend.enums import (
     ActionType,
@@ -470,7 +476,7 @@ class User(Base, TimestampMixin):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     role_id: Mapped[str] = mapped_column(
-        ForeignKey("roles.id", ondelete="SET DEFAULT"),
+        ForeignKey("roles.id", ondelete="RESTRICT"),
         default="citizen",
         nullable=False,
         index=True,
@@ -493,7 +499,9 @@ class User(Base, TimestampMixin):
     avatar_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
 
     role: Mapped[Role] = relationship(back_populates="users")
     documents: Mapped[list[UserDocument]] = relationship(
@@ -568,6 +576,19 @@ class UserDocument(Base, TimestampMixin):
     # v0.4: пользовательские поля для doc_type='other'. Храним как JSON-строку,
     # чтобы не плодить колонки. Для остальных типов остаётся пустым.
     custom_fields_json: Mapped[str] = mapped_column(String(2000), default="", nullable=False)
+    # Промпт 1 (encryption at-rest). Plain-колонки выше оставлены для backward
+    # compatibility — read-путь умеет fallback. Все новые записи идут только
+    # в encrypted-колонки; plain остаются пустыми.
+    number_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    issued_by_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    custom_fields_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Скан хранится зашифрованно вне публичной /uploads-папки.
+    scan_encrypted_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    scan_original_filename: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    scan_mime_type: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    scan_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    scan_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="documents")
 
@@ -614,6 +635,8 @@ class UserNotification(Base):
     __tablename__ = "user_notifications"
     __table_args__ = (
         Index("ix_user_notifications_user_read", "user_id", "is_read"),
+        # Промпт 6: dedupe — не создавать одну и ту же запись повторно.
+        Index("ix_user_notifications_dedupe", "user_id", "dedupe_key"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -624,6 +647,89 @@ class UserNotification(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     source: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     due_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    # Промпт 6: route для глубокой ссылки в приложении.
+    route: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    # Промпт 6: дедупликация. Пустая строка = не подлежит дедупу.
+    dedupe_key: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+
+class UserPushToken(Base, TimestampMixin):
+    """Промпт 6: device-токен пользователя для native push (FCM/APNs).
+
+    Полный токен на frontend не возвращается — только masked + last_seen_at.
+    """
+    __tablename__ = "user_push_tokens"
+    __table_args__ = (
+        UniqueConstraint("user_id", "token_hash", name="uq_user_push_tokens_hash"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform: Mapped[str] = mapped_column(String(16), default="android", nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(120), nullable=False)
+    token_encrypted: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    device_label: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ControlCenterSession(Base):
+    """Скрытая сессия владельца платформы для Control Center.
+
+    Raw token никогда не хранится: в БД попадает только SHA-256 hash.
+    """
+    __tablename__ = "control_center_sessions"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_control_center_sessions_token_hash"),
+        Index("ix_control_center_sessions_expires", "expires_at", "revoked_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    user_agent: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+
+
+class SystemSetting(Base, TimestampMixin):
+    """Платформенные настройки, управляемые только через Control Center."""
+    __tablename__ = "system_settings"
+    __table_args__ = (
+        UniqueConstraint("key", name="uq_system_settings_key"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    value_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    updated_by: Mapped[str] = mapped_column(String(255), default="control-center", nullable=False)
+
+
+class ControlCenterAuditLog(Base):
+    """Журнал действий скрытого Control Center без пользовательских ролей."""
+    __tablename__ = "control_center_audit_logs"
+    __table_args__ = (
+        Index("ix_control_center_audit_logs_created", "created_at"),
+        Index("ix_control_center_audit_logs_action", "action"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("control_center_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(120), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    before_json: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    after_json: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    ip_address: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    user_agent: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ok", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
@@ -636,11 +742,23 @@ class UtilityAccount(Base, TimestampMixin):
     address: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     account_number: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     provider: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    # Промпт 2: расширенные поля. Все добавлены опциональными с дефолтами,
+    # чтобы старые ответы API оставались валидными.
+    label: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    service_types: Mapped[str] = mapped_column(String(500), default="[]", nullable=False)  # JSON-массив
+    payer_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    manual_mode: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_sync_note: Mapped[str] = mapped_column(String(500), default="", nullable=False)
 
     payments: Mapped[list[UtilityPayment]] = relationship(
         back_populates="account",
         cascade="all, delete-orphan",
         order_by=lambda: UtilityPayment.id.asc(),
+    )
+    requests: Mapped[list["UtilityRequest"]] = relationship(
+        back_populates="account",
+        cascade="all, delete-orphan",
+        order_by=lambda: UtilityRequest.created_at.desc(),
     )
 
 
@@ -661,6 +779,12 @@ class UtilityPayment(Base):
     payment_deadline: Mapped[str] = mapped_column(String(20), default="", nullable=False)
     comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    # Промпт 2: breakdown как JSON-строка (вода/свет/газ с показаниями и тарифом).
+    breakdown_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    # manual / erip / receipt — откуда запись (manual = пользователь ввёл).
+    source: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
+    # Путь к загруженной квитанции (зашифровано через тот же сервис, что и сканы документов).
+    receipt_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
 
     account: Mapped[UtilityAccount] = relationship(back_populates="payments")
 
@@ -679,6 +803,101 @@ class TaxObligation(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(64), default="Предстоит", nullable=False)
     period: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     comment: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # Промпт 2: расширенные поля.
+    tax_type: Mapped[str] = mapped_column(String(40), default="other", nullable=False)
+    source: Mapped[str] = mapped_column(String(32), default="manual", nullable=False)
+    recipient: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    unp: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    notice_number: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    payment_code: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    paid_at: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    external_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    help_text: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+
+
+class AIChatSession(Base, TimestampMixin):
+    """Промпт 3: сессия AI-чата пользователя. Гражданская или редакторская."""
+    __tablename__ = "ai_chat_sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    mode: Mapped[str] = mapped_column(String(16), default="citizen", nullable=False)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_message_preview: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+    messages: Mapped[list["AIChatMessage"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by=lambda: AIChatMessage.created_at.asc(),
+    )
+
+
+class AIChatMessage(Base):
+    """Промпт 3: сообщение в AI-чате (user / assistant / system)."""
+    __tablename__ = "ai_chat_messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("ai_chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(String(16), default="user", nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    links_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    actions_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    sources_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    source: Mapped[str] = mapped_column(String(16), default="llm", nullable=False)
+    model: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    provider: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    error_code: Mapped[str] = mapped_column(String(40), default="", nullable=False)
+    # Доли секунды важны: user- и assistant-сообщения часто создаются в одну
+    # секунду, а порядок берётся по created_at (см. AIChatSession.messages).
+    created_at: Mapped[datetime] = mapped_column(_PRECISE_DT, default=_utcnow, nullable=False)
+
+    session: Mapped[AIChatSession] = relationship(back_populates="messages")
+
+
+class UserAIProviderCredential(Base, TimestampMixin):
+    """Промпт 3 (п.3): пользовательский API-ключ AI-провайдера.
+
+    Полный ключ хранится только зашифрованным (Fernet, мастер-ключ
+    BELPOMOSHNIK_AI_KEYS_MASTER_KEY) и расшифровывается лишь в момент запроса к
+    провайдеру. На frontend уходит только masked-форма."""
+    __tablename__ = "user_ai_provider_credentials"
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", name="uq_user_ai_provider"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(40), default="groq", nullable=False)
+    encrypted_api_key: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    masked_key: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    model: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UtilityRequest(Base, TimestampMixin):
+    """Промпт 2: пользовательская заявка ЖКХ (115). Локальный органайзер,
+    реальной отправки в 115.бел нет — пользователь руками отмечает статусы."""
+    __tablename__ = "utility_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    account_id: Mapped[str | None] = mapped_column(
+        ForeignKey("utility_accounts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    address: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(40), default="other", nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="draft", nullable=False, index=True)
+    external_number: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    external_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    target_service: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+
+    account: Mapped[UtilityAccount | None] = relationship(back_populates="requests")
 
 
 class EmailNotification(Base):
@@ -716,11 +935,22 @@ class AuditLog(Base, TimestampMixin):
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    actor_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     role_id: Mapped[str] = mapped_column(String(64), nullable=False, default="content_editor")
     event_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
     action: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="demo")
+    entity_type: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    entity_id: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    before_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    after_json: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    ip_address: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    user_agent: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ok")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 

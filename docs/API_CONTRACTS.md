@@ -1,6 +1,6 @@
 # API_CONTRACTS.md — Контракты API «Белпомощник»
 
-Обновлено: 2026-05-24. Соответствует Этапу G плана работ.
+Обновлено: 2026-06-13.
 
 ---
 
@@ -11,7 +11,7 @@
 | Base URL | `http://127.0.0.1:8060` |
 | Prefix | `/api` |
 | Формат | JSON |
-| Аутентификация | MVP: без auth. Production: JWT Bearer (Этап H) |
+| Аутентификация | JWT Bearer для пользовательских и административных действий |
 | Документация | `http://127.0.0.1:8060/docs` (Swagger UI) |
 
 ---
@@ -46,13 +46,39 @@
 | Метод | Путь | Описание |
 |---|---|---|
 | GET | `/api/health` | `{"status": "ok"}` |
+| GET | `/api/public/system-state` | Публичное состояние платформы: баннер, обслуживание, feature flags, branding |
 | GET | `/api/admin/bootstrap/problems` | Временный: список проблем для Flet-админки |
+
+### Control Center (скрытый системный слой)
+
+> Не является обычной админ-панелью и не привязан к пользовательским ролям. Окно открывается во frontend только командой `belpomoshnikControl()`, но пароль проверяется backend’ом.
+
+| Метод | Путь | Защита | Описание |
+|---|---|---|---|
+| POST | `/api/control-center/unlock` | Пароль backend | Выдаёт временный `control_token` |
+| POST | `/api/control-center/lock` | `X-Control-Center-Token` | Отзывает текущую control-сессию |
+| GET | `/api/control-center/status` | `X-Control-Center-Token` | Live status платформы |
+| PUT | `/api/control-center/maintenance` | `X-Control-Center-Token` | Обслуживание |
+| PUT | `/api/control-center/readonly` | `X-Control-Center-Token` | Режим только чтения |
+| PUT | `/api/control-center/banner` | `X-Control-Center-Token` | Системный баннер |
+| PUT | `/api/control-center/feature-flags` | `X-Control-Center-Token` | Feature flags разделов |
+| PUT | `/api/control-center/branding` | `X-Control-Center-Token` | Брендинг |
+| PUT | `/api/control-center/navigation-layout` | `X-Control-Center-Token` | Сохранение порядка меню |
+| POST | `/api/control-center/broadcast-notification` | `X-Control-Center-Token` | Системная in-app рассылка |
+| POST | `/api/control-center/service-actions/{action}` | `X-Control-Center-Token` | Сервисные сценарии |
+| GET | `/api/control-center/audit-log` | `X-Control-Center-Token` | Журнал действий Control Center |
 
 ---
 
 ## Административные эндпоинты (prefix `/api/admin`)
 
-> MVP: без auth. Production: требуется роль `content_editor` или `platform_admin` (Этап H).
+> Требуется JWT. Базовые контентные действия доступны `content_editor` и выше. Управление пользователями, ролями, блокировками, сессиями и системными уведомлениями доступно только `platform_admin`.
+
+### Обзор
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/dashboard/stats` | Реальная сводка админ-панели |
 
 ### Проблемы
 
@@ -61,6 +87,7 @@
 | GET | `/api/admin/problems` |
 | POST | `/api/admin/problems` |
 | PUT | `/api/admin/problems/{id}` |
+| DELETE | `/api/admin/problems/{id}` |
 
 ### Сценарии
 
@@ -68,6 +95,7 @@
 |---|---|
 | GET/POST | `/api/admin/scenarios` |
 | GET/PUT/DELETE | `/api/admin/scenarios/{id}` |
+| GET | `/api/admin/scenarios/{id}/integrity` |
 | GET/POST | `/api/admin/scenarios/{id}/stages` |
 | GET/POST | `/api/admin/stages/{id}/steps` |
 | PUT/DELETE | `/api/admin/stages/{id}`, `/api/admin/steps/{id}` |
@@ -78,6 +106,35 @@
 |---|---|
 | POST/DELETE | `/api/admin/dependencies` / `/{id}` |
 | POST/DELETE | `/api/admin/related-scenarios` / `/{id}` |
+
+### Пользователи и роли (`platform_admin`)
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/roles` | Справочник ролей |
+| GET | `/api/admin/users` | Список пользователей с фильтрами `search`, `role`, `active`, `limit`, `offset` |
+| GET | `/api/admin/users/{id}` | Карточка пользователя с счётчиками связанных сущностей |
+| PATCH | `/api/admin/users/{id}/role` | Изменить роль |
+| PATCH | `/api/admin/users/{id}/active` | Заблокировать/разблокировать |
+| POST | `/api/admin/users/{id}/sessions/revoke` | Отозвать refresh-сессии пользователя |
+| POST | `/api/admin/users/{id}/notifications` | Создать системное in-app уведомление |
+| DELETE | `/api/admin/users/{id}` | Soft-delete: деактивация и отзыв сессий |
+
+### Аудит
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/audit-logs` | Журнал действий; фильтры `actor`, `entity_type`, `event_type`, `status`, `limit` |
+
+### Регионы и города
+
+На 2026-06-14 географический справочник админки хранится как JSON в `system_settings.geo_regions`. Frontend продолжает держать localStorage fallback, но при доступном backend редактор/админ синхронизирует карту через API.
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/api/admin/regions` | Получить `GeoRegion[]` |
+| PUT | `/api/admin/regions` | Сохранить полный список регионов/районов |
+
 | POST/DELETE | `/api/admin/source-references` / `/{id}` |
 
 ### Контент
@@ -135,6 +192,11 @@
 | GET | `/api/user/notifications` | Список уведомлений |
 | PATCH | `/api/user/notifications/{id}/read` | Отметить прочитанным |
 | POST | `/api/user/notifications/read-all` | Прочитать все |
+| DELETE | `/api/user/notifications/{id}` | Удалить своё уведомление |
+| POST | `/api/user/push/native-token` | Зарегистрировать зашифрованный iOS/Android token |
+| DELETE | `/api/user/push/native-token` | Деактивировать token текущего пользователя |
+| GET | `/api/user/push/status` | Разрешения, readiness и маски зарегистрированных устройств |
+| POST | `/api/user/push/test` | Создать in-app тест и попытаться доставить системно |
 
 ### Трекеры (ЖКХ + налоги)
 

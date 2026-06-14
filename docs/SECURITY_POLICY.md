@@ -31,15 +31,20 @@
 - **MVP-ограничение:** в `auth.py` стоит дефолтный ключ `"change-me-in-production-use-256-bit-key"` — в production обязательно заменить.
 
 ### Персональные данные в БД
-- MVP: SQLite-файл `data/belpomoshnik.db` — хранится локально, не реплицируется.  
-- Production: PostgreSQL с шифрованием на уровне диска (pgcrypto / LUKS / managed DB).  
-- Поля `number`, `issued_by` в таблице `user_documents` в production рекомендуется шифровать симметричным ключом (pgcrypto `pgp_sym_encrypt`).
+- Текущая dev/MVP БД — MySQL; production-переход на PostgreSQL остаётся отдельным инфраструктурным этапом.
+- Чувствительные поля личных документов и сканы уже шифруются Fernet-ключом `BELPOMOSHNIK_DOCUMENT_MASTER_KEY`.
+- Device push token хранится только в зашифрованном виде; API возвращает маску, но не полный token.
 
 ### Файлы документов (H7)
-- Загружаемые файлы хранятся в `data/user_docs/<user_id>/<doc_id>`.  
-- Доступ — только через аутентифицированный endpoint `GET /api/user/documents/{doc_id}/file`.  
-- **Не** раздаются через статику nginx/Apache.  
-- В production: вынести за webroot или использовать S3 с pre-signed URLs.
+- Зашифрованные blob хранятся в `data/secure/documents/<user_id>/<doc_id>` вне public static.
+- Доступ — только через owner-isolated endpoint `GET /api/user/documents/{doc_id}/scan` с JWT.
+- Формат проверяется по magic bytes, а не только по расширению файла.
+
+### Уведомления
+- Системные каналы включаются только после явного разрешения пользователя.
+- Push payload намеренно обезличен: нет номеров документов, адресов и сканов.
+- In-app уведомление создаётся даже при запрете внешней доставки.
+- FCM/APNs credentials задаются только через защищённое окружение и не коммитятся.
 
 ---
 
@@ -52,6 +57,8 @@
 | Гражданин | `citizen` | Только собственные данные `/api/user/*` |
 | Редактор | `content_editor` | + контентные admin-endpoints `/api/admin/*` |
 | Администратор | `platform_admin` | Полный доступ + управление пользователями |
+
+Обновление 2026-06-13: операции `/api/admin/users/*`, включая изменение роли, блокировку, soft-delete, отзыв refresh-сессий и создание системного уведомления пользователю, дополнительно требуют `platform_admin`. Редактор контента больше не может управлять пользователями прямым API-запросом. Важные действия записываются в `audit_logs` с actor/entity/before/after, а удаление пользователя выполняется как деактивация без каскадного удаления пользовательских данных.
 
 Иерархия реализована в `backend.api.auth.require_role()`.  
 Все `/api/admin/*` endpoints защищены `Depends(require_role("content_editor"))` на уровне роутера.
@@ -89,7 +96,30 @@
 
 ---
 
-## H8.7 Генерация безопасного ключа
+## H8.7 Control Center
+
+Control Center — скрытый системный слой владельца платформы. Он не отображается в меню, не является ролью пользователя и не назначается через админ-панель.
+
+Механизм доступа:
+
+- frontend открывает окно только по консольной команде `belpomoshnikControl()`;
+- пароль проверяется только backend endpoint’ом `POST /api/control-center/unlock`;
+- пароль задаётся через `CONTROL_CENTER_PASSWORD` или `CONTROL_CENTER_PASSWORD_HASH`;
+- при успешном входе backend выдаёт временный raw-token;
+- raw-token показывается frontend только один раз, а в БД хранится только SHA-256 hash;
+- опасные действия требуют заголовок `X-Control-Center-Token`;
+- истёкшие и отозванные token не принимаются;
+- неудачные попытки входа ограничиваются rate-limit;
+- все действия пишутся в `control_center_audit_logs`;
+- пароль и raw-token не логируются.
+
+Таблицы: `control_center_sessions`, `system_settings`, `control_center_audit_logs`.
+
+MVP-ограничение: `CONTROL_CENTER_PASSWORD=x20b01` допустим только для локальной разработки. Для production нужно использовать длинный случайный пароль или `CONTROL_CENTER_PASSWORD_HASH`, HTTPS и внешний secret-management.
+
+---
+
+## H8.8 Генерация безопасного ключа
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"

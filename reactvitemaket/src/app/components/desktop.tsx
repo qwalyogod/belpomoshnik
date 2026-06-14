@@ -252,11 +252,17 @@ const WEEK_BASE = [
 ];
 
 export function AdminPanel({ editor = false, fill = false, mobile = false }: { editor?: boolean; fill?: boolean; mobile?: boolean } = {}) {
-  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, contentTags, addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, setAdminUserRole, setAdminUserActive, deleteAdminUser, currentUser, authSession, loadArticles } = useStore();
-  const [section, setSection] = useState(editor ? "dashboard" : "scenarios");
+  const { admin, profile, role, articles, addArticle, updateArticle, removeArticle, isSubmitterBlocked, toggleBlockedSubmitter, uploadMedia, viewsDaily, categories, contentTags, addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus, currentUser, authSession, loadArticles } = useStore();
+  const [section, setSection] = useState("dashboard");
   const [navPage, setNavPage] = useState(0);
   const [period, setPeriod] = useState<"7" | "30">("7");
   const [pubFilter, setPubFilter] = useState<"all" | ContentKind>("all");
+  const [scenarioFilter, setScenarioFilter] = useState<"all" | "published" | "review" | "draft" | "archived">("all");
+  const [scenarioSearch, setScenarioSearch] = useState("");
+  const [problemFilter, setProblemFilter] = useState<"all" | "published" | "draft" | "archived">("all");
+  const [problemSearch, setProblemSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<"all" | "citizen" | "content_editor" | "platform_admin">("all");
   const [editing, setEditing] = useState<{ kind: ContentKind; mode: "create" | "edit"; initial?: Partial<ContentDraft>; id?: string; authorMeta?: Article["author"] } | null>(null);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const openEditor = (kind: ContentKind) => setEditing({ kind, mode: "create" });
@@ -348,19 +354,47 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       console.error("[AdminPanel] moderate article failed:", err);
     }
   };
+  const handleRevokeSessions = async (id: string) => {
+    const token = authSession?.access_token;
+    if (!token || !/^\d+$/.test(id)) return;
+    try {
+      await apiClient.revokeAdminUserSessions<Record<string, unknown>>(token, Number(id));
+      window.alert("Активные сессии пользователя завершены.");
+    } catch (err) {
+      console.error("[AdminPanel] revoke sessions failed:", err);
+      window.alert("Не удалось завершить сессии пользователя.");
+    }
+  };
+  const handleCreateProblem = async () => {
+    const title = window.prompt("Название новой проблемы");
+    if (title?.trim()) await createAdminProblem(title.trim());
+  };
   const catLabel = (id: string) => categories.find((c) => c.id === id)?.name ?? id;
-  const statusLabel = (s: string) => (s === "published" ? "Опубликовано" : s === "review" ? "На проверке" : s === "rejected" ? "Отклонено" : "Черновик");
+  const statusLabel = (s: string) => (s === "published" ? "Опубликовано" : s === "review" ? "На проверке" : s === "rejected" ? "Отклонено" : s === "archived" ? "Архив" : "Черновик");
 
-  const apiRows = admin.scenarios.map((s) => ({
+  const scenarioRows = admin.scenarios.filter((s) => {
+    const byStatus = scenarioFilter === "all" || s.status === scenarioFilter;
+    const q = scenarioSearch.trim().toLowerCase();
+    const bySearch = !q || s.title.toLowerCase().includes(q) || catLabel(s.category).toLowerCase().includes(q);
+    return byStatus && bySearch;
+  });
+  const apiRows = scenarioRows.map((s) => ({
     c: catLabel(s.category),
     t: s.title,
     st: statusLabel(s.status),
     a: editor ? "Редактор" : "—",
-    u: `${s.taskCount} задач`,
+    u: `${s.stageCount ?? 0} этапов · ${s.taskCount} задач`,
   }));
   const rows = apiRows;
 
-  const total = admin.scenarios.length;
+  const problemRows = admin.problems.filter((p) => {
+    const byStatus = problemFilter === "all" || p.status === problemFilter;
+    const q = problemSearch.trim().toLowerCase();
+    const bySearch = !q || p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q) || catLabel(p.category).toLowerCase().includes(q);
+    return byStatus && bySearch;
+  });
+
+  const total = admin.stats?.scenariosTotal ?? admin.scenarios.length;
   const published = admin.scenarios.filter((s) => s.status === "published").length;
   const review = admin.scenarios.filter((s) => s.status === "review").length;
   // v1.1 (P10): реальные счётчики. Плашка «нет данных», если backend пустой.
@@ -370,7 +404,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
         { l: "Всего сценариев", v: String(total), d: "из API" },
         { l: "Опубликовано", v: String(published), d: `${Math.round((published / total) * 100)}%` },
         { l: "На проверке", v: String(review), d: "ждут редактора" },
-        { l: "Черновики", v: String(total - published - review), d: "в работе" },
+        { l: "Проблемы", v: String(admin.stats?.problemsTotal ?? admin.problems.length), d: "в каталоге" },
       ]
     : EMPTY_ADMIN_STATS;
 
@@ -381,12 +415,13 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     { id: "dashboard", icon: <BarChart3 size={15} />, label: "Обзор", short: "Обзор" },
     { id: "publications", icon: <Newspaper size={15} />, label: "Публикации", short: "Публик.", badge: articles.length ? String(articles.length) : undefined },
     { id: "moderation", icon: <ShieldAlert size={15} />, label: "Модерация", short: "Модер.", badge: moderationCount ? String(moderationCount) : undefined },
+    { id: "problems", icon: <AlertCircle size={15} />, label: "Проблемы", short: "Пробл.", badge: admin.problems.length ? String(admin.problems.length) : undefined },
     { id: "categories", icon: <LayoutGrid size={15} />, label: "Категории", short: "Категории" },
     { id: "tags", icon: <Tags size={15} />, label: "Теги", short: "Теги" },
     { id: "scenarios", icon: <FileText size={15} />, label: "Сценарии", short: "Сценарии", badge: total ? String(total) : undefined },
     { id: "law", icon: <BookOpen size={15} />, label: "Правовые обновления", short: "Право" },
     { id: "authorities", icon: <Building2 size={15} />, label: "Учреждения", short: "Учрежд." },
-    { id: "extremist", icon: <ShieldAlert size={15} />, label: "Экстремистский реестр", short: "Экстр." },
+    { id: "extremist", icon: <ShieldAlert size={15} />, label: "Экстремистские материалы", short: "Экстр." },
     { id: "users", icon: <Users size={15} />, label: "Пользователи и роли", short: "Люди", sys: true },
     { id: "regions", icon: <MapPin size={15} />, label: "Регионы и города", short: "Регионы", sys: true },
     { id: "rules", icon: <Bell size={15} />, label: "Правила уведомлений", short: "Правила", sys: true },
@@ -439,13 +474,13 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     ? viewsDaily.map((d) => ({ d: shortWeekday(d.date), v: d.count }))
     : WEEK_BASE;
   const maxWeek = Math.max(1, ...week.map((d) => d.v));
-  const pubCount = hasReal ? realPublished.length : total ? published : 118;
-  const revCount = hasReal ? realReview : total ? review : 17;
+  const pubCount = hasReal ? realPublished.length : total ? published : 0;
+  const revCount = hasReal ? realReview : total ? review : 0;
   const analyticsNote = hasWeekReal
     ? "Просмотры и дневной график — реальные (счётчик при открытии материала)."
     : hasReal
-      ? "Просмотры — реальные. Дневной график — демонстрационный (накапливается по дням)."
-      : "Демо-данные аналитики до накопления реальных просмотров.";
+      ? "Просмотры — реальные. Дневной график начнёт заполняться после открытий материалов по дням."
+      : "Аналитика появится после накопления реальных просмотров.";
   const dashKpis = [
     { l: hasReal ? "Просмотры всего" : "Просмотры за период", v: fmt(totalViews), d: hasReal ? "по материалам" : period === "30" ? "за 30 дней" : "за 7 дней", icon: <Eye size={15} />, up: hasReal ? "" : "+12%" },
     { l: "Опубликовано", v: String(pubCount), d: "материалов", icon: <Check size={15} />, up: "" },
@@ -455,6 +490,21 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
 
   const dashboardBody = (
     <>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {[
+          { l: "Пользователи", v: admin.stats?.usersTotal ?? admin.users.length, d: `${admin.stats?.usersBlocked ?? admin.users.filter(u => !u.isActive).length} заблокировано` },
+          { l: "Публикации", v: admin.stats?.publicationsTotal ?? articles.length, d: `${admin.stats?.publicationsReview ?? moderationCount} на модерации` },
+          { l: "Проблемы", v: admin.stats?.problemsTotal ?? admin.problems.length, d: "каталог" },
+          { l: "Сценарии", v: admin.stats?.scenariosTotal ?? admin.scenarios.length, d: "life events" },
+          { l: "Учреждения", v: admin.stats?.authoritiesTotal ?? 0, d: `${admin.stats?.regionsTotal ?? 0} регионов` },
+        ].map((s) => (
+          <Card key={s.l} className="p-4">
+            <div className="text-[12px] tracking-tight text-black/50 dark:text-white/50">{s.l}</div>
+            <div className="mt-2 tracking-tight text-black dark:text-white" style={{ fontSize: 24 }}>{s.v}</div>
+            <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">{s.d}</div>
+          </Card>
+        ))}
+      </div>
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B2A86] via-[#0846C6] to-[#0056FF] p-5 text-white sm:p-6">
         <div className="text-[12px] tracking-tight text-white/70">Редакция · {todayLabel}</div>
         <div className="mt-1 tracking-tight" style={{ fontSize: 22 }}>Здравствуйте, {profile.name}</div>
@@ -541,12 +591,14 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       </div>
       <Card className="mt-5 p-0">
         <div className="flex items-center gap-2 overflow-x-auto border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06] sm:px-5 [&::-webkit-scrollbar]:hidden">
-          {["Все","Опубликовано","На проверке","Черновик"].map((t, i) => (
-            <span key={t} className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] tracking-tight ${i===0 ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/55 dark:text-white/55"}`}>{t}</span>
+          {([[
+            "all", "Все"], ["published", "Опубликовано"], ["review", "На проверке"], ["draft", "Черновик"], ["archived", "Архив"],
+          ] as const).map(([value, label]) => (
+            <button key={value} onClick={() => setScenarioFilter(value)} className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] tracking-tight ${scenarioFilter===value ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/55 dark:text-white/55"}`}>{label}</button>
           ))}
           <div className="ml-auto hidden items-center gap-2 rounded-xl bg-[#F6F7FB] px-3 py-1.5 text-[12px] dark:bg-white/[0.04] sm:flex">
             <Search size={13} className="text-black/40 dark:text-white/40" />
-            <input placeholder="Поиск" className="bg-transparent tracking-tight outline-none dark:text-white" />
+            <input value={scenarioSearch} onChange={(e) => setScenarioSearch(e.target.value)} placeholder="Поиск" className="bg-transparent tracking-tight outline-none dark:text-white" />
           </div>
         </div>
         <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -570,6 +622,77 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                   <td className="py-3.5 text-black/65 dark:text-white/65">{r.a}</td>
                   <td className="py-3.5 text-black/50 dark:text-white/50">{r.u}</td>
                   <td className="py-3.5 pr-5 text-right"><ChevronRight size={15} className="inline text-black/35 dark:text-white/35" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </>
+  );
+
+  const problemsBody = (
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { l: "Всего проблем", v: String(admin.problems.length), d: "видны админке" },
+          { l: "Опубликовано", v: String(admin.problems.filter(p => p.status === "published").length), d: "на сайте" },
+          { l: "Черновики", v: String(admin.problems.filter(p => p.status === "draft").length), d: "в работе" },
+          { l: "Архив", v: String(admin.problems.filter(p => p.status === "archived").length), d: "скрыты" },
+        ].map((s) => (
+          <Card key={s.l} className="p-4">
+            <div className="text-[12px] tracking-tight text-black/50 dark:text-white/50">{s.l}</div>
+            <div className="mt-2 tracking-tight text-black dark:text-white" style={{ fontSize: 22 }}>{s.v}</div>
+            <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">{s.d}</div>
+          </Card>
+        ))}
+      </div>
+      <Card className="mt-5 p-0">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06] sm:px-5 [&::-webkit-scrollbar]:hidden">
+          {([[
+            "all", "Все"], ["published", "Опубликовано"], ["draft", "Черновик"], ["archived", "Архив"],
+          ] as const).map(([value, label]) => (
+            <button key={value} onClick={() => setProblemFilter(value)} className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] tracking-tight ${problemFilter===value ? "bg-[#E3E7FC] text-[#0056FF] dark:bg-[#0E1A3A] dark:text-[#7FA8FF]" : "text-black/55 dark:text-white/55"}`}>{label}</button>
+          ))}
+          <div className="ml-auto hidden items-center gap-2 rounded-xl bg-[#F6F7FB] px-3 py-1.5 text-[12px] dark:bg-white/[0.04] sm:flex">
+            <Search size={13} className="text-black/40 dark:text-white/40" />
+            <input value={problemSearch} onChange={(e) => setProblemSearch(e.target.value)} placeholder="Поиск проблемы" className="bg-transparent tracking-tight outline-none dark:text-white" />
+          </div>
+        </div>
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
+          <table className="w-full min-w-[620px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
+                <th className="px-5 py-3">Категория</th>
+                <th className="py-3">Название</th>
+                <th className="py-3">Slug</th>
+                <th className="py-3">Статус</th>
+                <th className="py-3">Описание</th>
+                <th className="py-3 pr-5" />
+              </tr>
+            </thead>
+            <tbody className="text-[13px] tracking-tight text-black dark:text-white">
+              {problemRows.map((p) => (
+                <tr key={p.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
+                  <td className="px-5 py-3.5"><Pill tone="lavender">{catLabel(p.category)}</Pill></td>
+                  <td className="py-3.5 font-medium">{p.title}</td>
+                  <td className="py-3.5 text-black/50 dark:text-white/50">{p.slug}</td>
+                  <td className="py-3.5"><Pill tone={tone(statusLabel(p.status)) as any}>{statusLabel(p.status)}</Pill></td>
+                  <td className="max-w-[360px] truncate py-3.5 text-black/55 dark:text-white/55">{p.shortDescription || "—"}</td>
+                  <td className="whitespace-nowrap py-3.5 pr-5 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <select value={p.status} onChange={(e) => setAdminProblemStatus(p.id, e.target.value as typeof p.status)} className="h-8 rounded-lg border border-black/10 bg-white px-2 text-[12px] tracking-tight outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white">
+                        <option value="draft">Черновик</option>
+                        <option value="published">Опубликовано</option>
+                        <option value="archived">Архив</option>
+                      </select>
+                      {p.status === "published" && (
+                        <button onClick={() => window.open(`/problem-detail/${p.slug}`, "_blank")} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] tracking-tight text-[#0056FF] hover:bg-[#0056FF]/[0.08]">
+                          Открыть <ArrowUpRight size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -918,21 +1041,40 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
     const normalized = LEGACY_ROLE_MAP[raw] ?? raw;
     return uniqueRoles.some(r => r.value === normalized) ? normalized : "citizen";
   };
+  const visibleUsers = admin.users.filter((u) => {
+    const byRole = userRoleFilter === "all" || roleValue(u.role) === userRoleFilter;
+    const q = userSearch.trim().toLowerCase();
+    const bySearch = !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.id.includes(q);
+    return byRole && bySearch;
+  });
   const usersBody = admin.users.length === 0 ? sectionEmpty(<Users size={20} />, "Доступно администратору", "Список пользователей и ролей виден только администратору платформы.") : (
     <Card className="p-0">
+      <div className="flex flex-wrap items-center gap-2 border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.06] sm:px-5">
+        <div className="flex items-center gap-2 rounded-xl bg-[#F6F7FB] px-3 py-2 text-[12px] dark:bg-white/[0.04]">
+          <Search size={13} className="text-black/40 dark:text-white/40" />
+          <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Email, имя или id" className="w-44 bg-transparent tracking-tight outline-none dark:text-white" />
+        </div>
+        <select value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value as typeof userRoleFilter)} className="h-9 rounded-xl border border-black/10 bg-white px-3 text-[12px] tracking-tight outline-none dark:border-white/12 dark:bg-white/[0.04] dark:text-white">
+          <option value="all">Все роли</option>
+          {uniqueRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+        <span className="ml-auto text-[12px] tracking-tight text-black/45 dark:text-white/45">Показано: {visibleUsers.length} из {admin.users.length}</span>
+      </div>
       <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <table className="w-full min-w-[640px]">
+        <table className="w-full min-w-[860px]">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-black/40 dark:text-white/40">
               <th className="px-5 py-3">Имя</th>
               <th className="py-3">Email</th>
               <th className="py-3">Роль</th>
               <th className="py-3">Статус</th>
+              <th className="py-3">Связанные данные</th>
+              <th className="py-3">Последний вход</th>
               <th className="py-3 pr-5" />
             </tr>
           </thead>
           <tbody className="text-[13px] tracking-tight text-black dark:text-white">
-            {admin.users.map((u) => (
+            {visibleUsers.map((u) => (
               <tr key={u.id} className="border-t border-black/[0.05] dark:border-white/[0.05]">
                 <td className="px-5 py-3.5">{u.name || "—"}</td>
                 <td className="py-3.5 text-black/55 dark:text-white/55">{u.email}</td>
@@ -947,9 +1089,20 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
                 </td>
                 <td className="py-3.5">
                   <Pill tone={u.isActive ? "ok" : "warn"}>{u.isActive ? "Активен" : "Заблокирован"}</Pill>
+                  {u.isTestAccount && <span className="ml-2"><Pill tone="lavender">тестовый</Pill></span>}
                 </td>
+                <td className="py-3.5 text-black/55 dark:text-white/55">{u.situationsCount ?? 0} ситуаций · {u.documentsCount ?? 0} документов · {u.notificationsCount ?? 0} увед.</td>
+                <td className="py-3.5 text-black/45 dark:text-white/45">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("ru-RU") : "—"}</td>
                 <td className="whitespace-nowrap py-3.5 pr-5 text-right">
                   <div className="inline-flex items-center gap-2">
+                    <button
+                      onClick={() => handleRevokeSessions(u.id)}
+                      disabled={u.email === currentUser.email}
+                      title={u.email === currentUser.email ? "Нельзя завершить собственную текущую сессию" : "Завершить refresh-сессии пользователя"}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] tracking-tight text-black/55 transition-colors hover:border-[#0056FF]/30 hover:bg-[#0056FF]/[0.08] hover:text-[#0056FF] disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-white/55"
+                    >
+                      <X size={12} /> Сессии
+                    </button>
                     <button
                       onClick={() => setAdminUserActive(u.id, !u.isActive)}
                       disabled={u.email === currentUser.email}
@@ -1072,7 +1225,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-white/70 px-5 py-3.5 backdrop-blur dark:border-white/[0.06] dark:bg-[#0B0D13]/70 sm:px-7">
         <div>
           <div className="text-[11px] tracking-tight text-black/45 dark:text-white/45">{editor ? "Редактор" : "Контент"} / {current.label}</div>
-          <div className="mt-0.5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{section === "scenarios" ? "Жизненные сценарии" : section === "dashboard" ? (editor ? "Обзор редакции" : "Обзор") : current.label}</div>
+          <div className="mt-0.5 tracking-tight text-black dark:text-white" style={{ fontSize: 18 }}>{section === "scenarios" ? "Жизненные сценарии" : section === "problems" ? "Проблемы" : section === "dashboard" ? (editor ? "Обзор редакции" : "Обзор") : current.label}</div>
         </div>
         {section === "dashboard" && (
           <div className="flex items-center gap-2">
@@ -1090,6 +1243,9 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
             <button onClick={() => openEditor("scenario")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая ситуация</button>
           </div>
         )}
+        {section === "problems" && (
+          <button onClick={handleCreateProblem} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая проблема</button>
+        )}
         {section === "publications" && (
           <button onClick={() => openEditor("news")} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0056FF] px-3 text-[13px] tracking-tight text-white shadow-[0_8px_24px_-12px_rgba(0,86,255,0.6)] transition-all hover:bg-[#0049DB] active:translate-y-[1px]"><Plus size={15} /> Новая публикация</button>
         )}
@@ -1098,6 +1254,7 @@ export function AdminPanel({ editor = false, fill = false, mobile = false }: { e
         {section === "dashboard" ? dashboardBody
           : section === "publications" ? publicationsBody
           : section === "moderation" ? moderationBody
+          : section === "problems" ? problemsBody
           : section === "scenarios" ? scenariosBody
           : section === "categories" ? categoriesBody
           : section === "tags" ? tagsBody

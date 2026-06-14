@@ -2,26 +2,29 @@ import { createContext, useContext, useMemo, useRef, useState, ReactNode, useCal
 import {
   Role, Lang, Scenario, UserSituation, UserDocument, AppNotification, LegalUpdate,
   UserProfile, Settings, UserDocumentType, Problem, DocumentRef, Institution, AppUser,
-  AdminScenarioRow, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
+  AdminScenarioRow, AdminProblemRow, AdminDashboardStats, UtilityAccount, UtilityPayment, TaxObligation, Article, Category,
   ContentTag, UserAddress, UserNote, NoteCategory,
+  UtilityRequest, SystemState,
 } from "./types";
 import {
   CATEGORIES, SCENARIOS, INITIAL_SITUATIONS, INITIAL_DOCUMENTS, INITIAL_NOTIFICATIONS,
   LEGAL_UPDATES, INITIAL_PROFILE, INITIAL_SETTINGS, INITIAL_FAVORITES, PROBLEMS,
   INITIAL_UTILITY_ACCOUNTS, INITIAL_TAXES
 } from "./mock";
-import { adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload } from "./adapters";
+import { adaptAdminDashboardStats, adaptAdminProblemRow, adaptAdminScenarioRow, adaptArticle, adaptContentTag, adaptDocumentRef, adaptInstitution, adaptLegalUpdate, adaptNotification, adaptProblem, adaptScenario, adaptTax, adaptUserDocument, adaptUserNote, adaptUserProfile, adaptUserSituation, adaptUtilityAccount, adaptUtilityPayment, adaptUtilityRequest, taxPayload, userNotePayload, userProfilePayload, utilityAccountPayload, utilityPaymentPayload, utilityRequestPayload } from "./adapters";
 import { apiClient, API_BASE_URL, type AuthTokens } from "../services/api";
 import { buildReminders } from "../services/reminders";
 import { clearPublicContentCache } from "../services/storage";
-import { GEO_KEY, GEO_SEED, type GeoRegion } from "./geo";
+import { checkNativeNotificationPermission, clearNativeNotificationSchedule, syncNativeNotificationSchedule } from "../services/nativeNotifications";
+import { checkPushPermission, registerNativePush, unregisterNativePushToken } from "../services/nativePush";
+import { GEO_KEY, GEO_SEED, defaultRegionPosition, normalizeGeoRegion, type GeoRegion } from "./geo";
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export interface AdminUserRow { id: string; email: string; name: string; role: string; isActive: boolean; city: string; region: string }
-export interface AuditLogRow { id: string; actor: string; roleId: string; eventType: string; action: string; status: string; createdAt: string }
+export interface AdminUserRow { id: string; email: string; name: string; role: string; isActive: boolean; emailVerified?: boolean; isTestAccount?: boolean; city: string; region: string; createdAt?: string; lastLoginAt?: string; situationsCount?: number; documentsCount?: number; notificationsCount?: number; proposalsCount?: number }
+export interface AuditLogRow { id: string; actor: string; roleId: string; eventType: string; action: string; status: string; createdAt: string; entityType?: string; entityId?: string }
 
 type Store = {
   role: Role;
@@ -49,6 +52,8 @@ type Store = {
 
   admin: {
     scenarios: AdminScenarioRow[];
+    problems: AdminProblemRow[];
+    stats: AdminDashboardStats | null;
     status: "loading" | "api" | "fallback";
     users: AdminUserRow[];
     auditLogs: AuditLogRow[];
@@ -64,6 +69,8 @@ type Store = {
   addDocument: (doc: Omit<UserDocument, "id" | "status"> & { status?: UserDocument["status"] }) => void;
   updateDocument: (id: string, patch: Partial<UserDocument>) => void;
   deleteDocument: (id: string) => void;
+  /** Промпт 1: forced re-fetch с бэка (после upload/delete скана). */
+  refreshDocuments: () => Promise<void>;
 
   utilityAccounts: UtilityAccount[];
   addUtilityAccount: (account: Pick<UtilityAccount, "address" | "accountNumber" | "provider">) => void;
@@ -77,6 +84,12 @@ type Store = {
   addTax: (tax: Omit<TaxObligation, "id">) => void;
   updateTax: (id: string, patch: Partial<TaxObligation>) => void;
   deleteTax: (id: string) => void;
+
+  /** Промпт 2: заявки 115 (локальный органайзер ЖКХ). */
+  utilityRequests: UtilityRequest[];
+  addUtilityRequest: (input: Omit<UtilityRequest, "id" | "createdAt" | "updatedAt">) => void;
+  updateUtilityRequest: (id: string, patch: Partial<UtilityRequest>) => void;
+  deleteUtilityRequest: (id: string) => void;
 
   // Editor / UGC publications (platform-wide, local-first).
   articles: Article[];
@@ -98,6 +111,7 @@ type Store = {
   notifications: AppNotification[];
   markRead: (id: string) => void;
   markAllRead: () => void;
+  refreshNotifications: () => Promise<void>;
   unreadCount: number;
 
   profile: UserProfile;
@@ -163,6 +177,8 @@ type Store = {
   setAdminUserRole: (id: string, role: string) => void;
   setAdminUserActive: (id: string, active: boolean) => void;
   deleteAdminUser: (id: string) => void;
+  createAdminProblem: (title: string) => Promise<void>;
+  setAdminProblemStatus: (id: string, status: AdminProblemRow["status"]) => void;
 
   // helpers
   scenarioById: (id: string) => Scenario | undefined;
@@ -178,6 +194,12 @@ type Store = {
   requireAccount: () => boolean;
   guestGuardSignal: number;
   dismissGuestGuard: () => void;
+
+  systemState: SystemState;
+  refreshSystemState: () => Promise<void>;
+  controlCenterOpen: boolean;
+  openControlCenter: () => void;
+  closeControlCenter: () => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -221,6 +243,53 @@ const TEST_ACCOUNTS: AppUser[] = [
     isTestAccount: true,
   },
 ];
+
+const DEFAULT_SYSTEM_STATE: SystemState = {
+  maintenance: {
+    enabled: false,
+    level: "notice",
+    title: "Платформа работает в штатном режиме",
+    message: "",
+    until: "",
+    allowAdminAccess: true,
+  },
+  readonly: { enabled: false, message: "" },
+  banner: {
+    enabled: false,
+    type: "info",
+    text: "",
+    linkLabel: "",
+    linkUrl: "",
+    dismissible: true,
+    audience: "all",
+    version: 1,
+  },
+  featureFlags: {
+    documents: true,
+    situations: true,
+    assistant: true,
+    news: true,
+    finance: true,
+    profile: true,
+    editorPanel: true,
+    adminPanel: true,
+    notifications: true,
+  },
+  branding: {
+    appName: "Белпомощник",
+    shortName: "Белпомощник",
+    logoText: "Б",
+    logoUrl: "",
+    accentColor: "#2563EB",
+    homeTitle: "Какая у вас ситуация?",
+    homeSubtitle: "Помогаем собрать документы, шаги и сроки в одном месте.",
+  },
+  navigationLayout: {
+    desktop: ["home", "catalog", "situations", "documents", "finance", "news", "profile"],
+    tablet: ["home", "catalog", "situations", "documents", "news", "profile"],
+    mobile: ["home", "catalog", "assistant", "situations", "news", "profile"],
+  },
+};
 
 // Публичный demo-пароль для тест-аккаунтов (citizen/editor/admin).
 // Пароль одинаковый во всех bootstrap-аккаунтах (см. backend/bootstrap.py).
@@ -570,12 +639,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<UserDocument[]>(INITIAL_DOCUMENTS);
   const [utilityAccounts, setUtilityAccounts] = useState<UtilityAccount[]>(INITIAL_UTILITY_ACCOUNTS);
   const [taxes, setTaxes] = useState<TaxObligation[]>(INITIAL_TAXES);
+  // Промпт 2: заявки 115 (локальный органайзер ЖКХ).
+  const [utilityRequests, setUtilityRequests] = useState<UtilityRequest[]>([]);
   // Platform-wide editorial + UGC content (shared across roles so the editor's
   // moderation queue can see citizen submissions). Global localStorage, not per-user.
   const [articles, setArticles] = useState<Article[]>(() => safeRead<Article[]>(ARTICLES_KEY, []));
   const [blockedSubmitters, setBlockedSubmitters] = useState<string[]>(() => safeRead<string[]>(BLOCKED_SUBMITTERS_KEY, []));
   // Editable geography (regions → districts → city). Admin edits persist globally.
-  const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED));
+  const [geo, setGeo] = useState<GeoRegion[]>(() => safeRead<GeoRegion[]>(GEO_KEY, GEO_SEED).map((r, i) => normalizeGeoRegion(r, i)));
+  const geoRemoteReadyRef = useRef(false);
+  const geoSaveTimerRef = useRef<number | null>(null);
   const [viewsDaily, setViewsDaily] = useState<{ date: string; count: number }[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(INITIAL_FAVORITES);
@@ -589,10 +662,32 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
   const [authSession, setAuthSession] = useState<AuthTokens | null>(null);
   const [adminScenarios, setAdminScenarios] = useState<AdminScenarioRow[]>([]);
+  const [adminProblems, setAdminProblems] = useState<AdminProblemRow[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminDashboardStats | null>(null);
   const [adminStatus, setAdminStatus] = useState<"loading" | "api" | "fallback">("fallback");
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
   const [guestGuardSignal, setGuestGuardSignal] = useState(0);
+  const [systemState, setSystemState] = useState<SystemState>(DEFAULT_SYSTEM_STATE);
+  const [controlCenterOpen, setControlCenterOpen] = useState(false);
+
+  const refreshSystemState = useCallback(async () => {
+    try {
+      const next = await apiClient.getSystemState<SystemState>();
+      setSystemState({ ...DEFAULT_SYSTEM_STATE, ...next });
+    } catch (error) {
+      console.warn("System state unavailable; local defaults remain active.", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSystemState();
+    const id = window.setInterval(() => { refreshSystemState(); }, 60_000);
+    return () => window.clearInterval(id);
+  }, [refreshSystemState]);
+
+  const openControlCenter = useCallback(() => setControlCenterOpen(true), []);
+  const closeControlCenter = useCallback(() => setControlCenterOpen(false), []);
 
   useEffect(() => {
     safeWrite(CURRENT_USER_KEY, currentUser.id);
@@ -644,21 +739,90 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { safeWrite(CONTENT_TAGS_KEY, contentTags); }, [contentTags]);
   useEffect(() => { safeWrite(AUTHORITIES_KEY, authorities); }, [authorities]);
 
+  useEffect(() => {
+    const token = authSession?.access_token;
+    if (!token || !isStaffRole(role)) {
+      geoRemoteReadyRef.current = false;
+      return;
+    }
+    const ctrl = new AbortController();
+    apiClient.getAdminRegions<{ regions?: unknown[] }>(token, { signal: ctrl.signal })
+      .then((payload) => {
+        if (ctrl.signal.aborted) return;
+        const regions = Array.isArray(payload.regions) ? payload.regions : [];
+        if (regions.length) {
+          setGeo(regions.map((item, index) => normalizeGeoRegion(item as GeoRegion, index)));
+        }
+        geoRemoteReadyRef.current = true;
+      })
+      .catch((error) => {
+        if (!ctrl.signal.aborted) {
+          console.warn("Admin regions API unavailable; geography stays local.", error);
+          geoRemoteReadyRef.current = true;
+        }
+      });
+    return () => ctrl.abort();
+  }, [authSession?.access_token, role]);
+
+  useEffect(() => {
+    const token = authSession?.access_token;
+    if (!token || !isStaffRole(role) || !geoRemoteReadyRef.current) return;
+    if (geoSaveTimerRef.current) window.clearTimeout(geoSaveTimerRef.current);
+    geoSaveTimerRef.current = window.setTimeout(() => {
+      apiClient.saveAdminRegions<{ regions: unknown[] }>(token, geo)
+        .catch((error) => console.warn("Admin regions save failed; local cache preserved.", error));
+    }, 900);
+    return () => {
+      if (geoSaveTimerRef.current) window.clearTimeout(geoSaveTimerRef.current);
+    };
+  }, [authSession?.access_token, geo, role]);
+
   // --- Geography CRUD (admin "Регионы и города") ---
   const addRegion = useCallback((name: string) => {
     const region = name.trim();
     if (!region) return;
-    setGeo((prev) => (prev.some((r) => r.region === region) ? prev : [...prev, { region, region_center: "", districts: [] }]));
+    setGeo((prev) => {
+      if (prev.some((r) => r.region.toLowerCase() === region.toLowerCase())) return prev;
+      const pos = defaultRegionPosition(region, prev.length);
+      return [...prev, normalizeGeoRegion({
+        id: `region-${Date.now()}`,
+        region,
+        displayName: pos.short,
+        region_center: "",
+        districts: [],
+        mapLabelX: pos.x,
+        mapLabelY: pos.y,
+        mapLabelOrder: pos.order,
+        mapLabelVisible: true,
+        isActive: true,
+      }, prev.length)];
+    });
   }, []);
   const deleteRegion = useCallback((region: string) => {
-    setGeo((prev) => prev.filter((r) => r.region !== region));
+    setGeo((prev) => prev.map((r) => (r.region === region ? { ...r, isActive: false, updatedAt: new Date().toISOString() } : r)));
   }, []);
   const updateRegion = useCallback((originalName: string, next: GeoRegion) => {
     const region = next.region.trim();
     if (!region) return;
-    setGeo((prev) => prev.map((r) => (r.region === originalName ? { ...next, region } : r)));
+    setGeo((prev) => prev.map((r, index) => {
+      if (r.region !== originalName) return r;
+      return normalizeGeoRegion({
+        ...r,
+        ...next,
+        region,
+        id: r.id,
+        mapLabelX: next.mapLabelX ?? r.mapLabelX,
+        mapLabelY: next.mapLabelY ?? r.mapLabelY,
+        mapLabelAnchor: next.mapLabelAnchor ?? r.mapLabelAnchor,
+        mapLabelOrder: next.mapLabelOrder ?? r.mapLabelOrder,
+        mapLabelVisible: next.mapLabelVisible ?? r.mapLabelVisible,
+        isActive: next.isActive ?? r.isActive,
+        createdAt: r.createdAt,
+        updatedAt: new Date().toISOString(),
+      }, index);
+    }));
   }, []);
-  const resetGeo = useCallback(() => setGeo(GEO_SEED), []);
+  const resetGeo = useCallback(() => setGeo(GEO_SEED.map((r, i) => normalizeGeoRegion(r, i))), []);
 
   // --- Legal updates CRUD ---
   const addLegal = useCallback((item: Omit<LegalUpdate, "id">) => {
@@ -826,10 +990,41 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     apiClient.deleteAdminUser<unknown>(token, Number(id))
-      .then(() => setAdminUsers(prev => prev.filter(u => u.id !== id)))
+      .then(() => setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u)))
       .catch(error => {
         console.warn("User delete failed; backend call failed.", error);
         window.alert("Не удалось удалить пользователя. Проверьте, что это не вы.");
+      });
+  }, [authSession?.access_token]);
+
+  const createAdminProblem = useCallback(async (title: string) => {
+    const clean = title.trim();
+    if (!clean) return;
+    const slugBase = clean.toLowerCase().replace(/[^0-9a-zа-яё]+/gi, "-").replace(/^-|-$/g, "") || `problem-${Date.now()}`;
+    const payload = { title: clean, slug: `${slugBase}-${Date.now().toString(36).slice(-4)}`, status: "draft" };
+    const token = authSession?.access_token;
+    if (!token) {
+      setAdminProblems(prev => [{ id: payload.slug, slug: payload.slug, title: clean, category: "documents", status: "draft" }, ...prev]);
+      return;
+    }
+    try {
+      const created = await apiClient.createAdminProblem<Record<string, unknown>>(token, payload);
+      setAdminProblems(prev => [adaptAdminProblemRow(created), ...prev]);
+    } catch (error) {
+      console.warn("Problem create failed; backend call failed.", error);
+      window.alert("Не удалось создать проблему.");
+    }
+  }, [authSession?.access_token]);
+
+  const setAdminProblemStatus = useCallback((id: string, status: AdminProblemRow["status"]) => {
+    setAdminProblems(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    const token = authSession?.access_token;
+    if (!token || !/^\d+$/.test(id)) return;
+    apiClient.updateAdminProblem<Record<string, unknown>>(token, id, { status })
+      .then(updated => setAdminProblems(prev => prev.map(p => p.id === id ? adaptAdminProblemRow(updated) : p)))
+      .catch(error => {
+        console.warn("Problem status update failed; backend call failed.", error);
+        window.alert("Не удалось изменить статус проблемы.");
       });
   }, [authSession?.access_token]);
 
@@ -1001,6 +1196,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const token = authSession?.access_token;
     if (!token || !isStaffRole(currentUser.role)) {
       setAdminScenarios([]);
+      setAdminProblems([]);
+      setAdminStats(null);
       setAdminStatus("fallback");
       setAdminUsers([]);
       setAuditLogs([]);
@@ -1024,13 +1221,28 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }
       });
 
+    apiClient.getAdminProblems<Record<string, unknown>[]>(token, { signal: controller.signal })
+      .then(items => {
+        if (controller.signal.aborted || !Array.isArray(items)) return;
+        setAdminProblems(items.map(adaptAdminProblemRow));
+      })
+      .catch(() => { /* keep empty */ });
+
+    apiClient.getAdminDashboardStats<Record<string, unknown>>(token, { signal: controller.signal })
+      .then(stats => {
+        if (controller.signal.aborted || !stats) return;
+        setAdminStats(adaptAdminDashboardStats(stats));
+      })
+      .catch(() => { setAdminStats(null); });
+
     apiClient.getAuditLogs<Record<string, unknown>[]>(token, { signal: controller.signal })
       .then(rows => {
         if (controller.signal.aborted || !Array.isArray(rows)) return;
-        setAuditLogs(rows.map(r => ({
-          id: String(r.id), actor: String(r.actor ?? ""), roleId: String(r.role_id ?? ""),
-          eventType: String(r.event_type ?? ""), action: String(r.action ?? ""),
+          setAuditLogs(rows.map(r => ({
+            id: String(r.id), actor: String(r.actor ?? ""), roleId: String(r.role_id ?? ""),
+            eventType: String(r.event_type ?? ""), action: String(r.action ?? ""),
           status: String(r.status ?? ""), createdAt: String(r.created_at ?? ""),
+          entityType: String(r.entity_type ?? ""), entityId: String(r.entity_id ?? ""),
         })));
       })
       .catch(() => { /* keep empty */ });
@@ -1049,7 +1261,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           setAdminUsers(rows.map(u => ({
             id: String(u.id), email: String(u.email ?? ""), name: String(u.name ?? ""),
             role: String(u.role_id ?? ""), isActive: Boolean(u.is_active),
+            emailVerified: Boolean(u.email_verified), isTestAccount: Boolean(u.is_test_account),
             city: String(u.city ?? ""), region: String(u.region ?? ""),
+            createdAt: String(u.created_at ?? ""), lastLoginAt: String(u.last_login_at ?? ""),
+            situationsCount: Number(u.situations_count ?? 0), documentsCount: Number(u.documents_count ?? 0),
+            notificationsCount: Number(u.notifications_count ?? 0), proposalsCount: Number(u.proposals_count ?? 0),
           })));
         })
         .catch(() => { /* keep empty */ });
@@ -1160,11 +1376,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     // Дёргаем backend, чтобы refresh_token был revoke. Не блокируем UI
     // на ошибке сети: локально мы уже стираем сессию.
+    if (authSession?.access_token) {
+      void unregisterNativePushToken(authSession.access_token).catch(() => undefined);
+    }
+    void clearNativeNotificationSchedule().catch(() => undefined);
     void apiClient.logout().catch(() => undefined);
     setAuthSession(null);
     apiClient.saveTokens(null);
     applyUser(GUEST_USER);
-  }, [applyUser]);
+  }, [applyUser, authSession?.access_token]);
 
   const resetSession = useCallback(() => {
     setQuickAccounts(TEST_ACCOUNTS);
@@ -1461,6 +1681,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [authSession?.access_token, role]);
 
+  // Промпт 1: forced re-fetch (после upload/delete скана нужны свежие scan metadata).
+  const refreshDocuments: Store["refreshDocuments"] = useCallback(async () => {
+    if (!authSession?.access_token) return;
+    try {
+      const items = await apiClient.getUserDocuments<Record<string, unknown>[]>(authSession.access_token);
+      if (!Array.isArray(items)) return;
+      const apiDocuments = items.map(adaptUserDocument);
+      setDocuments(prev => mergeById(prev, apiDocuments));
+    } catch (error) {
+      console.warn("refreshDocuments failed", error);
+    }
+  }, [authSession?.access_token]);
+
   // --- Taxes (ТЗ §18) ---
   const addTax: Store["addTax"] = useCallback((tax) => {
     if (!requireAccount()) return;
@@ -1490,6 +1723,76 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (authSession?.access_token && isBackendSituationId(id)) {
       apiClient.deleteTax(authSession.access_token, id)
         .catch(error => console.warn("Tax deleted locally; backend delete failed.", error));
+    }
+  }, [authSession?.access_token, role]);
+
+  // --- Промпт 2: заявки 115 (CRUD) ---
+  useEffect(() => {
+    if (role === "guest" || !authSession?.access_token) {
+      setUtilityRequests([]);
+      return;
+    }
+    const controller = new AbortController();
+    apiClient.getUtilityRequests<Record<string, unknown>[]>(authSession.access_token, { signal: controller.signal })
+      .then(items => {
+        if (controller.signal.aborted || !Array.isArray(items)) return;
+        setUtilityRequests(items.map(adaptUtilityRequest));
+      })
+      .catch(err => {
+        if (!controller.signal.aborted) {
+          console.warn("Utility requests API unavailable; using empty.", err);
+        }
+      });
+    return () => controller.abort();
+  }, [authSession?.access_token, role]);
+
+  const addUtilityRequest: Store["addUtilityRequest"] = useCallback((input) => {
+    if (!requireAccount()) return;
+    const temp: UtilityRequest = {
+      id: uid("ureq"),
+      title: input.title,
+      category: input.category,
+      address: input.address,
+      accountId: input.accountId,
+      description: input.description,
+      status: input.status ?? "draft",
+      externalNumber: input.externalNumber,
+      externalUrl: input.externalUrl,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setUtilityRequests(prev => [temp, ...prev]);
+    if (authSession?.access_token) {
+      apiClient.createUtilityRequest<Record<string, unknown>>(authSession.access_token, utilityRequestPayload(temp))
+        .then(saved => {
+          const adapted = adaptUtilityRequest(saved);
+          setUtilityRequests(prev => prev.map(r => r.id === temp.id ? adapted : r));
+        })
+        .catch(err => console.warn("Utility request saved locally; backend create failed.", err));
+    }
+  }, [authSession?.access_token, role]);
+
+  const updateUtilityRequest: Store["updateUtilityRequest"] = useCallback((id, patch) => {
+    if (!requireAccount()) return;
+    setUtilityRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch, updatedAt: new Date().toISOString() } : r));
+    if (authSession?.access_token) {
+      const existing = utilityRequests.find(r => r.id === id);
+      const merged = existing ? { ...existing, ...patch } : patch;
+      apiClient.updateUtilityRequest<Record<string, unknown>>(authSession.access_token, id, utilityRequestPayload(merged))
+        .then(saved => {
+          const adapted = adaptUtilityRequest(saved);
+          setUtilityRequests(prev => prev.map(r => r.id === id ? adapted : r));
+        })
+        .catch(err => console.warn("Utility request updated locally; backend update failed.", err));
+    }
+  }, [authSession?.access_token, role, utilityRequests]);
+
+  const deleteUtilityRequest: Store["deleteUtilityRequest"] = useCallback((id) => {
+    if (!requireAccount()) return;
+    setUtilityRequests(prev => prev.filter(r => r.id !== id));
+    if (authSession?.access_token) {
+      apiClient.deleteUtilityRequest(authSession.access_token, id)
+        .catch(err => console.warn("Utility request deleted locally; backend delete failed.", err));
     }
   }, [authSession?.access_token, role]);
 
@@ -1722,12 +2025,34 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         .catch(error => console.warn("Notifications marked read locally; backend update failed.", error));
     }
   }, [authSession?.access_token]);
+  const refreshNotifications = useCallback(async () => {
+    if (!authSession?.access_token) return;
+    const rows = await apiClient.getUserNotifications<Record<string, unknown>[]>(authSession.access_token);
+    if (Array.isArray(rows)) setNotifications(rows.map(adaptNotification));
+  }, [authSession?.access_token]);
   const reminders = useMemo(
     () => buildReminders(documents, utilityAccounts, taxes, settings),
     [documents, utilityAccounts, taxes, settings],
   );
   const allNotifications = useMemo(() => [...reminders, ...notifications], [reminders, notifications]);
   const unreadCount = useMemo(() => allNotifications.filter(n => !n.read).length, [allNotifications]);
+
+  // Не запрашиваем разрешения автоматически. Если пользователь уже выдал их,
+  // восстанавливаем расписание и регистрацию после входа/перезапуска.
+  useEffect(() => {
+    if (!authSession?.access_token || role === "guest") return;
+    let cancelled = false;
+    const sync = async () => {
+      if (await checkNativeNotificationPermission() === "granted" && !cancelled) {
+        await syncNativeNotificationSchedule(reminders);
+      }
+      if (await checkPushPermission() === "granted" && !cancelled) {
+        await registerNativePush(authSession.access_token);
+      }
+    };
+    void sync().catch(error => console.warn("Native notification sync failed.", error));
+    return () => { cancelled = true; };
+  }, [authSession?.access_token, role, reminders]);
 
   const updateProfile: Store["updateProfile"] = useCallback((patch) => {
     if (!requireAccount()) return;
@@ -1991,15 +2316,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     signInAs, signInWithEmail, registerUser, signOut, resetSession,
     categories: mutableCategories, contentTags, scenarios, problems, legal, publicDocuments, authorities,
     publicContentStatus, publicContentError, loadScenarioDetail,
-    admin: { scenarios: adminScenarios, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
+    admin: { scenarios: adminScenarios, problems: adminProblems, stats: adminStats, status: adminStatus, users: adminUsers, auditLogs: auditLogs },
     situations, createSituation, toggleTask, setNote, deleteSituation,
-    documents, addDocument, updateDocument, deleteDocument,
+    documents, addDocument, updateDocument, deleteDocument, refreshDocuments,
     utilityAccounts, addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     taxes, addTax, updateTax, deleteTax,
+    utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest,
     articles, addArticle, updateArticle, removeArticle,
     blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     favorites, toggleFavorite,
-    notifications: allNotifications, markRead, markAllRead, unreadCount,
+    notifications: allNotifications, markRead, markAllRead, refreshNotifications, unreadCount,
     profile, updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress,
@@ -2010,32 +2336,35 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     addCategory, updateCategory, deleteCategory,
     addContentTag, updateContentTag, deleteContentTag,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive, deleteAdminUser,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     requireAccount, guestGuardSignal, dismissGuestGuard,
+    systemState, refreshSystemState, controlCenterOpen, openControlCenter, closeControlCenter,
   }), [
     role, currentUser, authSession, quickAccounts, scenarios, problems, legal, publicDocuments, authorities, contentTags, publicContentStatus, publicContentError,
-    adminScenarios, adminStatus, adminUsers, auditLogs,
+    adminScenarios, adminProblems, adminStats, adminStatus, adminUsers, auditLogs,
     situations, documents, favorites, notifications, profile, settings, utilityAccounts, taxes, articles,
     notes, addNote, updateNote, toggleNote, removeNote,
     addAddress, updateAddress, removeAddress, togglePreferredSource,
     addArticle, updateArticle, removeArticle, blockedSubmitters, isSubmitterBlocked, toggleBlockedSubmitter, registerView, uploadMedia, viewsDaily, meId, loadArticles,
     signInAs, signInWithEmail, registerUser, signOut, resetSession, setRole,
     createSituation, toggleTask, setNote, deleteSituation,
-    addDocument, updateDocument, deleteDocument, toggleFavorite,
+    addDocument, updateDocument, deleteDocument, refreshDocuments, toggleFavorite,
     addUtilityAccount, updateUtilityAccount, deleteUtilityAccount, addUtilityPayment, updateUtilityPayment, deleteUtilityPayment,
     addTax, updateTax, deleteTax,
+    utilityRequests, addUtilityRequest, updateUtilityRequest, deleteUtilityRequest,
     reminders, allNotifications,
-    markRead, markAllRead, unreadCount,
+    markRead, markAllRead, refreshNotifications, unreadCount,
     updateProfile, updateAccountName, changeAccountEmail, changeAccountPassword, uploadAvatar, removeAvatar, applyQuizResult, updateSettings, setLang,
     geo, addRegion, deleteRegion, updateRegion, resetGeo,
     addLegal, updateLegal, deleteLegal, resetLegal,
     addCategory, updateCategory, deleteCategory, addContentTag, updateContentTag, deleteContentTag, mutableCategories,
     addAuthority, updateAuthority, deleteAuthority,
-    setAdminUserRole, setAdminUserActive, deleteAdminUser,
+    setAdminUserRole, setAdminUserActive, deleteAdminUser, createAdminProblem, setAdminProblemStatus,
     scenarioById, problemById, situationByScenario, taskIsBlocked, situationProgress,
     loadScenarioDetail,
     requireAccount, guestGuardSignal, dismissGuestGuard,
+    systemState, refreshSystemState, controlCenterOpen, openControlCenter, closeControlCenter,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

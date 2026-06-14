@@ -1,0 +1,72 @@
+# Control Center
+
+Control Center — скрытый центр управления платформой «Белпомощник». Это не обычная админ-панель, не редакторский раздел и не роль пользователя. Панель предназначена для владельца проекта и не отображается в меню.
+
+## Как открыть
+
+1. Открыть сайт в браузере.
+2. Открыть консоль разработчика.
+3. Выполнить команду:
+
+```js
+belpomoshnikControl()
+```
+
+4. Ввести пароль доступа. В текущей локальной сборке пароль задаётся на backend через переменную:
+
+```env
+CONTROL_CENTER_PASSWORD=x20b01
+```
+
+Пароль не хранится во frontend bundle. Команда в консоли только открывает окно, а проверка выполняется endpoint’ом `POST /api/control-center/unlock`.
+
+## Backend-настройки
+
+```env
+CONTROL_CENTER_ENABLED=true
+CONTROL_CENTER_PASSWORD=x20b01
+CONTROL_CENTER_PASSWORD_HASH=
+CONTROL_CENTER_TOKEN_TTL_MINUTES=30
+CONTROL_CENTER_MAX_ATTEMPTS=5
+CONTROL_CENTER_LOCK_MINUTES=15
+```
+
+Если задан `CONTROL_CENTER_PASSWORD_HASH`, backend сравнивает SHA-256 хэш введённого пароля. Raw-token Control Center выдаётся только один раз, а в БД хранится только `token_hash`.
+
+## Возможности
+
+- live status backend, базы данных, пользователей, публикаций, сценариев, учреждений и уведомлений;
+- включение технического обслуживания;
+- режим только чтения;
+- системный баннер;
+- feature flags основных разделов;
+- обновление брендинга;
+- системная рассылка in-app уведомлений;
+- сервисные сценарии для проверки состояния;
+- отдельный audit log действий Control Center.
+
+## Таблицы
+
+- `control_center_sessions` — временные control-token сессии, хранится только hash;
+- `system_settings` — системные настройки платформы;
+- `control_center_audit_logs` — журнал действий скрытой панели.
+
+## Публичное состояние
+
+Frontend периодически читает:
+
+```http
+GET /api/public/system-state
+```
+
+На основании этого состояния сайт может показать системный баннер или экран технического обслуживания. Опасные действия доступны только с заголовком:
+
+```http
+X-Control-Center-Token: <raw-token>
+```
+
+## Ограничения текущей реализации
+
+- layout меню уже применяется в desktop header, tablet/sidebar и mobile bottom nav;
+- feature flags скрывают пункты меню и системные входы, но прямые маршруты пока не блокируются полностью;
+- push-рассылка использует существующую систему уведомлений: in-app создаётся всегда, native push зависит от настроенных FCM/APNs credentials.

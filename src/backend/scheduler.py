@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 EMAIL_INTERVAL_SECONDS: int = 60
 TOKEN_CLEANUP_INTERVAL_SECONDS: int = 3600
+NOTIFICATION_RULES_INTERVAL_SECONDS: int = 6 * 3600
 
 
 async def _email_sender_loop() -> None:
@@ -64,12 +65,33 @@ async def _token_cleanup_loop() -> None:
             logger.error("token cleanup error: %s", exc)
 
 
+async def _notification_rules_loop() -> None:
+    from backend.database import SessionLocal
+    from backend.notifications.rules import generate_all_due_notifications
+
+    while True:
+        try:
+            await asyncio.sleep(NOTIFICATION_RULES_INTERVAL_SECONDS)
+            db = SessionLocal()
+            try:
+                result = generate_all_due_notifications(db)
+                if any(result.values()):
+                    logger.info("notification rules: %s", result)
+            finally:
+                db.close()
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.error("notification rules error: %s", exc)
+
+
 _tasks: list[asyncio.Task] = []
 
 
 def start_background_tasks() -> None:
     _tasks.append(asyncio.create_task(_email_sender_loop(), name="email_sender"))
     _tasks.append(asyncio.create_task(_token_cleanup_loop(), name="token_cleanup"))
+    _tasks.append(asyncio.create_task(_notification_rules_loop(), name="notification_rules"))
     logger.info("background scheduler started (%d tasks)", len(_tasks))
 
 

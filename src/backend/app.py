@@ -13,6 +13,8 @@ from backend.api.admin import router as admin_router
 from backend.api.articles import router as articles_router
 from backend.api.assistant import router as assistant_router, admin_router as assistant_admin_router
 from backend.api.auth import router as auth_router
+from backend.api.control_center import public_router as control_center_public_router
+from backend.api.control_center import router as control_center_router
 from backend.api.extremist import router as extremist_router
 from backend.api.public import router as public_router
 from backend.api.situations import router as situations_router
@@ -75,20 +77,19 @@ def create_app() -> FastAPI:
     app.include_router(extremist_router)
     app.include_router(assistant_router)
     app.include_router(assistant_admin_router)
+    app.include_router(control_center_public_router)
+    app.include_router(control_center_router)
 
     from backend.api.articles import UPLOAD_DIR
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR), check_dir=False), name="uploads")
 
-    # v0.3: PDF сканы личных документов. Отдельный mount, чтобы не путать
-    # пользовательский контент (документы) и редакторский (статьи).
+    # Промпт 1: личные сканы документов НЕ отдаются как StaticFiles.
+    # Они лежат в data/secure/documents/ (вне публичной /uploads),
+    # шифруются Fernet'ом и выдаются только через
+    # GET /api/user/documents/{id}/scan (JWT + owner-check).
     from backend.api.user import DOCUMENT_SCAN_DIR
     DOCUMENT_SCAN_DIR.mkdir(parents=True, exist_ok=True)
-    app.mount(
-        "/uploads/documents",
-        StaticFiles(directory=str(DOCUMENT_SCAN_DIR), check_dir=False),
-        name="document-scans",
-    )
 
     @app.get("/api/health", tags=["system"])
     def health():

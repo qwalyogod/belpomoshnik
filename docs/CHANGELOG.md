@@ -1,5 +1,105 @@
 # Журнал изменений
 
+## 2026-06-14 (mobile header polish)
+
+- В мобильном header убрана лишняя подпись «Белпомощник» рядом с логотипом; центральный заголовок на главной сохранён.
+- Mobile header чуть приподнят за счёт уменьшения верхнего safe-area padding и синхронного обновления CSS-переменной высоты.
+- При открытии полноэкранной формы «Предложить новость/проблему/ситуацию» мобильные header, bottom-nav и fade-подложка скрываются, чтобы не перекрывать редактор.
+- Проверка: `pnpm -C reactvitemaket run build` — ✅.
+
+## 2026-06-14 (mobile WebView scroll polish)
+
+- Исправлена прокрутка React-mobile интерфейса в WebView после проверки на iPhone: убран нестабильный вложенный scroll-root, который приводил к обрезанию и перекрытию контента при скролле.
+- Mobile header сделан непрозрачным, чтобы карточки и поля не просвечивали под верхней панелью.
+- Нижняя fade-подложка под mobile tab-bar усилена, а сама панель сделана непрозрачной, чтобы контент не выглядел как отдельный слой под навигацией.
+- Проверка: `pnpm -C reactvitemaket run build` — ✅.
+
+## 2026-06-14 (WebView shell: защита экрана подключения)
+
+- Исправлен экран подключения мобильной WebView-оболочки: shell-экраны теперь рендерятся как полноэкранный непрозрачный слой поверх WebView.
+- Отключён скролл страницы Flet-оболочки, чтобы при протягивании вниз не проступал старый/уже загруженный React-интерфейс.
+- Проверка: `.venv/bin/python -m compileall -q src/mobile_webview.py` — ✅.
+
+## 2026-06-14 (скрытый Control Center)
+
+- Добавлен скрытый Control Center владельца платформы: окно открывается только через консольную команду `belpomoshnikControl()` и не отображается в меню, ролях или обычной админ-панели.
+- Backend: добавлен router `/api/control-center/*`, публичный `/api/public/system-state`, rate limit попыток входа, временный control-token в заголовке `X-Control-Center-Token`, хранение только hash token.
+- Backend: добавлены таблицы `control_center_sessions`, `system_settings`, `control_center_audit_logs` и миграция `0026_control_center.sql`.
+- Control Center умеет показывать live status, включать обслуживание, readonly, системный баннер, feature flags, брендинг, отправлять системные in-app уведомления и запускать сервисные сценарии.
+- Frontend: добавлены `ControlCenter`, `SystemBanner`, `MaintenanceScreen`, API-клиент и store-поддержка public system-state с периодическим обновлением.
+- Prompt 9 security-финиш: деактивированный пользователь больше не проходит `/api/auth/me` и не может выполнять публикационные действия со старым access token.
+- Документация: добавлен `docs/CONTROL_CENTER.md`, обновлены API/security/status/tasks.
+- Проверка: `pnpm -C reactvitemaket run build` и `.venv/bin/python -m compileall -q src` — ✅. Backend-тесты по просьбе пользователя не запускались.
+
+## 2026-06-14 (backend sync регионов)
+
+- Добавлены admin endpoints `GET /api/admin/regions` и `PUT /api/admin/regions`.
+- Справочник «Регионы и города» сохраняется в `system_settings.geo_regions` как JSON, а frontend localStorage используется как fallback при недоступном API.
+- Изменение географии логируется в `audit_logs` как `geo_regions`.
+- React store при входе редактора/админа подтягивает регионы с backend и сохраняет изменения с debounce.
+- Проверка: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`, `git diff --check` — ✅. Backend-тесты по просьбе пользователя не запускались.
+
+## 2026-06-14 (runtime применение system-state)
+
+- Desktop header, tablet/sidebar и mobile bottom nav теперь учитывают `systemState.navigationLayout` для порядка пунктов.
+- `featureFlags` скрывают пункты отключённых разделов из навигации: ситуации, документы, ЖКХ/налоги, новости, профиль.
+- Флаг `assistant=false` скрывает центральную кнопку помощника в mobile nav.
+- Флаги `adminPanel` и `editorPanel` скрывают вход в системные панели из desktop/tablet navigation.
+- Прямые маршруты пока не блокируются feature flags полностью: это оставлено отдельным hardening-шагом, чтобы не ломать пользовательские ссылки.
+- Проверка: `pnpm -C reactvitemaket run build`, `.venv/bin/python -m compileall -q src`, `git diff --check` — ✅.
+
+## 2026-06-14 (админ-панель: регионы и города)
+
+- Раздел «Регионы и города» переписан из мобильной модалки в полноценный редактор географического справочника.
+- Desktop layout: большая карта Беларуси слева, справа список регионов или инспектор выбранного региона.
+- Mobile layout: сохранена bottom-sheet логика, но используется тот же инспектор и та же модель данных.
+- Модель `GeoRegion` расширена: `displayName`, `mapLabelX`, `mapLabelY`, `mapLabelAnchor`, `mapLabelOrder`, `mapLabelVisible`, `isActive`, timestamps; районы получили `id`, `sortOrder`, `isActive`.
+- Позиции карточек больше не зависят от названия региона: переименование сохраняет координаты, новые регионы получают fallback-позицию на карте.
+- Добавлен режим «Расположение»: карточки регионов можно перетаскивать мышью/тачем, координаты сохраняются в процентах.
+- «Удаление» региона в текущей frontend-модели заменено архивированием, чтобы справочник не терял данные.
+- Проверка: `pnpm -C reactvitemaket run build` и `.venv/bin/python -m compileall -q src` — ✅. Backend-тесты по просьбе пользователя не запускались.
+
+## 2026-06-13 (админ-панель: управление пользователями и контроль контента)
+
+- Добавлен backend endpoint `/api/admin/dashboard/stats` для реальной сводки: пользователи, публикации, проблемы, сценарии, учреждения, регионы и уведомления.
+- Усилены права `/api/admin/users/*`: список, роль, блокировка, soft-delete, отзыв сессий и системные уведомления доступны только `platform_admin`; редактор больше не может менять пользователей прямым API-запросом.
+- Удаление пользователя переведено в безопасную деактивацию с отзывом refresh-токенов, чтобы не ломать связанные ситуации, документы и историю.
+- Расширены `users` и `audit_logs`: последний вход, подтверждение email, actor/entity/before/after/IP/user-agent; вход редактора/админа логируется.
+- Добавлены фильтры для пользователей, проблем, сценариев и журнала действий; добавлена проверка целостности сценария `/api/admin/scenarios/{id}/integrity`.
+- React-админка получила раздел «Проблемы», реальные системные KPI, расширенную таблицу пользователей, фильтры, кнопку отзыва сессий и отображение связанных данных пользователя.
+- Добавлены backend-тесты `test_admin_users.py`, `test_admin_content.py`, `test_security_fixes.py`.
+- Проверка: `.venv/bin/python -m compileall -q src`, `pnpm -C reactvitemaket run build`, targeted admin/security tests — ✅.
+
+## 2026-06-13 (уведомления v2 и проверка rework 1–5)
+
+- Исправлена MySQL-несовместимая связь `users.role_id` с `ON DELETE SET DEFAULT`; теперь назначенную роль защищает `RESTRICT`.
+- Завершена трёхуровневая система уведомлений: in-app, Capacitor Local Notifications и архитектурная native push доставка.
+- Добавлены endpoints регистрации/deactivation/status/test push-токена; полный token не возвращается и хранится зашифрованно.
+- Добавлены backend-правила сроков документов, задач, ЖКХ и налогов, безопасный push payload и scheduler.
+- Страница `/notifications` показывает состояния каналов, настройки типов и тестовую отправку без имитации FCM/APNs.
+- Добавлены `@capacitor/local-notifications` и `@capacitor/push-notifications`, а также документация `NOTIFICATIONS_ARCHITECTURE.md`.
+- Проверка: 10 новых notification-тестов пройдены; production frontend build и `compileall` успешны. Полный suite после исправления тестовой БД: 89/91 до настройки Fernet fixture; fixture исправлен, полный повтор выполняется в финальной стабилизации.
+
+## 2026-06-13 (лента публикаций, detail-страницы и поиск)
+
+### Что изменено
+
+- `reactvitemaket/src/app/pages.tsx` — карточки новостей и закон-апдейтов приведены к единому виду с предпросмотром редактора: обложка/медиа-зона, категория, крупный заголовок, автор/дата, summary, теги, источник и просмотры.
+- `reactvitemaket/src/app/pages.tsx`, `reactvitemaket/src/app/routes.tsx` — добавлена полноценная детальная страница новости `/news/:id` с HTML-телом статьи, галереей, источником, тегами и регистрацией просмотра.
+- `reactvitemaket/src/app/pages.tsx` — в ленту новостей добавлен поиск с Google-like подсказками по новостям, закон-апдейтам, источникам, тегам и структурным полям.
+- `reactvitemaket/src/app/pages.tsx` — детальная страница закон-апдейта усилена: полноценная статья отображается выше структурных блоков «Что изменилось / Кого касается / Что сделать», добавлен блок официального источника.
+- `reactvitemaket/src/app/pages.tsx` — в раздел «Экстремистские материалы» добавлен поиск с подсказками; распознавание изображений по URL стало мягче для ссылок без стандартного расширения.
+- `reactvitemaket/src/app/App.tsx` — маршрут `/news/:id` теперь считается detail-экраном на mobile и получает кнопку «Назад».
+
+### Результат проверки
+
+- `cd reactvitemaket && pnpm build` — ✅ без ошибок; остался стандартный warning Vite о крупном JS-chunk.
+- `.venv/bin/python -m compileall src` — ✅ без ошибок.
+- `git diff --check` — ✅ без замечаний.
+- Smoke по маршрутам frontend: `/news`, `/news/164`, `/law-detail/136`, `/extremist`, `/extremist/61` — ✅ HTTP 200.
+- API smoke: `/api/articles?kind=news` — 120 записей; `/api/law-updates` — 80; `/api/extremist-entries` — 60.
+- Ограничение: текущие импортированные JSON-пачки в основном содержат пустые `cover/gallery/media_urls`, поэтому изображения появятся у новых/отредактированных материалов, где редактор реально укажет URL.
+
 ## 2026-06-13 (импорт публикационного контента 2022-2026)
 
 ### Что изменено
