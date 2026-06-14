@@ -2415,6 +2415,15 @@ export function ProposeButton({ kind, label, className = "" }: { kind: ContentKi
 
 export function ProposeContentModal({ open, kind = "scenario", initial, editId, onClose }: { open: boolean; kind?: ContentKind; initial?: Partial<ContentDraft>; editId?: string; onClose: () => void }) {
   const { addArticle, updateArticle, currentUser, profile, isSubmitterBlocked, meId, uploadMedia } = useStore();
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("belp-propose-open");
+    return () => {
+      document.body.classList.remove("belp-propose-open");
+    };
+  }, [open]);
+
   if (!open) return null;
   const blocked = isSubmitterBlocked(meId ?? currentUser.id);
 

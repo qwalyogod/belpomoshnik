@@ -8,7 +8,7 @@ import {
   Plus, ScanLine, EyeOff, Building2, Clock, Bookmark, ArrowUpRight, Settings,
   Users, BookOpen, LayoutGrid, Baby, ChevronLeft, X, LogOut, UserPlus, Newspaper,
 } from "lucide-react";
-import { Logo, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "./components/belp-ui";
+import { Logo, LogoMark, Pill, Card, PrimaryButton, GhostButton, UserAvatarCircle } from "./components/belp-ui";
 import { AppStoreProvider, useStore, readAvatarForUser } from "./data/store";
 import { buildReminders } from "./services/reminders";
 import { applyAccessibilitySettings } from "./services/a11y";
@@ -125,7 +125,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
         // Сами header и nav переопределят их в своих style (см. MobileBrandBar
         // и MobileNav). Это гарантирует, что контент сразу получит правильный
         // padding, даже если header/nav ещё не замаунтились.
-        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+        ["--belp-mobile-header-h" as string]: "calc(3.5rem + env(safe-area-inset-top))",
         ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
       }}
     >
@@ -138,7 +138,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
       <MobileBrandBar />
       <div
         style={{
-          paddingTop: "var(--belp-mobile-header-h, calc(3.85rem + env(safe-area-inset-top)))",
+          paddingTop: "var(--belp-mobile-header-h, calc(3.5rem + env(safe-area-inset-top)))",
           paddingBottom: showBottomNav
             ? "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))"
             : "max(1.5rem, env(safe-area-inset-bottom))",
@@ -177,7 +177,7 @@ function MobileBottomFade({ color }: { color: string }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-[25]"
+      className="belp-mobile-bottom-fade pointer-events-none fixed inset-x-0 bottom-0 z-[25]"
       style={{
         height: "calc(var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom))) + 7.5rem)",
         background: `linear-gradient(to bottom, ${color}00 0%, ${color}33 16%, ${color}cc 42%, ${color}fa 58%, ${color} 100%)`,
@@ -246,14 +246,14 @@ export function MobileBrandBar() {
   const title = mobileTitleFromPath(location.pathname);
   return (
     <div
-      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB] px-4 pb-3 dark:border-white/[0.04] dark:bg-[#07080C]"
+      className="belp-mobile-header fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-black/[0.04] bg-[#F6F7FB] px-4 pb-2.5 dark:border-white/[0.04] dark:bg-[#07080C]"
       style={{
-        paddingTop: "calc(0.75rem + env(safe-area-inset-top))",
+        paddingTop: "calc(0.45rem + env(safe-area-inset-top))",
         // Высота хедера = padding-top (12px + safe-area) + h-10 (40px)
-        // + pb-3 (12px) + border (1px) = ~3.85rem + safe-area.
+        // + pb-2.5 (10px) + border (1px) = ~3.5rem + safe-area.
         // CSS-переменная для синхронизации padding-top контента
         // в MobileShell (см. ниже).
-        ["--belp-mobile-header-h" as string]: "calc(3.85rem + env(safe-area-inset-top))",
+        ["--belp-mobile-header-h" as string]: "calc(3.5rem + env(safe-area-inset-top))",
       }}
     >
       {/* Левая зона: back (на detail) ИЛИ логотип (на top-level) */}
@@ -263,7 +263,7 @@ export function MobileBrandBar() {
           aria-label="На главную"
           className="shrink-0"
         >
-          <Logo size={26} />
+          <LogoMark size={26} />
         </button>
       ) : (
         <div className="flex w-10 shrink-0 items-center">
@@ -417,7 +417,7 @@ function MobileNav({ active, onChange }: { active: Page; onChange: (p: Page) => 
           CSS-переменная --belp-mobile-nav-h синхронизирует padding-bottom
           контента в MobileShell, чтобы последние элементы не обрезались. */}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4"
+        className="belp-mobile-bottom-nav pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-4"
         style={{
           paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
           ["--belp-mobile-nav-h" as string]: "calc(7rem + env(safe-area-inset-bottom))",
