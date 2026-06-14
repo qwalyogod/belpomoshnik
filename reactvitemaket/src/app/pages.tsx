@@ -3243,19 +3243,22 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (loading) return;
     setLoading(true);
     setError("");
-    window.setTimeout(() => {
-      const ok = signInWithEmail(email, password);
-      setLoading(false);
+    try {
+      // signInWithEmail асинхронна (реальный backend-вход) — обязательно await,
+      // иначе ok был бы Promise (всегда truthy) и навигация шла бы при провале.
+      const ok = await signInWithEmail(email, password);
       if (ok) {
         navigate("/");
         return;
       }
       setError("Проверьте email и пароль. Для тестовых аккаунтов пароль: Test12345!");
-    }, 120);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGuest = () => {

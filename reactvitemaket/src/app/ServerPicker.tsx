@@ -48,6 +48,16 @@ function defaultApiFromServer(serverUrl: string): string {
   }
 }
 
+function withShellCacheBust(serverUrl: string): string {
+  try {
+    const u = new URL(serverUrl);
+    u.searchParams.set("__belp_shell_ts", String(Date.now()));
+    return u.toString();
+  } catch {
+    return serverUrl;
+  }
+}
+
 function isCapacitorShell(): boolean {
   if (typeof window === "undefined") return false;
   const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
@@ -116,7 +126,7 @@ export function ServerPicker() {
     } catch { /* ignore */ }
     // Переходим на фронт-сервер внутри WebView (не в Safari)
     // allowNavigation в capacitor.config.json разрешает это для iOS WKWebView
-    window.location.replace(server);
+    window.location.replace(withShellCacheBust(server));
   };
 
   // Общий стиль поля (переиспользуется для двух инпутов)

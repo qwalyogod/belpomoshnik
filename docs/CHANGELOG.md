@@ -1,5 +1,14 @@
 # Журнал изменений
 
+## 2026-06-14 (mobile WebView: fixed chrome scroll-root)
+
+- MobileShell переведён на отдельный `data-mobile-scroll-root` между fixed header и fixed bottom-nav, чтобы в iOS/Android WebView контент не протаскивался под верхнюю панель и нижнее меню.
+- Для mobile-shell добавлен `body.belp-mobile-shell-active`, который блокирует собственный body-scroll на телефоне.
+- Старые внутренние `h-full overflow-y-auto` внутри mobile-shell нейтрализованы CSS-правилом, чтобы не создавать вложенный scroll и не обрезать контент.
+- `scrollContentToTop` теперь сбрасывает новый mobile scroll-root.
+- ServerPicker добавляет cache-bust параметр при подключении к dev-серверу, чтобы WebView не держал старые Vite-ресурсы.
+- Проверка: `pnpm -C reactvitemaket run build` — ✅.
+
 ## 2026-06-14 (mobile header polish)
 
 - В мобильном header убрана лишняя подпись «Белпомощник» рядом с логотипом; центральный заголовок на главной сохранён.

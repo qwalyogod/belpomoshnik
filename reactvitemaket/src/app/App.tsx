@@ -105,6 +105,12 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   //   dark:  #07080C (почти-чёрный)
   const fadeColor = dark ? "#07080C" : "#F6F7FB";
 
+  useEffect(() => {
+    if (!showMobileShell) return undefined;
+    document.body.classList.add("belp-mobile-shell-active");
+    return () => document.body.classList.remove("belp-mobile-shell-active");
+  }, [showMobileShell]);
+
   if (!showMobileShell) {
     // /login, /register, /welcome — без MobileShell, без MobileNav, без MobileTopBar.
     return (
@@ -115,11 +121,11 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
   }
 
   return (
-    // На mobile оставляем нативный window-scroll: страницы уже содержат свои
-    // внутренние mobile-отступы и на iOS/WKWebView такая модель стабильнее
-    // вложенного scroll-root. Bottom-nav защищён отдельной fade-подложкой.
+    // Mobile/WebView: один стабильный scroll-root между fixed header и
+    // fixed bottom-nav. Так iOS WKWebView не протаскивает контент под header
+    // и не двигает навигацию вместе со страницей при сильном swipe-scroll.
     <div
-      className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#F6F7FB] dark:bg-[#07080C]"
+      className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-[#F6F7FB] dark:bg-[#07080C]"
       style={{
         // Fallback-значения CSS-переменных до рендера header/nav.
         // Сами header и nav переопределят их в своих style (см. MobileBrandBar
@@ -136,12 +142,18 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
           Высота берётся из CSS-переменной --belp-mobile-header-h, которую
           выставляет сам header (см. MobileBrandBar). */}
       <MobileBrandBar />
-      <div
+      <main
+        data-scroll-root
+        data-mobile-scroll-root
+        className="belp-mobile-scroll-root absolute inset-x-0 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
-          paddingTop: "var(--belp-mobile-header-h, calc(3.5rem + env(safe-area-inset-top)))",
+          top: "var(--belp-mobile-header-h, calc(3.5rem + env(safe-area-inset-top)))",
+          bottom: 0,
           paddingBottom: showBottomNav
             ? "var(--belp-mobile-nav-h, calc(7rem + env(safe-area-inset-bottom)))"
             : "max(1.5rem, env(safe-area-inset-bottom))",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
         }}
       >
         {/* P12: ускорили переход между страницами и убрали initial opacity 0 —
@@ -158,7 +170,7 @@ export function MobileShell({ dark, setDark }: { dark: boolean; setDark: (d: boo
             <Outlet context={{ dark, setDark, protectedGuard, onAddDoc: () => { if (protectedGuard()) setDocModal({ open: true, id: null }); }, onEditDoc: (id: string) => { if (protectedGuard()) setDocModal({ open: true, id }); } }} />
           </motion.div>
         </AnimatePresence>
-      </div>
+      </main>
       {showBottomNav && <MobileBottomFade color={fadeColor} />}
       {showBottomNav && <MobileNav active={page as Page} onChange={(p) => { if (p === page) scrollContentToTop("smooth"); else navigate(`/${p === 'home' ? '' : p}`); }} />}
       <DocumentEditModal open={docModal.open} editingId={docModal.id} onClose={() => setDocModal({ open: false, id: null })} />

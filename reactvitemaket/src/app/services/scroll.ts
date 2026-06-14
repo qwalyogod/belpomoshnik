@@ -2,8 +2,8 @@
  * Сброс прокрутки контента наверх.
  *
  * В приложении две модели скролла:
- *  - mobile (MobileShell): страница скроллится нативно окном; bottom-nav
- *    защищён fade-подложкой и дополнительным нижним padding;
+ *  - mobile (MobileShell): контент скроллится в [data-mobile-scroll-root],
+ *    а header/bottom-nav остаются fixed в viewport;
  *  - desktop (DesktopShell / DesktopHeaderShell): контент живёт в постоянном
  *    `flex-1 overflow-y-auto`, помеченном [data-scroll-root].
  *
@@ -19,7 +19,7 @@ export function scrollContentToTop(behavior: ScrollBehavior = "auto"): void {
   } catch {
     window.scrollTo(0, 0);
   }
-  document.querySelectorAll<HTMLElement>("[data-scroll-root]").forEach((el) => {
+  document.querySelectorAll<HTMLElement>("[data-scroll-root], [data-mobile-scroll-root]").forEach((el) => {
     try {
       el.scrollTo({ top: 0, behavior });
     } catch {

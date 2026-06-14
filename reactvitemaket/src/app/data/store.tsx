@@ -1325,14 +1325,32 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const account = quickAccounts.find(item => item.email.toLowerCase() === normalizedEmail);
-    if (!account) return false;
     try {
-      // Реальный backend login (вместо локального сравнения `account.password`).
-      // Если backend недоступен — функция вернёт false, UI покажет ошибку.
+      // Вход решает backend. НЕ требуем наличия локальной персоны — иначе
+      // пользователь, зарегистрированный на бэке (другое устройство / очищен
+      // localStorage), не смог бы войти.
       const tokens = await apiClient.login<AuthTokens>(email, password);
       setAuthSession(tokens);
       apiClient.saveTokens(tokens);
+
+      let account = quickAccounts.find(item => item.email.toLowerCase() === normalizedEmail);
+      if (!account) {
+        // Персоны нет локально — строим её из /api/auth/me и добавляем в список.
+        const me = await apiClient
+          .getMe<{ id: number | string; email: string; name: string; role: string }>(tokens.access_token)
+          .catch(() => null);
+        account = {
+          id: me?.id != null ? String(me.id) : uid("user"),
+          name: me?.name?.trim() || normalizedEmail.split("@")[0],
+          email: normalizedEmail,
+          role: (me?.role as AppUser["role"]) || "citizen",
+          region: "Минская область",
+          city: "Минск",
+          district: "Центральный",
+          isTestAccount: false,
+        };
+        setQuickAccounts(prev => normalizeQuickAccounts([...prev, account!]));
+      }
       applyUser(account);
       return true;
     } catch (e) {

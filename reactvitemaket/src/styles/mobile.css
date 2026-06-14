@@ -64,6 +64,27 @@ body.belp-propose-open .belp-mobile-bottom-fade {
   display: none;
 }
 
+@media (max-width: 767px) {
+  body.belp-mobile-shell-active {
+    overflow: hidden;
+  }
+
+  .belp-mobile-scroll-root {
+    isolation: isolate;
+    transform: translateZ(0);
+  }
+
+  /* Старые mobile-страницы ещё местами задают собственный
+     `h-full overflow-y-auto`. В WebView это создаёт вложенный скролл:
+     контент уезжает под fixed header/bottom-nav. Внутри нового shell
+     оставляем единственный scroll-root — `.belp-mobile-scroll-root`. */
+  .belp-mobile-scroll-root .h-full.overflow-y-auto {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible !important;
+  }
+}
+
 /* iOS: убрать серый "автозаполнитель" подсветку паролей в WebView. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
