@@ -1,5 +1,12 @@
 # Журнал изменений
 
+## 2026-06-15 (mobile app icon)
+
+- Источником иконки приложения зафиксирован `reactvitemaket/resources/icon.svg`.
+- Пересобраны Android launcher icons, iOS AppIcon и web/PWA icons из SVG-иконки предложения.
+- Обновлён генератор `reactvitemaket/resources/generate-icons.sh`, чтобы мастер-иконка рендерилась из SVG.
+- Проверка: `bash reactvitemaket/resources/generate-icons.sh`, `pnpm -C reactvitemaket run build` — ✅.
+
 ## 2026-06-14 (mobile WebView: fixed chrome scroll-root)
 
 - MobileShell переведён на отдельный `data-mobile-scroll-root` между fixed header и fixed bottom-nav, чтобы в iOS/Android WebView контент не протаскивался под верхнюю панель и нижнее меню.

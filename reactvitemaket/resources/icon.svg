@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Исходник логотипа-иконки «Белпомощник».
+  Совпадает с фирменным знаком из React-компонента Logo/LogoMark
+  (reactvitemaket/src/app/components/belp-ui.tsx): градиент #0056FF → #2277FF → #9BB8FF
+  и белая «Б». Это редактируемый источник; PNG-иконки генерирует resources/generate-icons.sh.
+-->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0056FF"/>
+      <stop offset="0.6" stop-color="#2277FF"/>
+      <stop offset="1" stop-color="#9BB8FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Полноразмерный квадрат под маску платформы (iOS/Android скругляют сами).
+       Для отдельного логотипа можно вернуть rx/ry ≈ 230 (как на сайте). -->
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#g)"/>
+  <text x="512" y="512" fill="#FFFFFF" font-family="Arial, Helvetica, 'PT Sans', sans-serif"
+        font-weight="700" font-size="600" text-anchor="middle" dominant-baseline="central">Б</text>
+</svg>
