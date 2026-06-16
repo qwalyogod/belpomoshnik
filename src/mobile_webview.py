@@ -46,7 +46,7 @@ def _lan_ip() -> str:
         sock.close()
 
 
-APP_URL = os.getenv("BELPOMOSHNIK_APP_URL") or os.getenv("REACT_APP_URL") or f"http://{_lan_ip()}:8560"
+APP_URL = "https://belpomoshnik.online"
 DEBUG_WEBVIEW = os.getenv("BELPOMOSHNIK_WEBVIEW_DEBUG", "0") == "1"
 
 PHONE_MAX_SHORTEST_SIDE = 600
@@ -286,17 +286,6 @@ def main(page: ft.Page) -> None:
             ),
         )
 
-    url_field = ft.TextField(
-        value=APP_URL,
-        label="Адрес приложения",
-        hint_text="http://192.168.0.10:8560",
-        text_size=15,
-        autofocus=True,
-        keyboard_type=ft.KeyboardType.URL,
-        on_submit=lambda e: page.run_task(open_url),
-        border_radius=14,
-    )
-
     def replace(control: ft.Control, screen_name: str = "form") -> None:
         apply_shell_theme()
         lock_phone_orientation_if_needed()
@@ -309,54 +298,6 @@ def main(page: ft.Page) -> None:
     # P12: глобальный словарь текущего экрана. Используется on_message,
     # чтобы не зацикливать переключения offline↔online↔offline.
     screens: dict[str, str] = {"current": "form"}
-
-    def show_connection_form(message: str | None = None, error: bool = False) -> None:
-        colors = _palette(page)
-        helper: ft.Control
-        if message:
-            helper = ft.Container(
-                padding=ft.padding.symmetric(horizontal=14, vertical=10),
-                border_radius=14,
-                bgcolor="#FEF2F2" if error else colors["surface_2"],
-                content=ft.Text(
-                    message,
-                    size=13,
-                    color=colors["danger"] if error else colors["muted"],
-                    text_align=ft.TextAlign.CENTER,
-                ),
-            )
-        else:
-            helper = ft.Text(
-                "Для разработки укажите адрес, который доступен с этого устройства.",
-                size=13,
-                color=colors["muted"],
-                text_align=ft.TextAlign.CENTER,
-            )
-
-        controls: list[ft.Control] = [
-            helper,
-            url_field,
-            ft.Row(
-                [primary_button("Подключиться", ft.Icons.ARROW_FORWARD, lambda e: page.run_task(open_url))],
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-        ]
-        if DEBUG_WEBVIEW:
-            controls.append(secondary_button("Проверить оболочку", ft.Icons.BUG_REPORT, lambda e: page.run_task(test_shell)))
-
-        replace(
-            ft.Container(
-                expand=True,
-                alignment=ft.alignment.center,
-                content=shell_card(
-                    ft.Icons.LINK,
-                    "Подключение к Белпомощнику",
-                    "Введите адрес приложения и нажмите «Подключиться».",
-                    controls,
-                ),
-            ),
-            screen_name="form",
-        )
 
     def show_loading(url: str) -> None:
         colors = _palette(page)
@@ -404,7 +345,7 @@ def main(page: ft.Page) -> None:
                         ft.Row(
                             [
                                 primary_button("Попробовать снова", ft.Icons.REFRESH, lambda e: page.run_task(retry)),
-                                secondary_button("Изменить адрес", ft.Icons.EDIT, lambda e: show_connection_form()),
+                                secondary_button("Открыть сайт", ft.Icons.OPEN_IN_BROWSER, lambda e: page.launch_url(APP_URL)),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
                             wrap=True,
@@ -432,7 +373,7 @@ def main(page: ft.Page) -> None:
                         ft.Row(
                             [
                                 primary_button("Попробовать снова", ft.Icons.REFRESH, lambda e: page.run_task(retry)),
-                                secondary_button("Изменить адрес", ft.Icons.EDIT, lambda e: show_connection_form()),
+                                secondary_button("Открыть сайт", ft.Icons.OPEN_IN_BROWSER, lambda e: page.launch_url(APP_URL)),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
                             wrap=True,
@@ -515,18 +456,8 @@ def main(page: ft.Page) -> None:
             pass
 
     async def open_url(_=None) -> None:
-        url = _normalize_url(url_field.value or "")
-        if not url:
-            show_connection_form("Введите адрес приложения.", error=True)
-            return
-
-        parsed = urlparse(url)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            show_connection_form("Адрес должен начинаться с http:// или https://.", error=True)
-            return
-
+        url = APP_URL
         last_url["value"] = url
-        url_field.value = url
         print(f"[shell] open -> {url}")
         show_loading(url)
 
@@ -549,7 +480,6 @@ def main(page: ft.Page) -> None:
         await webview.load_request(url)
 
     async def retry(_=None) -> None:
-        url_field.value = last_url["value"]
         await open_url()
 
     async def test_shell(_=None) -> None:
@@ -568,14 +498,13 @@ def main(page: ft.Page) -> None:
         lock_phone_orientation_if_needed()
 
     def on_brightness_change(_=None) -> None:
-        # Нативные shell-экраны должны следовать системной теме.
-        show_connection_form() if not page.controls else page.update()
+        page.update()
 
     page.on_resize = on_resize
     page.on_platform_brightness_change = on_brightness_change
 
     apply_shell_theme()
-    show_connection_form()
+    page.run_task(open_url)
 
 
 if __name__ == "__main__":
