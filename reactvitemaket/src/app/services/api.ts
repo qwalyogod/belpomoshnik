@@ -9,20 +9,15 @@ export type AuthTokens = {
   expires_in: number;
 };
 
-// API_BASE_URL — динамический.
-// 1) Если в текущем origin сохранён API URL — используем его.
-// 2) Если сохранён serverUrl — конвертируем порт 8560/8550 → 8060.
-// 3) Если VITE_API_BASE_URL задан реальным внешним URL — используем его.
-// 4) Если VITE_API_BASE_URL указывает на localhost, а frontend открыт по LAN,
-//    заменяем host на текущий host страницы. На iPhone 127.0.0.1 — это сам
-//    телефон, а не компьютер с backend.
-// 5) Фолбэк для dev-LAN — текущий host страницы + порт 8060.
-// 6) Последний фолбэк — 127.0.0.1:8000.
-//
-// Меняйте через env или ServerPicker, не правя код.
+// API_BASE_URL — определяется из окружения сборки (Vite).
+// Прод: VITE_API_BASE_URL=https://belpomoshnik.online (.env.production) — запросы
+//   идут на тот же origin, где /api проксируется на FastAPI.
+// Dev:  VITE_API_BASE_URL=http://127.0.0.1:8060 (.env.local); если фронт открыт
+//   по LAN, host подменяется на host страницы (на телефоне 127.0.0.1 — сам телефон).
+// Фолбэк — host страницы + порт 8060 (dev-LAN), затем 127.0.0.1:8000.
+// Адрес меняется только через env, не правя код.
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 const DEV_BACKEND_PORT = "8060";
-const DEV_FRONTEND_PORTS = new Set(["8560", "8550"]);
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function trimSlash(value: string): string {
@@ -39,12 +34,6 @@ function isLocalHost(hostname: string): boolean {
 
 function isHttpProtocol(protocol: string): boolean {
   return protocol === "http:" || protocol === "https:";
-}
-
-function apiFromUrlLike(raw: string): string {
-  const u = new URL(raw);
-  const nextPort = DEV_FRONTEND_PORTS.has(u.port) || !u.port ? DEV_BACKEND_PORT : u.port;
-  return `${u.protocol}//${u.hostname}:${nextPort}`;
 }
 
 function apiFromCurrentLocation(): string | null {
@@ -81,21 +70,6 @@ function envApiForCurrentDevice(fromEnv: string | undefined): string | null {
 function resolveApiBaseUrl(): string {
   const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (typeof window === "undefined") return DEFAULT_API_BASE_URL;
-  try {
-    // 1) Явно заданный в ServerPicker API URL
-    const explicitApi = window.localStorage.getItem("belpomoshnik.apiBaseUrl");
-    if (explicitApi) {
-      const api = apiUrlForCurrentDevice(explicitApi);
-      if (api) return api;
-    }
-    // 2) Фолбэк — автоконверсия из serverUrl
-    const serverUrl = window.localStorage.getItem("belpomoshnik.serverUrl");
-    if (serverUrl) {
-      return apiFromUrlLike(serverUrl);
-    }
-  } catch {
-    /* ignore */
-  }
   const envApi = envApiForCurrentDevice(fromEnv);
   if (envApi) return envApi;
   const currentApi = apiFromCurrentLocation();

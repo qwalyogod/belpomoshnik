@@ -591,9 +591,9 @@ export function SettingsPage({ themeMode, setThemeMode }: { themeMode: "light" |
       {/* Промпт 3/4: личный Groq-ключ. Доступно любому авторизованному пользователю. */}
       {accessToken && <GroqKeyCard accessToken={accessToken} />}
 
-      {/* Карточка «Разработка» скрыта: смена сервера теперь происходит в нативной
-          оболочке (ServerPicker на экране ввода адресов). В вебе менять сервер
-          не нужно — Vite dev запускается на :8560, бэк на :8060. */}
+      {/* Карточка «Разработка» убрана: приложение всегда работает со статичным
+          адресом https://belpomoshnik.online. Адрес API задаётся через env при
+          сборке (.env.production / .env.local), вручную менять сервер не нужно. */}
     </div>
   );
 }
